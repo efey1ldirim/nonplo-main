@@ -48,6 +48,7 @@ export const agents = pgTable("agents", {
   openaiInstructions: text("openai_instructions"), // Re-enabled
   openaiModel: text("openai_model"), // Re-enabled
   openaiAssistantId: text("openai_assistant_id"), // Re-enabled for chat functionality
+  temperature: text("temperature").default("1.0"), // OpenAI temperature setting (0.0-2.0)
   is_active: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -193,6 +194,7 @@ export const insertAgentSchema = createInsertSchema(agents).pick({
   openaiInstructions: true,
   openaiModel: true,
   openaiAssistantId: true,
+  temperature: true,
   is_active: true,
 });
 
