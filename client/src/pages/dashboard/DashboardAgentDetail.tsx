@@ -148,8 +148,8 @@ export default function DashboardAgentDetail() {
         // Get the actual button dimensions
         const tabRect = overviewTab.getBoundingClientRect();
         
-        // Set initial size to match the button exactly
-        indicator.style.width = `${tabRect.width}px`;
+        // Set initial size to match the button exactly + extra padding
+        indicator.style.width = `${tabRect.width + 8}px`;
         indicator.style.transform = 'translateX(0px)';
         
         // Also call the updateIndicatorPosition for consistency
