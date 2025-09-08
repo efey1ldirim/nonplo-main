@@ -106,7 +106,7 @@ export default function DashboardAgentDetail() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [conversationMessages, setConversationMessages] = useState<any[]>([]);
 
-  // Tab indicator animation function
+  // Tab indicator animation function - now for 5 tabs
   const updateIndicatorPosition = (tabIndex: number) => {
     const indicator = document.getElementById('sliding-indicator');
     const tabTriggers = document.querySelectorAll('[data-tab-index]');
@@ -941,14 +941,6 @@ export default function DashboardAgentDetail() {
               >
                 Chat
               </TabsTrigger>
-              <TabsTrigger 
-                value="test" 
-                className="relative z-10 flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
-                data-tab-index="5"
-                onClick={() => updateIndicatorPosition(5)}
-              >
-                Test & Yayınla
-              </TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -1474,46 +1466,6 @@ export default function DashboardAgentDetail() {
           </div>
         </TabsContent>
 
-        {/* 6) Test & Publish */}
-        <TabsContent value="test" className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <LiveTestConsole
-              agentId={agent.id}
-              agentName={agent.name}
-              agentRole={agent.role}
-            />
-            <Card>
-              <CardHeader>
-                <CardTitle>Yayınlama & Versiyon</CardTitle>
-                <CardDescription>Ajanınızı yayınlayın ve versiyon notları ekleyin</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm">Durum: Taslak</div>
-                <Button onClick={() => toast({ title: 'Yayınlandı', description: 'Mevcut ayarlar artık canlı.' })}>
-                  Yayınla
-                </Button>
-                <div>
-                  <Label>Versiyon notları</Label>
-                  <Textarea rows={3} placeholder="Bu versiyonda neler değişti?" />
-                </div>
-                <Separator />
-                <div className="text-sm text-muted-foreground">Tanılama: Herhangi bir sorun tespit edilmedi.</div>
-                
-                <div className="space-y-2 pt-4">
-                  <h4 className="text-sm font-medium">Hızlı İşlemler</h4>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => window.open(`/chat/${agent.id}`, '_blank')}>
-                      Tam Ekran Chat
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/chat/${agent.id}`)}>
-                      Chat Sayfası
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Delete confirmation */}
