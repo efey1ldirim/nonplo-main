@@ -119,7 +119,7 @@ export default function DashboardAgentDetail() {
           return;
         }
         setUserId(user.id);
-        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id)]);
+        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id), loadAgentToolSettings()]);
       } catch (e) {
         console.error(e);
         toast({ title: "Hata", description: "Dijital çalışan yüklenemedi.", variant: "destructive" });
