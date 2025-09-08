@@ -2,22 +2,13 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-// Supabase-only database connection
-const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
-
-if (!supabasePassword) {
-  throw new Error(
-    "SUPABASE_DB_PASSWORD must be set. Please check your environment variables.",
-  );
+// Unified database connection using DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set");
 }
 
-// Supabase connection string
-const connectionString = `postgresql://postgres.hnlosxmzbzesyubocgmf:${supabasePassword}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`;
-
-
-
-const client = postgres(connectionString, {
-  ssl: 'require', // Supabase requires SSL
+console.log('🔗 db.ts using DATABASE_URL connection');
+const client = postgres(process.env.DATABASE_URL, {
   max: 1, // Limit connections in development
   onnotice: () => {}, // Suppress notices
 });
