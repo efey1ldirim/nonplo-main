@@ -91,24 +91,25 @@ export class CalendarService {
         const encryptedAccessToken = encrypt(tokens.access_token);
         const encryptedRefreshToken = encrypt(tokens.refresh_token!);
         
-        // Database'e kaydet veya güncelle (UPSERT)
+        // Database'e kaydet - DELETE & RECREATE yöntemi
         let calendarConnection;
         if (isUpdate) {
-          // Existing connection'ı güncelle
-          calendarConnection = await storage.updateGoogleCalendarTokens(userId, agentId, encryptedAccessToken, encryptedRefreshToken);
-          console.log(`✅ Google Calendar tokens updated for user ${userId}, agent ${agentId}`);
-        } else {
-          // Yeni connection oluştur
-          calendarConnection = await storage.createGoogleCalendarConnection({
-            userId,
-            agentId,
-            googleEmail: email,
-            googleAccessToken: encryptedAccessToken,
-            googleRefreshToken: encryptedRefreshToken,
-            calendarId: 'primary'
-          });
-          console.log(`✅ New Google Calendar connection created for user ${userId}, agent ${agentId}`);
+          // Existing connection'ı tamamen sil (HARD DELETE)
+          console.log(`🗑️ Hard deleting existing connection for user ${userId}, agent ${agentId}`);
+          await storage.hardDeleteGoogleCalendarConnection(userId, agentId);
         }
+        
+        // Her durumda yeni connection oluştur
+        calendarConnection = await storage.createGoogleCalendarConnection({
+          userId,
+          agentId,
+          googleEmail: email,
+          googleAccessToken: encryptedAccessToken,
+          googleRefreshToken: encryptedRefreshToken,
+          calendarId: 'primary'
+        });
+        console.log(`✅ Google Calendar connection created/recreated for user ${userId}, agent ${agentId}`);
+        
         
         // Kaydı doğrula
         const verifyConnection = await storage.getGoogleCalendarByUserAgent(userId, agentId);

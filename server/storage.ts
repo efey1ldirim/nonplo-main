@@ -247,6 +247,7 @@ export interface IStorage {
   getAllGoogleCalendarConnections(): Promise<UserGoogleCalendar[]>;
   updateGoogleCalendarTokens(userId: string, agentId: string, accessToken: string, refreshToken?: string): Promise<void>;
   disconnectGoogleCalendar(userId: string, agentId: string): Promise<void>;
+  hardDeleteGoogleCalendarConnection(userId: string, agentId: string): Promise<void>;
   logCalendarOperation(data: InsertCalendarOperation): Promise<CalendarOperation>;
 
   // Dashboard Stats
@@ -800,6 +801,19 @@ export class DatabaseStorage implements IStorage {
           eq(userGoogleCalendars.agentId, agentId)
         )
       );
+  }
+
+  // Hard delete Google Calendar connection - CONSTRAINT SORUNU İÇİN
+  async hardDeleteGoogleCalendarConnection(userId: string, agentId: string): Promise<void> {
+    await db
+      .delete(userGoogleCalendars)
+      .where(
+        and(
+          eq(userGoogleCalendars.userId, userId),
+          eq(userGoogleCalendars.agentId, agentId)
+        )
+      );
+    console.log(`🗑️ Hard deleted Google Calendar connection for user ${userId}, agent ${agentId}`);
   }
 
   async logCalendarOperation(data: InsertCalendarOperation): Promise<CalendarOperation> {
