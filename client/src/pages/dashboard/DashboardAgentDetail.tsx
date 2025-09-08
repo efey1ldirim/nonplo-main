@@ -109,9 +109,25 @@ export default function DashboardAgentDetail() {
   // Tab indicator animation function
   const updateIndicatorPosition = (tabIndex: number) => {
     const indicator = document.getElementById('sliding-indicator');
-    if (indicator) {
-      const percentage = tabIndex * (100 / 6); // 6 tabs total
-      indicator.style.transform = `translateX(${percentage}%)`;
+    const tabTriggers = document.querySelectorAll('[data-tab-index]');
+    
+    if (indicator && tabTriggers.length > 0) {
+      const targetTab = tabTriggers[tabIndex] as HTMLElement;
+      if (targetTab) {
+        const container = targetTab.parentElement;
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const tabRect = targetTab.getBoundingClientRect();
+          
+          // Calculate position relative to container
+          const offsetLeft = tabRect.left - containerRect.left;
+          const tabWidth = tabRect.width;
+          
+          // Update indicator position and width
+          indicator.style.transform = `translateX(${offsetLeft}px)`;
+          indicator.style.width = `${tabWidth}px`;
+        }
+      }
     }
   };
 
@@ -121,8 +137,10 @@ export default function DashboardAgentDetail() {
 
   // Initialize indicator position and listen for tab changes
   useEffect(() => {
-    // Set initial position for 'overview' tab (index 0)
-    updateIndicatorPosition(0);
+    // Set initial position for 'overview' tab (index 0) with a small delay
+    const timer = setTimeout(() => {
+      updateIndicatorPosition(0);
+    }, 100);
     
     // Listen for tab value changes via data attributes or URL params
     const observer = new MutationObserver((mutations) => {
@@ -137,13 +155,28 @@ export default function DashboardAgentDetail() {
       });
     });
 
+    // Handle window resize to recalculate positions
+    const handleResize = () => {
+      const activeTab = document.querySelector('[data-state="active"][data-tab-index]') as HTMLElement;
+      if (activeTab) {
+        const tabIndex = parseInt(activeTab.getAttribute('data-tab-index') || '0');
+        updateIndicatorPosition(tabIndex);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     // Observe all tab triggers for state changes
     const tabTriggers = document.querySelectorAll('[data-tab-index]');
     tabTriggers.forEach(trigger => {
       observer.observe(trigger, { attributes: true, attributeFilter: ['data-state'] });
     });
 
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
   }, [agent]); // Re-run when agent changes
 
   useEffect(() => {
@@ -842,8 +875,8 @@ export default function DashboardAgentDetail() {
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
                    style={{
-                     width: `${100/6}%`,
-                     transform: 'translateX(0%)'
+                     width: 'auto',
+                     transform: 'translateX(0px)'
                    }}
                    id="sliding-indicator" />
               
