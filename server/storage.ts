@@ -631,16 +631,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertToolsSetting(setting: InsertToolsSettings): Promise<ToolsSettings> {
-    const result = await db.insert(toolsSettings)
-      .values(setting)
-      .onConflictDoUpdate({
-        target: setting.agentId 
-          ? [toolsSettings.userId, toolsSettings.agentId, toolsSettings.toolKey]
-          : [toolsSettings.userId, toolsSettings.toolKey],
-        set: { enabled: setting.enabled, updatedAt: new Date() }
-      })
-      .returning();
-    return result[0];
+    // Manual upsert: Check if exists, then update or insert
+    const whereConditions = setting.agentId 
+      ? and(
+          eq(toolsSettings.userId, setting.userId),
+          eq(toolsSettings.agentId, setting.agentId),
+          eq(toolsSettings.toolKey, setting.toolKey)
+        )
+      : and(
+          eq(toolsSettings.userId, setting.userId),
+          eq(toolsSettings.toolKey, setting.toolKey),
+          isNull(toolsSettings.agentId)
+        );
+
+    const existing = await db.select().from(toolsSettings).where(whereConditions);
+    
+    if (existing.length > 0) {
+      // Update existing
+      const result = await db.update(toolsSettings)
+        .set({ enabled: setting.enabled, updatedAt: new Date() })
+        .where(whereConditions)
+        .returning();
+      return result[0];
+    } else {
+      // Insert new
+      const result = await db.insert(toolsSettings)
+        .values(setting)
+        .returning();
+      return result[0];
+    }
   }
 
   // Agent-specific tool settings methods
