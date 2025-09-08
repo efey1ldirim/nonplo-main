@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -136,7 +136,7 @@ export default function DashboardAgentDetail() {
   }, [agent]);
 
   // Initialize indicator position and listen for tab changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     let timer: NodeJS.Timeout;
     
     // Set initial position for 'overview' tab (index 0) with multiple attempts
@@ -895,7 +895,7 @@ export default function DashboardAgentDetail() {
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
                    style={{
-                     width: '0px',
+                     width: '95px',
                      transform: 'translateX(0px)'
                    }}
                    id="sliding-indicator" />
