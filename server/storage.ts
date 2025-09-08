@@ -57,19 +57,13 @@ import {
   type InsertUserStatus,
 } from "@shared/schema";
 
-// Pure Supabase connection only
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_DB_PASSWORD) {
-  throw new Error("SUPABASE_URL and SUPABASE_DB_PASSWORD must be set for Supabase connection");
+// Use DATABASE_URL (Neon) connection to match Drizzle
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set");
 }
 
-// Extract project reference from Supabase URL
-const projectRef = process.env.SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
-const connectionString = `postgresql://postgres.${projectRef}:${process.env.SUPABASE_DB_PASSWORD}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`;
-
-// Force Supabase connection with debug
-console.log('🔗 FORCING Supabase connection:', connectionString.split('@')[1]?.split(':')[0]);
-const client = postgres(connectionString, {
-  ssl: 'require', // Supabase requires SSL
+console.log('🔗 Using DATABASE_URL connection (Neon)');
+const client = postgres(process.env.DATABASE_URL, {
   max: 1, // Limit connections
 });
 
