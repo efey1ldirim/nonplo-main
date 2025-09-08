@@ -7,6 +7,8 @@ interface CacheItem<T> {
 class InMemoryCacheManager {
   private cache = new Map<string, CacheItem<any>>();
   private defaultTTL = 5 * 60 * 1000; // 5 minutes
+  private hitCount = 0;
+  private missCount = 0;
 
   set<T>(key: string, data: T, ttl?: number): void {
     this.cache.set(key, {
@@ -25,15 +27,18 @@ class InMemoryCacheManager {
     const item = this.cache.get(key);
     
     if (!item) {
+      this.missCount++;
       return null;
     }
 
     const now = Date.now();
     if (now - item.timestamp > item.ttl) {
       this.cache.delete(key);
+      this.missCount++;
       return null;
     }
 
+    this.hitCount++;
     return item.data;
   }
 
@@ -62,12 +67,22 @@ class InMemoryCacheManager {
     size: number;
     hitRate: number;
     memoryUsage: string;
+    hits: number;
+    misses: number;
   } {
+    const totalRequests = this.hitCount + this.missCount;
     return {
       size: this.cache.size,
-      hitRate: 0, // Would need hit/miss tracking
-      memoryUsage: `${Math.round(JSON.stringify([...this.cache.entries()]).length / 1024)} KB`
+      hitRate: totalRequests > 0 ? Math.round((this.hitCount / totalRequests) * 100) : 0,
+      memoryUsage: `${Math.round(JSON.stringify([...this.cache.entries()]).length / 1024)} KB`,
+      hits: this.hitCount,
+      misses: this.missCount
     };
+  }
+
+  resetStats(): void {
+    this.hitCount = 0;
+    this.missCount = 0;
   }
 
   // Cache patterns for common queries
@@ -75,8 +90,8 @@ class InMemoryCacheManager {
     return `${prefix}:${params.map(p => String(p)).join(':')}`;
   }
 
-  // Specific cache methods for our application
-  cacheUserAgents(userId: string, agents: any[], ttl: number = 2 * 60 * 1000): void {
+  // Optimized cache methods with better TTL values
+  cacheUserAgents(userId: string, agents: any[], ttl: number = 5 * 60 * 1000): void { // Increased from 2min to 5min
     this.set(this.generateCacheKey('user_agents', userId), agents, ttl);
   }
 
@@ -84,7 +99,7 @@ class InMemoryCacheManager {
     return this.get(this.generateCacheKey('user_agents', userId));
   }
 
-  cacheAgentDetails(agentId: string, agent: any, ttl: number = 5 * 60 * 1000): void {
+  cacheAgentDetails(agentId: string, agent: any, ttl: number = 10 * 60 * 1000): void { // Increased from 5min to 10min
     this.set(this.generateCacheKey('agent_details', agentId), agent, ttl);
   }
 
@@ -92,7 +107,16 @@ class InMemoryCacheManager {
     return this.get(this.generateCacheKey('agent_details', agentId));
   }
 
-  cacheConversationMessages(conversationId: string, messages: any[], ttl: number = 30 * 1000): void {
+  // Dashboard stats cache (longer TTL since stats don't change frequently)
+  cacheDashboardStats(userId: string, stats: any, ttl: number = 3 * 60 * 1000): void { // 3 minutes for stats
+    this.set(this.generateCacheKey('dashboard_stats', userId), stats, ttl);
+  }
+
+  getCachedDashboardStats(userId: string): any | null {
+    return this.get(this.generateCacheKey('dashboard_stats', userId));
+  }
+
+  cacheConversationMessages(conversationId: string, messages: any[], ttl: number = 60 * 1000): void { // Increased from 30s to 1min
     this.set(this.generateCacheKey('conversation_messages', conversationId), messages, ttl);
   }
 
