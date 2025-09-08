@@ -650,6 +650,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertAgentToolSetting(userId: string, agentId: string, toolKey: string, enabled: boolean): Promise<ToolsSettings> {
+    // Debug: Check if column exists first
+    try {
+      await db.execute(sql`SELECT agent_id FROM tools_settings LIMIT 1`);
+    } catch (error: any) {
+      console.error('❌ agent_id column missing, adding it:', error.message);
+      try {
+        await db.execute(sql`ALTER TABLE tools_settings ADD COLUMN agent_id UUID`);
+        console.log('✅ agent_id column added successfully');
+      } catch (alterError: any) {
+        console.log('⚠️ Column might already exist:', alterError.message);
+      }
+    }
+    
     const setting = { userId, agentId, toolKey, enabled };
     return await this.upsertToolsSetting(setting);
   }
