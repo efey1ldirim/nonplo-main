@@ -134,6 +134,12 @@ export default function DashboardAgentDetail() {
               const settings = await response.json();
               console.log('✅ Tool settings loaded directly:', settings);
               setAgentProviderEnabled(settings);
+              
+              // Also update Google Calendar tool activation state
+              if (settings['google-calendar']) {
+                setGoogleCalendarToolActivated(true);
+                console.log('✅ Google Calendar tool state updated to active');
+              }
             } else {
               console.error('❌ Tool settings API failed:', response.status);
             }
