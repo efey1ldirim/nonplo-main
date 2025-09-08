@@ -2037,7 +2037,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       const authUrl = calendarService.generateAuthUrl(userId, agentId);
-      res.json({ authUrl });
+      res.json({ success: true, authUrl });
     } catch (error: any) {
       console.error('Calendar auth URL generation error:', error);
       res.status(500).json({ error: 'Failed to generate OAuth URL' });
