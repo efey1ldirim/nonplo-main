@@ -2443,16 +2443,6 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
-  // Chat with OpenAI Agent endpoint - direct OpenAI communication
-  app.post("/api/chat-with-cx-agent", async (req, res) => {
-    try {
-      const { chatWithOpenAIAgent } = await import("./routes/chat-with-openai-agent");
-      return chatWithOpenAIAgent(req, res);
-    } catch (error) {
-      console.error("Chat with OpenAI agent error:", error);
-      res.status(500).json({ error: "Failed to process chat request" });
-    }
-  });
 
   // ============ ERROR TRACKING ENDPOINTS ============
 

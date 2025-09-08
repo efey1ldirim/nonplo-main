@@ -161,17 +161,15 @@ export function ChatPage() {
 
     try {
       console.log('Chat mesaj gönderiliyor - userId:', user.id);
-      const response = await fetch('/api/chat-with-cx-agent', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          agentId,
+          assistantId: agent?.openaiAssistantId || 'default-assistant',
           message: messageToSend,
-          playbookId: '00000000-0000-0000-0000-000000000000', // Default playbook ID
-          userId: user.id,
-          sessionId: sessionId || undefined, // Include sessionId if available
+          agentId: agentId,
         }),
       });
 
@@ -181,17 +179,15 @@ export function ChatPage() {
         const agentMessage: ChatMessage = {
           id: 'agent-' + Date.now(),
           sender: 'agent',
-          content: data.response.text,
+          content: data.response,
           timestamp: new Date(),
-          intent: data.response.intent,
-          parameters: data.response.parameters,
         };
 
         setMessages(prev => [...prev, agentMessage]);
         
-        // Update session ID
-        if (data.response.sessionId) {
-          setSessionId(data.response.sessionId);
+        // Update thread ID for session tracking
+        if (data.threadId) {
+          setSessionId(data.threadId);
         }
 
         // Show debug logs in development
