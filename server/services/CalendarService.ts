@@ -326,6 +326,12 @@ export class CalendarService {
       };
 
     } catch (error: any) {
+      console.error('❌ DETAILED CalendarService.createEvent ERROR:');
+      console.error('  📍 Error message:', error.message);
+      console.error('  📍 Error code:', error.code);
+      console.error('  📍 Error status:', error.status);
+      console.error('  📍 Full error:', error);
+      
       await storage.logCalendarOperation({
         userId,
         agentId,
