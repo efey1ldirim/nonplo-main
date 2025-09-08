@@ -275,25 +275,9 @@ export class DatabaseStorage implements IStorage {
     // Debug and use Drizzle ORM properly
     try {
       console.log(`🔍 Fetching agents for user: ${userId}`);
-      
-      // TEMPORARY FIX: Use raw SQL to bypass Drizzle cache
-      const results = await client`
-        SELECT 
-          id, user_id as "userId", name, role, business_name as "businessName", 
-          description, sector, location, address, website, social_media as "socialMedia",
-          working_hours as "workingHours", holidays, faq, products, personality,
-          service_type as "serviceType", task_description as "taskDescription",
-          service_description as "serviceDescription", tools, integrations,
-          message_history_file as "messageHistoryFile", openai_instructions as "openaiInstructions",
-          openai_model as "openaiModel", openai_assistant_id as "openaiAssistantId",
-          temperature, is_active, created_at as "createdAt", updated_at as "updatedAt"
-        FROM agents 
-        WHERE user_id = ${userId} 
-        ORDER BY created_at DESC
-      `;
-      
+      const results = await db.select().from(agents).where(eq(agents.userId, userId)).orderBy(desc(agents.createdAt));
       console.log(`📊 Found ${results.length} agents for user ${userId}`);
-      return results as Agent[];
+      return results;
     } catch (error) {
       console.error('Database agents fetch error:', error);
       // Fallback: return empty array instead of crashing
