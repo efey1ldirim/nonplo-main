@@ -88,6 +88,15 @@ export default function DashboardAgentDetail() {
   const [toolActivationLoading, setToolActivationLoading] = useState(false);
   const [googleCalendarToolActivated, setGoogleCalendarToolActivated] = useState(false);
 
+  // Calendar connection status and management
+  const [calendarStatus, setCalendarStatus] = useState<{
+    connected: boolean;
+    email?: string;
+    connectedAt?: string;
+  }>({ connected: false });
+  const [calendarStatusLoading, setCalendarStatusLoading] = useState(false);
+  const [calendarDisconnecting, setCalendarDisconnecting] = useState(false);
+
   // Settings/Knowledge draft state (unsaved guard demo)
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
 
@@ -110,7 +119,7 @@ export default function DashboardAgentDetail() {
           return;
         }
         setUserId(user.id);
-        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id)]);
+        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id)]);
       } catch (e) {
         console.error(e);
         toast({ title: "Hata", description: "Dijital çalışan yüklenemedi.", variant: "destructive" });
@@ -291,6 +300,116 @@ export default function DashboardAgentDetail() {
   };
 
   const formatDate = (s?: string) => s ? new Date(s).toLocaleString() : "-";
+
+  // Calendar status management functions
+  const fetchCalendarStatus = async (uid: string) => {
+    if (!agentId) return;
+    
+    setCalendarStatusLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch(`/api/calendar/status?userId=${uid}&agentId=${agentId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCalendarStatus(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch calendar status:', error);
+    } finally {
+      setCalendarStatusLoading(false);
+    }
+  };
+
+  const disconnectCalendar = async () => {
+    if (!userId || !agentId || calendarDisconnecting) return;
+    
+    setCalendarDisconnecting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch('/api/calendar/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          userId,
+          agentId
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setCalendarStatus({ connected: false });
+        setGlobalConnections(prev => ({ ...prev, google_calendar: false }));
+        setAgentProviderEnabled(prev => ({ ...prev, google_calendar: false }));
+        setGoogleCalendarToolActivated(false);
+        
+        toast({
+          title: "Bağlantı Kesildi",
+          description: "Google Calendar bağlantısı başarıyla kesildi.",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to disconnect calendar');
+      }
+    } catch (error: any) {
+      console.error('Calendar disconnect error:', error);
+      toast({
+        title: "Bağlantı Kesilemedi",
+        description: error.message || "Google Calendar bağlantısı kesilemedi. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setCalendarDisconnecting(false);
+    }
+  };
+
+  const initiateCalendarConnection = async () => {
+    if (!userId || !agentId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch(`/api/calendar/auth/url?userId=${userId}&agentId=${agentId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.authUrl) {
+        // Redirect to Google OAuth
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error(data.error || 'Failed to get OAuth URL');
+      }
+    } catch (error: any) {
+      console.error('Calendar connection initiation error:', error);
+      toast({
+        title: "Bağlantı Başlatılamadı",
+        description: error.message || "Google Calendar bağlantısı başlatılamadı. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleToggleActive = async (checked: boolean) => {
     if (!agent || !userId) return;
@@ -849,42 +968,144 @@ export default function DashboardAgentDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {providers.map((p) => (
-                <div key={p.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border p-4">
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-muted-foreground">{p.desc}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!globalConnections[p.key] ? (
-                      <Button variant="outline" onClick={() => navigate('/dashboard/integrations')}>Global olarak bağlan</Button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Etkin</span>
-                        <Switch
-                          disabled={integrationsLoading}
-                          checked={!!agentProviderEnabled[p.key]}
-                          onCheckedChange={(v) => onToggleAgentProvider(p.key, v)}
-                        />
-                        {/* Phase 3: Manual Google Calendar tool activation button */}
-                        {p.key === 'google_calendar' && globalConnections[p.key] && (
-                          <Button 
-                            variant={googleCalendarToolActivated ? "default" : "outline"}
-                            size="sm"
-                            onClick={activateGoogleCalendarTool}
-                            disabled={toolActivationLoading}
-                            className="ml-2"
-                          >
-                            <CalendarIcon className="h-3 w-3 mr-1" />
-                            {toolActivationLoading ? 'Etkinleştiriliyor...' : 
-                             googleCalendarToolActivated ? 'Araçlar Aktif' : 'Araçları Etkinleştir'}
-                          </Button>
+              {providers.map((p) => {
+                // Enhanced Google Calendar UI
+                if (p.key === 'google_calendar') {
+                  return (
+                    <div key={p.key} className="rounded border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                      <div className="p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                              <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-lg">{p.name}</div>
+                              <div className="text-sm text-muted-foreground">{p.desc}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {calendarStatusLoading ? (
+                              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            ) : calendarStatus.connected ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                Bağlı
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                Bağlı Değil
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Connection Info & Actions */}
+                        {calendarStatus.connected ? (
+                          <div className="space-y-3">
+                            {/* Connected Account Info */}
+                            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 space-y-2">
+                              <div className="text-sm font-medium text-muted-foreground">Bağlı Hesap</div>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-sm font-medium">{calendarStatus.email || 'Bilinmiyor'}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Bağlantı: {calendarStatus.connectedAt ? 
+                                      new Date(calendarStatus.connectedAt).toLocaleDateString('tr-TR') : 
+                                      'Bilinmiyor'
+                                    }
+                                  </div>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={disconnectCalendar}
+                                  disabled={calendarDisconnecting}
+                                  className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                                >
+                                  {calendarDisconnecting ? 'Kesiliyor...' : 'Bağlantıyı Kes'}
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Agent Settings */}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-medium">Bu Ajan için Etkin</div>
+                                <div className="text-xs text-muted-foreground">Ajanın Google Calendar'ı kullanmasına izin ver</div>
+                              </div>
+                              <Switch
+                                disabled={integrationsLoading}
+                                checked={!!agentProviderEnabled[p.key]}
+                                onCheckedChange={(v) => onToggleAgentProvider(p.key, v)}
+                              />
+                            </div>
+
+                            {/* Tool Activation */}
+                            {agentProviderEnabled[p.key] && (
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <div>
+                                  <div className="text-sm font-medium">Calendar Araçları</div>
+                                  <div className="text-xs text-muted-foreground">Etkinlik oluşturma, okuma ve güncelleme araçları</div>
+                                </div>
+                                <Button 
+                                  variant={googleCalendarToolActivated ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={activateGoogleCalendarTool}
+                                  disabled={toolActivationLoading}
+                                >
+                                  <CalendarIcon className="h-3 w-3 mr-1" />
+                                  {toolActivationLoading ? 'Etkinleştiriliyor...' : 
+                                   googleCalendarToolActivated ? 'Araçlar Aktif' : 'Araçları Etkinleştir'}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="text-center py-4">
+                              <div className="text-sm text-muted-foreground mb-3">
+                                Bu ajanın Google Calendar'ı kullanabilmesi için önce Google hesabınızı bağlamanız gerekiyor.
+                              </div>
+                              <Button 
+                                onClick={initiateCalendarConnection}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                data-testid="button-connect-google-calendar"
+                              >
+                                <CalendarIcon className="h-4 w-4 mr-2" />
+                                Google Calendar'a Bağlan
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
+                  );
+                }
+
+                // Default provider UI for other integrations
+                return (
+                  <div key={p.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded border p-4">
+                    <div>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-sm text-muted-foreground">{p.desc}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!globalConnections[p.key] ? (
+                        <Button variant="outline" onClick={() => navigate('/dashboard/integrations')}>Global olarak bağlan</Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Etkin</span>
+                          <Switch
+                            disabled={integrationsLoading}
+                            checked={!!agentProviderEnabled[p.key]}
+                            onCheckedChange={(v) => onToggleAgentProvider(p.key, v)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="text-xs text-muted-foreground">Doğrulama: AÇIK konuma getirmek için global bağlantı gerekir.</div>
             </CardContent>
           </Card>
