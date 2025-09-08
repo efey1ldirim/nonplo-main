@@ -27,6 +27,7 @@ interface Agent {
   created_at: string;
   updated_at: string;
   openaiAssistantId?: string;
+  temperature?: string;
 }
 
 interface IntegrationConn {
@@ -99,6 +100,10 @@ export default function DashboardAgentDetail() {
 
   // Settings/Knowledge draft state (unsaved guard demo)
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
+
+  // Temperature control
+  const [temperature, setTemperature] = useState<string>("1.0");
+  const [temperatureLoading, setTemperatureLoading] = useState(false);
 
   // Recent conversations state
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([]);
@@ -294,10 +299,12 @@ export default function DashboardAgentDetail() {
         created_at: data.createdAt || data.created_at || new Date().toISOString(),
         updated_at: data.updatedAt || data.updated_at || new Date().toISOString(),
         openaiAssistantId: data.openaiAssistantId,
+        temperature: data.temperature || "1.0",
       };
       
       setAgent(mappedAgent as Agent);
       setNewName(mappedAgent.name);
+      setTemperature(mappedAgent.temperature);
     } catch (error) {
       console.error('Error fetching agent:', error);
       throw error;
@@ -640,6 +647,66 @@ export default function DashboardAgentDetail() {
       console.error('Error renaming agent:', error);
       setAgent({ ...agent, name: old });
       toast({ title: "Rename failed", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleTemperatureUpdate = async (newTemperature: string) => {
+    if (!agent || !userId) return;
+    
+    // Validate temperature value
+    const tempValue = parseFloat(newTemperature);
+    if (isNaN(tempValue) || tempValue < 0 || tempValue > 2) {
+      toast({ 
+        title: "Geçersiz Değer", 
+        description: "Yaratıcılık değeri 0.0 ile 2.0 arasında olmalıdır.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const oldTemperature = agent.temperature || "1.0";
+    setTemperatureLoading(true);
+    setAgent({ ...agent, temperature: newTemperature });
+    setTemperature(newTemperature);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch(`/api/agents/${agent.id}/temperature`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          temperature: newTemperature,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update temperature');
+      }
+      
+      const result = await response.json();
+      toast({ 
+        title: "Güncellendi", 
+        description: result.message || "Yaratıcılık seviyesi başarıyla güncellendi." 
+      });
+      
+    } catch (error) {
+      console.error('Error updating temperature:', error);
+      setAgent({ ...agent, temperature: oldTemperature });
+      setTemperature(oldTemperature);
+      toast({ 
+        title: "Güncelleme Başarısız", 
+        description: "Lütfen tekrar deneyin.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setTemperatureLoading(false);
     }
   };
 
@@ -1320,7 +1387,28 @@ export default function DashboardAgentDetail() {
               </div>
               <div>
                 <Label>Yaratıcılık</Label>
-                <Input type="number" step="0.1" min="0" max="2" placeholder="0.7" onChange={() => setHasUnsavedDraft(true)} />
+                <Input 
+                  type="number" 
+                  step="0.1" 
+                  min="0" 
+                  max="2" 
+                  value={temperature}
+                  onChange={(e) => {
+                    setTemperature(e.target.value);
+                    setHasUnsavedDraft(true);
+                  }}
+                  onBlur={() => {
+                    if (temperature !== (agent?.temperature || "1.0")) {
+                      handleTemperatureUpdate(temperature);
+                    }
+                  }}
+                  disabled={temperatureLoading}
+                  placeholder="1.0" 
+                />
+                {temperatureLoading && <div className="text-xs text-muted-foreground mt-1">Güncelleniyor...</div>}
+                <div className="text-xs text-muted-foreground mt-1">
+                  Düşük değerler (0.0-1.0) daha tutarlı, yüksek değerler (1.0-2.0) daha yaratıcı yanıtlar üretir.
+                </div>
               </div>
               <div className="md:col-span-2">
                 <Label>Yedek mesaj</Label>
