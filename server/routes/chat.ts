@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { storage } from '../database/storage';
+import { CalendarService } from '../services/CalendarService';
 import { v4 as uuidv4 } from 'uuid';
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -58,6 +59,57 @@ const detectLanguage = (text: string): string => {
 
   return turkishScore > englishScore ? 'tr' : 'en';
 };
+
+// Google Calendar Tools
+const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+    {
+        type: "function",
+        function: {
+            name: "gcal_list_events",
+            description: "List upcoming events from the user Google Calendar (primary).",
+            parameters: {
+                type: "object",
+                properties: {
+                    timeMin: { type: "string", description: "ISO8601 start (optional)" },
+                    timeMax: { type: "string", description: "ISO8601 end (optional)" },
+                    maxResults: { type: "number", description: "Max events to return (default 10)" },
+                    q: { type: "string", description: "Free text query (optional)" }
+                },
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "gcal_create_event",
+            description: "Create an event in the user primary Google Calendar.",
+            parameters: {
+                type: "object",
+                properties: {
+                    summary: { type: "string", description: "Event title" },
+                    description: { type: "string", description: "Event description (optional)" },
+                    startISO: { type: "string", description: "Event start in ISO8601" },
+                    endISO: { type: "string", description: "Event end in ISO8601" },
+                    location: { type: "string", description: "Location (optional)" },
+                    attendees: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: { email: { type: "string" } },
+                            required: ["email"]
+                        },
+                        description: "Event attendees (optional)"
+                    }
+                },
+                required: ["summary", "startISO", "endISO"]
+            }
+        }
+    }
+];
+
+// Calendar service instance
+const calendarService = new CalendarService();
 
 export const chatWithAgent = async (req: any, res: Response) => {
   console.log('💬 Chat API request received');
@@ -147,12 +199,14 @@ export const chatWithAgent = async (req: any, res: Response) => {
     });
     console.log('📤 User message added to OpenAI thread');
 
-    // Define tools - basic tools for now, can be expanded
+    // Define tools - including Google Calendar tools
     const tools: any[] = [
       // Code interpreter tool
       { type: 'code_interpreter' },
       // File search tool  
-      { type: 'file_search' }
+      { type: 'file_search' },
+      // Google Calendar tools
+      ...GCAL_TOOLS
     ];
 
     // Start OpenAI run
