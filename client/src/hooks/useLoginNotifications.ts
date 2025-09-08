@@ -47,7 +47,11 @@ export function useLoginNotifications() {
       };
       
       // Check after a short delay to ensure backend auth processed
-      setTimeout(checkDeletionStatus, 1000);
+      setTimeout(() => {
+        checkDeletionStatus().catch(error => {
+          console.error('Failed to check deletion status:', error);
+        });
+      }, 1000);
     }
   }, [session?.user?.id, isLoading, toast]);
 }

@@ -36,15 +36,32 @@ window.addEventListener('unhandledrejection', (event) => {
       event.preventDefault();
       return;
     }
+
+    // Handle Supabase auth errors silently (they're handled in components)
+    if (reason.message && (
+        reason.message.includes('Auth') ||
+        reason.message.includes('supabase') ||
+        reason.message.includes('session'))) {
+      console.warn('Auth operation failed (handled gracefully):', reason.message);
+      event.preventDefault();
+      return;
+    }
+
+    // Handle empty/undefined rejection objects
+    if (!reason.message && !reason.stack && Object.keys(reason).length === 0) {
+      console.warn('Empty promise rejection (likely cleanup operation)');
+      event.preventDefault();
+      return;
+    }
   }
   
+  // Only log actual unhandled errors
   console.error('🚨 Unhandled promise rejection:', event.reason);
   
   // In development, show more details
   if (import.meta.env.DEV) {
     console.error('Promise rejection details:', {
       reason: event.reason,
-      stack: event.reason?.stack,
       timestamp: new Date().toISOString()
     });
   }
