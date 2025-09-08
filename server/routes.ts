@@ -2135,6 +2135,89 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Get calendar events
+  app.get('/api/calendar/events', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const agentId = req.query.agentId as string;
+      
+      if (!userId || !agentId) {
+        return res.status(400).json({ error: 'userId and agentId are required' });
+      }
+      
+      const options = {
+        timeMin: req.query.timeMin as string,
+        timeMax: req.query.timeMax as string,
+        maxResults: req.query.maxResults ? parseInt(req.query.maxResults as string) : undefined,
+        orderBy: req.query.orderBy as string
+      };
+      
+      const result = await calendarService.getEvents(userId, agentId, options);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar events list error:', error);
+      res.status(500).json({ error: 'Failed to get calendar events' });
+    }
+  });
+
+  // Update calendar event
+  app.put('/api/calendar/events/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const eventId = req.params.id;
+      const { agentId, title, startTime, endTime, description, attendees } = req.body;
+      
+      if (!userId || !agentId || !eventId) {
+        return res.status(400).json({ error: 'userId, agentId, and eventId are required' });
+      }
+      
+      const eventData = {
+        title,
+        startTime,
+        endTime,
+        description,
+        attendees
+      };
+      
+      const result = await calendarService.updateEvent(userId, agentId, eventId, eventData);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar event update error:', error);
+      res.status(500).json({ error: 'Failed to update calendar event' });
+    }
+  });
+
+  // Delete calendar event
+  app.delete('/api/calendar/events/:id', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const eventId = req.params.id;
+      const agentId = req.query.agentId as string;
+      
+      if (!userId || !agentId || !eventId) {
+        return res.status(400).json({ error: 'userId, agentId, and eventId are required' });
+      }
+      
+      const result = await calendarService.deleteEvent(userId, agentId, eventId);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar event delete error:', error);
+      res.status(500).json({ error: 'Failed to delete calendar event' });
+    }
+  });
+
   // Calendar connection status
   app.get('/api/calendar/status/:userId/:agentId', async (req, res) => {
     try {

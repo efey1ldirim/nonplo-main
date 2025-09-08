@@ -281,6 +281,175 @@ export class CalendarService {
     return { success: true, message: 'Google Calendar bağlantısı kesildi' };
   }
 
+  // Event'leri listele
+  async getEvents(userId: string, agentId: string, options?: {
+    timeMin?: string;
+    timeMax?: string;
+    maxResults?: number;
+    orderBy?: string;
+  }) {
+    try {
+      const calendar = await this.getCalendarClient(userId, agentId);
+      
+      const response = await calendar.events.list({
+        calendarId: 'primary',
+        timeMin: options?.timeMin,
+        timeMax: options?.timeMax,
+        maxResults: options?.maxResults || 50,
+        orderBy: options?.orderBy || 'startTime',
+        singleEvents: true
+      });
+
+      // İşlemi logla
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'list_events',
+        inputData: options,
+        resultData: { eventCount: response.data.items?.length || 0 },
+        success: true
+      });
+
+      return {
+        success: true,
+        events: response.data.items || []
+      };
+    } catch (error: any) {
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'list_events',
+        inputData: options,
+        success: false,
+        errorMessage: error.message
+      });
+
+      throw error;
+    }
+  }
+
+  // Event güncelle
+  async updateEvent(userId: string, agentId: string, eventId: string, eventData: {
+    title?: string;
+    startTime?: string;
+    endTime?: string;
+    description?: string;
+    attendees?: string[];
+  }) {
+    try {
+      const calendar = await this.getCalendarClient(userId, agentId);
+      
+      // Önce mevcut eventi al
+      const existingEvent = await calendar.events.get({
+        calendarId: 'primary',
+        eventId: eventId
+      });
+
+      if (!existingEvent.data) {
+        throw new Error('Event not found');
+      }
+
+      // Güncelleme datasını hazırla
+      const updateData: calendar_v3.Schema$Event = {
+        summary: eventData.title || existingEvent.data.summary,
+        description: eventData.description || existingEvent.data.description,
+        attendees: eventData.attendees ? eventData.attendees.map(email => ({ email })) : existingEvent.data.attendees
+      };
+
+      if (eventData.startTime) {
+        updateData.start = {
+          dateTime: eventData.startTime,
+          timeZone: 'Europe/Istanbul'
+        };
+      }
+
+      if (eventData.endTime) {
+        updateData.end = {
+          dateTime: eventData.endTime,
+          timeZone: 'Europe/Istanbul'
+        };
+      }
+
+      const result = await calendar.events.update({
+        calendarId: 'primary',
+        eventId: eventId,
+        requestBody: updateData
+      });
+
+      // İşlemi logla
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'update_event',
+        googleEventId: eventId,
+        inputData: eventData,
+        resultData: result.data,
+        success: true
+      });
+
+      return {
+        success: true,
+        eventId: result.data.id,
+        calendarLink: result.data.htmlLink,
+        message: 'Randevunuz başarıyla güncellendi!'
+      };
+
+    } catch (error: any) {
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'update_event',
+        googleEventId: eventId,
+        inputData: eventData,
+        success: false,
+        errorMessage: error.message
+      });
+
+      throw error;
+    }
+  }
+
+  // Event sil
+  async deleteEvent(userId: string, agentId: string, eventId: string) {
+    try {
+      const calendar = await this.getCalendarClient(userId, agentId);
+      
+      await calendar.events.delete({
+        calendarId: 'primary',
+        eventId: eventId
+      });
+
+      // İşlemi logla
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'delete_event',
+        googleEventId: eventId,
+        inputData: { eventId },
+        resultData: { deleted: true },
+        success: true
+      });
+
+      return {
+        success: true,
+        message: 'Randevunuz başarıyla silindi!'
+      };
+
+    } catch (error: any) {
+      await storage.logCalendarOperation({
+        userId,
+        agentId,
+        operationType: 'delete_event',
+        googleEventId: eventId,
+        inputData: { eventId },
+        success: false,
+        errorMessage: error.message
+      });
+
+      throw error;
+    }
+  }
+
   private getErrorMessage(error: any): string {
     if (error.message.includes('invalid_grant')) {
       return 'Google Calendar bağlantınızın süresi dolmuş. Lütfen yeniden bağlanın.';
