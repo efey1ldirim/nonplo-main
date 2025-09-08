@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 import { openaiService } from '../services/OpenAIService';
-import { db } from '../storage';
+import { db } from '../database/storage';
 import { agents, conversations, messages } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 

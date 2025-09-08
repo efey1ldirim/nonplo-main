@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import HeroSection from "@/components/HeroSection";
-import WhyNonploSection from "@/components/WhyNonploSection";
-import FeaturesSection from "@/components/FeaturesSection";
-import TestimonialsSection from "@/components/TestimonialsSection";
-import FAQSection from "@/components/FAQSection";
-import ContactSection from "@/components/ContactSection";
-import NewsletterSection from "@/components/NewsletterSection";
-import PricingSection from "@/components/PricingSection";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import AgentCreationWizard from "@/components/AgentCreationWizard";
+import HeroSection from "@/components/sections/HeroSection";
+import WhyNonploSection from "@/components/sections/WhyNonploSection";
+import FeaturesSection from "@/components/sections/FeaturesSection";
+import TestimonialsSection from "@/components/sections/TestimonialsSection";
+import FAQSection from "@/components/sections/FAQSection";
+import ContactSection from "@/components/sections/ContactSection";
+import NewsletterSection from "@/components/sections/NewsletterSection";
+import PricingSection from "@/components/sections/PricingSection";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 
 const Index = () => {
   const location = useLocation();

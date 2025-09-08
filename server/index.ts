@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { setupStorageBucket } from "./setup-storage";
+import { setupVite, serveStatic, log } from "./config/vite";
+import { setupStorageBucket } from "./database/setup-storage";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));

@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import PricingSection from "@/components/PricingSection";
-import FAQSection from "@/components/FAQSection";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ContactFormDialog from "@/components/ContactFormDialog";
+import PricingSection from "@/components/sections/PricingSection";
+import FAQSection from "@/components/sections/FAQSection";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import ContactFormDialog from "@/components/dialogs/ContactFormDialog";
 import { Check, X, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {

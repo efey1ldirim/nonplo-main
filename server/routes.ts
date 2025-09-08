@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import cors from "cors";
-import { storage } from "./storage";
+import { storage } from "./database/storage";
 import { authenticate, optionalAuth, getUserId, supabase, adminClient, type AuthenticatedRequest } from "./middleware/auth";
 import { createClient } from '@supabase/supabase-js';
 import { rateLimiters } from "./middleware/rateLimiter";
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const finalFileName = `support_${Date.now()}_${sanitizedFileName}`;
       console.log('📝 Final filename for storage:', finalFileName);
       
-      const { uploadFileAsService } = await import('./storage-direct');
+      const { uploadFileAsService } = await import('./database/storage-direct');
       const result = await uploadFileAsService(buffer, finalFileName, mimeType || 'application/octet-stream');
       
       if (result.error) {
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const finalFileName = `integrations_${Date.now()}_${sanitizedFileName}`;
       console.log('📝 Final filename for storage:', finalFileName);
       
-      const { uploadFileAsService } = await import('./storage-direct');
+      const { uploadFileAsService } = await import('./database/storage-direct');
       const result = await uploadFileAsService(buffer, finalFileName, mimeType || 'application/octet-stream');
       
       if (result.error) {

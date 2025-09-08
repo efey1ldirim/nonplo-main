@@ -1,5 +1,5 @@
 import { SessionsClient, AgentsClient } from '@google-cloud/dialogflow-cx';
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 
 // Dialogflow CX configuration
 const projectId = process.env.CX_LOCATION || "nonplo-auth2";

@@ -5,7 +5,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import ContactFormDialog from "@/components/ContactFormDialog";
+import ContactFormDialog from "@/components/dialogs/ContactFormDialog";
 import { MessageCircle } from "lucide-react";
 
 const faqs = [

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
-import { storage } from '../storage';
-import { db } from '../storage';
+import { storage } from '../database/storage';
+import { db } from '../database/storage';
 import { agents } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { SessionsClient } from "@google-cloud/dialogflow-cx";
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 import { CalendarService } from '../services/CalendarService';
 
 const defaultProjectId = process.env.CX_LOCATION || "nonplo-auth2";

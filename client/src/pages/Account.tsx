@@ -28,10 +28,10 @@ import {
   Check,
   Star
 } from "lucide-react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import PasswordChangeDialog from "@/components/PasswordChangeDialog";
-import EmailChangeDialog from "@/components/EmailChangeDialog";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import PasswordChangeDialog from "@/components/dialogs/PasswordChangeDialog";
+import EmailChangeDialog from "@/components/dialogs/EmailChangeDialog";
 
 const Account = () => {
   const { toast } = useToast();

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { db } from '../storage';
+import { db } from '../database/storage';
 import { agents } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { containsProfanity, getProfanityMessage, sanitizeBusinessName } from '../utils/profanity-filter';

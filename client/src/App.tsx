@@ -17,7 +17,7 @@ import NotFound from "./pages/NotFound";
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Account = lazy(() => import("./pages/Account"));
 const Builder = lazy(() => import("./pages/Builder"));
-const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
+const DashboardLayout = lazy(() => import("./components/layout/DashboardLayout"));
 const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
 const DashboardAgents = lazy(() => import("./pages/dashboard/DashboardAgents"));
 const DashboardMessages = lazy(() => import("./pages/dashboard/DashboardMessages"));

@@ -1,4 +1,4 @@
-import { adminClient } from "./middleware/auth";
+import { adminClient } from "../middleware/auth";
 
 export async function setupStorageBucket() {
   try {

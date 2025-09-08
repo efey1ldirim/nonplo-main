@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../storage';
+import { db } from '../database/storage';
 import { agents, playbooks, playbookBackups } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { AuthenticatedRequest, getUserId } from '../middleware/auth';

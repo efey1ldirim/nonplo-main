@@ -1,5 +1,5 @@
 import { google, calendar_v3 } from 'googleapis';
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 import { encrypt, decrypt } from '../utils/encryption';
 import type { UserGoogleCalendar } from '@shared/schema';
 import { checkTokenExpiry, metricsStore } from '../middleware/calendarMonitoring';

@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrainingRequestDialog } from "@/components/TrainingRequestDialog";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { TrainingRequestDialog } from "@/components/dialogs/TrainingRequestDialog";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Play, Clock, Video, Star } from "lucide-react";
 
 const VideoTutorials = () => {

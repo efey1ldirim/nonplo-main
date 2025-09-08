@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user

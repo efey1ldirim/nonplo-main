@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 
 // Calendar metrics interface
 interface CalendarMetrics {

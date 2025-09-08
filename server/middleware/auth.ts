@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { storage } from '../storage';
+import { storage } from '../database/storage';
 
 // Fix dashboard URL to API URL format
 let supabaseUrl = process.env.SUPABASE_URL || 'https://hnlosxmzbzesyubocgmf.supabase.co';

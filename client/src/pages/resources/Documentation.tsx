@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ContactFormDialog from "@/components/ContactFormDialog";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import ContactFormDialog from "@/components/dialogs/ContactFormDialog";
 import { Search, BookOpen, Rocket, Puzzle, Wrench, Clock, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 
 const Documentation = () => {
