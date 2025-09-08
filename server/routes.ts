@@ -2015,6 +2015,126 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // ============ CALENDAR API ENDPOINTS ============
+
+  // Generate OAuth URL for calendar connection
+  app.get('/api/calendar/auth/url', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Google Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const agentId = req.query.agentId as string;
+      
+      if (!userId || !agentId) {
+        return res.status(400).json({ error: 'userId and agentId are required' });
+      }
+      
+      const authUrl = calendarService.generateAuthUrl(userId, agentId);
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error('Calendar auth URL generation error:', error);
+      res.status(500).json({ error: 'Failed to generate OAuth URL' });
+    }
+  });
+
+  // Enhanced calendar connection status endpoint
+  app.get('/api/calendar/status', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.json({ connected: false });
+      }
+      
+      const userId = getUserId(req);
+      const agentId = req.query.agentId as string;
+      
+      if (!userId || !agentId) {
+        return res.status(400).json({ error: 'userId and agentId are required' });
+      }
+      
+      const status = await calendarService.getConnectionStatus(userId, agentId);
+      res.json(status);
+    } catch (error) {
+      console.error('Calendar status error:', error);
+      res.json({ connected: false });
+    }
+  });
+
+  // Enhanced calendar disconnect endpoint with POST method
+  app.post('/api/calendar/disconnect', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const { agentId } = req.body;
+      
+      if (!userId || !agentId) {
+        return res.status(400).json({ error: 'userId and agentId are required' });
+      }
+      
+      const result = await calendarService.disconnectCalendar(userId, agentId);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar disconnect error:', error);
+      res.status(500).json({ error: 'Failed to disconnect calendar' });
+    }
+  });
+
+  // Create calendar event
+  app.post('/api/calendar/events', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const { agentId, title, startTime, endTime, description, attendees } = req.body;
+      
+      if (!userId || !agentId || !startTime || !endTime) {
+        return res.status(400).json({ error: 'userId, agentId, startTime, and endTime are required' });
+      }
+      
+      const eventData = {
+        title,
+        startTime,
+        endTime,
+        description,
+        attendees
+      };
+      
+      const result = await calendarService.createEvent(userId, agentId, eventData);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar event creation error:', error);
+      res.status(500).json({ error: 'Failed to create calendar event' });
+    }
+  });
+
+  // Check calendar availability
+  app.post('/api/calendar/availability', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      const { agentId, startTime, endTime } = req.body;
+      
+      if (!userId || !agentId || !startTime || !endTime) {
+        return res.status(400).json({ error: 'userId, agentId, startTime, and endTime are required' });
+      }
+      
+      const result = await calendarService.checkAvailability(userId, agentId, startTime, endTime);
+      res.json(result);
+    } catch (error) {
+      console.error('Calendar availability check error:', error);
+      res.status(500).json({ error: 'Failed to check calendar availability' });
+    }
+  });
+
   // Calendar connection status
   app.get('/api/calendar/status/:userId/:agentId', async (req, res) => {
     try {
