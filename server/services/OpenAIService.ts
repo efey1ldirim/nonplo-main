@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { Agent, AgentWizardData } from "../../shared/schema";
+import { ErrorHandler } from "../utils/errorHandler";
 
 const OPENAI_MODEL = "gpt-4o-mini";
 
@@ -38,7 +39,8 @@ export class OpenAIService {
       return response.choices[0].message.content || "";
     } catch (error: any) {
       console.error("OpenAI playbook generation error:", error);
-      throw new Error(`Playbook oluşturulurken hata: ${error.message}`);
+      const customError = ErrorHandler.classifyError(error);
+      throw new Error(customError.userMessage);
     }
   }
 
@@ -73,7 +75,8 @@ export class OpenAIService {
       return response.choices[0].message.content || "Üzgünüm, şu anda yanıt veremiyorum.";
     } catch (error: any) {
       console.error("OpenAI chat error:", error);
-      throw new Error(`Sohbet hatası: ${error.message}`);
+      const customError = ErrorHandler.classifyError(error);
+      throw new Error(customError.userMessage);
     }
   }
 
