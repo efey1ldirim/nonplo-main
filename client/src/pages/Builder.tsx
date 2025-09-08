@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Monitor, Zap, MessageSquare, Loader2, Users, Sparkles, HeadphonesIcon, CalendarIcon, ShoppingCartIcon, HomeIcon, DumbbellIcon, BookOpenIcon, Bot, ArrowRight, CheckCircle, Mail, User, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import AgentCreationWizard from "@/components/AgentCreationWizard";
+import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 
 const Builder = () => {
   const navigate = useNavigate();
