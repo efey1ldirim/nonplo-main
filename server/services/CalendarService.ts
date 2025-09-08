@@ -135,8 +135,7 @@ export class CalendarService {
       throw new Error('Google Calendar not connected');
     }
 
-    // Check token expiry and warn if needed
-    const connection = await storage.getGoogleCalendarConnection(userId, agentId);
+    // Check token expiry and warn if needed  
     const tokenStatus = await checkTokenExpiry(userId, agentId);
     
     if (tokenStatus.warning) {
@@ -394,15 +393,19 @@ export class CalendarService {
   // Calendar bağlantı durumunu kontrol et
   async getConnectionStatus(userId: string, agentId: string) {
     try {
+      console.log(`🔍 Checking calendar status for user: ${userId}, agent: ${agentId}`);
       const connection = await storage.getGoogleCalendarByUserAgent(userId, agentId);
+      console.log(`📊 Connection found:`, connection ? 'YES' : 'NO');
       
       if (connection) {
+        console.log(`✅ Connection details: email=${connection.googleEmail}, active=${connection.isActive}`);
         return {
           connected: true,
           email: connection.googleEmail,
           connectedAt: connection.createdAt
         };
       } else {
+        console.log(`❌ No calendar connection found for user ${userId}, agent ${agentId}`);
         return { connected: false };
       }
     } catch (error) {
