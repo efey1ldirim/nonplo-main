@@ -137,15 +137,30 @@ export default function DashboardAgentDetail() {
 
   // Initialize indicator position and listen for tab changes
   useEffect(() => {
-    // Set initial position for 'overview' tab (index 0) with a small delay
-    const timer = setTimeout(() => {
-      updateIndicatorPosition(0);
-    }, 200);
+    let timer: NodeJS.Timeout;
     
-    // Also try to set it immediately if DOM is ready
-    requestAnimationFrame(() => {
-      updateIndicatorPosition(0);
-    });
+    // Set initial position for 'overview' tab (index 0) with multiple attempts
+    const setInitialPosition = () => {
+      const overviewTab = document.querySelector('[value="overview"][data-tab-index="0"]') as HTMLElement;
+      if (overviewTab) {
+        updateIndicatorPosition(0);
+        return true;
+      }
+      return false;
+    };
+    
+    // Try immediately
+    if (!setInitialPosition()) {
+      // Try with requestAnimationFrame
+      requestAnimationFrame(() => {
+        if (!setInitialPosition()) {
+          // Try with short delay as fallback
+          timer = setTimeout(() => {
+            setInitialPosition();
+          }, 100);
+        }
+      });
+    }
     
     // Listen for tab value changes via data attributes or URL params
     const observer = new MutationObserver((mutations) => {
@@ -178,7 +193,7 @@ export default function DashboardAgentDetail() {
     });
 
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       observer.disconnect();
       window.removeEventListener('resize', handleResize);
     };
