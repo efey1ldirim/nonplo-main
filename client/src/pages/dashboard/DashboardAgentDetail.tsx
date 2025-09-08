@@ -897,7 +897,7 @@ export default function DashboardAgentDetail() {
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
                    style={{
-                     width: '230px',
+                     width: '210px',
                      transform: 'translateX(0px)'
                    }}
                    id="sliding-indicator" />
