@@ -106,7 +106,7 @@ export default function DashboardAgentDetail() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [conversationMessages, setConversationMessages] = useState<any[]>([]);
 
-  // Tab indicator animation function - now for 5 tabs
+  // Tab indicator animation function - now for 4 tabs
   const updateIndicatorPosition = (tabIndex: number) => {
     const indicator = document.getElementById('sliding-indicator');
     const tabTriggers = document.querySelectorAll('[data-tab-index]');
@@ -912,34 +912,26 @@ export default function DashboardAgentDetail() {
                 Genel Bakış
               </TabsTrigger>
               <TabsTrigger 
-                value="knowledge" 
-                className="relative z-10 flex-1 min-w-[60px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
-                data-tab-index="1"
-                onClick={() => updateIndicatorPosition(1)}
-              >
-                Bilgi
-              </TabsTrigger>
-              <TabsTrigger 
                 value="integrations" 
                 className="relative z-10 flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
-                data-tab-index="2"
-                onClick={() => updateIndicatorPosition(2)}
+                data-tab-index="1"
+                onClick={() => updateIndicatorPosition(1)}
               >
                 Entegrasyonlar
               </TabsTrigger>
               <TabsTrigger 
                 value="settings" 
                 className="relative z-10 flex-1 min-w-[60px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
-                data-tab-index="3"
-                onClick={() => updateIndicatorPosition(3)}
+                data-tab-index="2"
+                onClick={() => updateIndicatorPosition(2)}
               >
                 Ayarlar
               </TabsTrigger>
               <TabsTrigger 
                 value="chat" 
                 className="relative z-10 flex-1 min-w-[50px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
-                data-tab-index="4"
-                onClick={() => updateIndicatorPosition(4)}
+                data-tab-index="3"
+                onClick={() => updateIndicatorPosition(3)}
               >
                 Chat
               </TabsTrigger>
@@ -1143,77 +1135,7 @@ export default function DashboardAgentDetail() {
           </Card>
         </TabsContent>
 
-        {/* 2) Knowledge */}
-        <TabsContent value="knowledge" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>İş Profili</CardTitle>
-              <CardDescription>Sadece bu ajanı etkiler.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="biz-name">İsim</Label>
-                <Input id="biz-name" placeholder="ör. Nonplo Destek" onChange={() => setHasUnsavedDraft(true)} />
-              </div>
-              <div>
-                <Label htmlFor="biz-sector">Sektör</Label>
-                <Input id="biz-sector" placeholder="Müşteri Desteği" onChange={() => setHasUnsavedDraft(true)} />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Konum</Label>
-                <Input placeholder="Şehir, Ülke" onChange={() => setHasUnsavedDraft(true)} />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Çalışma Saatleri / Tatiller</Label>
-                <Textarea rows={3} placeholder="Pzt-Cum 9:00-18:00; Tatiller: ..." onChange={() => setHasUnsavedDraft(true)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Ton & Stil</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-2 md:grid-cols-3">
-                {['Resmi','Samimi','Esprili','Kısa & Direkt','Hikaye Anlatımı'].map((t) => (
-                  <Button key={t} variant="outline" onClick={() => setHasUnsavedDraft(true)}>{t}</Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>SSS</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground mb-3">Sık sorulan soruları ekleyin, düzenleyin ve kaldırın.</div>
-              <Button variant="outline">SSS Ekle</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Dosyalar</CardTitle>
-              <CardDescription>.txt, .pdf, .docx yükleyin</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded border border-dashed p-6 text-center">
-                <div className="text-sm text-muted-foreground mb-2">Dosyaları buraya sürükleyip bırakın veya seçmek için tıklayın</div>
-                <Input type="file" multiple accept=".txt,.pdf,.docx" onChange={() => setHasUnsavedDraft(true)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center gap-2">
-            <Button onClick={() => { setHasUnsavedDraft(false); toast({ title: 'Kaydedildi' }); }}>Kaydet</Button>
-            <Button variant="outline" onClick={() => setHasUnsavedDraft(false)}>İptal</Button>
-            {hasUnsavedDraft && <span className="text-sm text-muted-foreground">Kaydedilmemiş değişiklikleriniz var.</span>}
-          </div>
-        </TabsContent>
-
-        {/* 3) Integrations */}
+        {/* 2) Integrations */}
         <TabsContent value="integrations" className="space-y-6">
           <Card>
             <CardHeader>
