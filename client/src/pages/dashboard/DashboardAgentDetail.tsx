@@ -121,9 +121,25 @@ export default function DashboardAgentDetail() {
         setUserId(user.id);
         await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id)]);
         
-        // Load agent tool settings after userId is set
-        if (user.id && agentId) {
-          await loadAgentToolSettings();
+        // Load agent tool settings directly here
+        console.log('🔄 Loading tool settings directly in useEffect...');
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token && agentId) {
+            console.log('📡 Making direct API call for tool settings...');
+            const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
+              headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            if (response.ok) {
+              const settings = await response.json();
+              console.log('✅ Tool settings loaded directly:', settings);
+              setAgentProviderEnabled(settings);
+            } else {
+              console.error('❌ Tool settings API failed:', response.status);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Tool settings error:', error);
         }
       } catch (e) {
         console.error(e);
