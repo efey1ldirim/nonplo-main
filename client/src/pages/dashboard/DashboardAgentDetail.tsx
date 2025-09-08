@@ -838,7 +838,7 @@ export default function DashboardAgentDetail() {
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="sticky top-0 z-10 mb-6">
           <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-gray-900/95">
-            <div className="flex relative overflow-x-auto scrollbar-hide">
+            <TabsList className="relative h-auto w-full bg-transparent p-0 overflow-x-auto scrollbar-hide">
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
                    style={{
@@ -896,7 +896,7 @@ export default function DashboardAgentDetail() {
               >
                 Test & Yayınla
               </TabsTrigger>
-            </div>
+            </TabsList>
           </div>
         </div>
 
