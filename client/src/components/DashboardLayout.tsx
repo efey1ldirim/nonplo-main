@@ -35,7 +35,7 @@ const DashboardLayout = () => {
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: MessageSquare, label: "Messages", path: "/dashboard/messages" },
     { icon: Wrench, label: "Integrations & Tools", path: "/dashboard/integrations" },
-    { icon: HelpCircle, label: "Support", path: "/dashboard/support" },
+    { icon: HelpCircle, label: "Destek", path: "/dashboard/support" },
   ];
 
   // Fetch agents for expandable list

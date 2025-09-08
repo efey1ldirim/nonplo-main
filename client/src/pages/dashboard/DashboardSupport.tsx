@@ -259,7 +259,7 @@ const DashboardSupport = ({ onClose }: DashboardSupportProps) => {
             </Button>
           </div>
           <p className="text-muted-foreground mt-1">
-            AI asistanınız size yardımcı olmak için burada. Rehberlerimizi inceleyin veya ekibimizle doğrudan iletişime geçin.
+            Size yardımcı olmak için buradayız. Sorununuzu anlatın ve beraber çözelim!
           </p>
         </div>
 
@@ -293,7 +293,7 @@ const DashboardSupport = ({ onClose }: DashboardSupportProps) => {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="sizin.email@ornek.com"
+                      placeholder="örnek@mail.com"
                       value={ticketForm.email}
                       onChange={(e) => setTicketForm({...ticketForm, email: e.target.value})}
                       required
