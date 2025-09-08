@@ -33,22 +33,41 @@ export class ApiClient {
   ): Promise<T> {
     const { skipAuth = false, ...requestOptions } = options;
     
-    const headers = await this.getHeaders(skipAuth);
-    
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      ...requestOptions,
-      headers: {
-        ...headers,
-        ...requestOptions.headers,
-      },
-    });
+    try {
+      const headers = await this.getHeaders(skipAuth);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...requestOptions,
+        headers: {
+          ...headers,
+          ...requestOptions.headers,
+        },
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      // Handle network errors gracefully
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timeout - please try again');
+        }
+        if (error.message.includes('Failed to fetch')) {
+          throw new Error('Network error - please check your connection');
+        }
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   static async get<T>(endpoint: string, options?: ApiOptions): Promise<T> {

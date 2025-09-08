@@ -116,6 +116,8 @@ export const authenticate = async (
     } catch (error) {
       // Don't block authentication if deletion cancellation fails
       console.error('Failed to auto-cancel scheduled deletion:', error);
+      // Ensure this doesn't cause an unhandled promise rejection
+      return Promise.resolve();
     }
 
     next();

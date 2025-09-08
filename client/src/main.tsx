@@ -26,10 +26,31 @@ window.addEventListener('unhandledrejection', (event) => {
       event.preventDefault();
       return;
     }
+
+    // Handle API fetch errors gracefully
+    if (reason.message && (
+        reason.message.includes('fetch') || 
+        reason.message.includes('Failed to fetch') ||
+        reason.message.includes('NetworkError'))) {
+      console.warn('Network request failed (will retry):', reason.message);
+      event.preventDefault();
+      return;
+    }
   }
   
-  console.error('Unhandled promise rejection:', event.reason);
-  // Only prevent default for non-critical errors
+  console.error('🚨 Unhandled promise rejection:', event.reason);
+  
+  // In development, show more details
+  if (import.meta.env.DEV) {
+    console.error('Promise rejection details:', {
+      reason: event.reason,
+      stack: event.reason?.stack,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Prevent the default unhandled rejection behavior
+  event.preventDefault();
 });
 
 window.addEventListener('error', (event) => {

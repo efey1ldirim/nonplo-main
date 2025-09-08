@@ -10,7 +10,11 @@ export class CalendarService {
 
   constructor() {
     // Development ortamında encryption key setup
-    setupDevelopmentKeys();
+    try {
+      setupDevelopmentKeys();
+    } catch (error) {
+      console.warn('Development keys setup failed:', error);
+    }
     
     // Direct environment variable access for production
     const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
@@ -19,6 +23,7 @@ export class CalendarService {
     
     if (!clientId || !clientSecret || !redirectUri) {
       // OAuth credentials not configured, calendar features will be disabled
+      console.warn('Google Calendar credentials not configured - calendar features disabled');
       this.oauth2Client = null;
       return;
     }
@@ -29,7 +34,9 @@ export class CalendarService {
         clientSecret,
         redirectUri
       );
+      console.log('✅ Google Calendar OAuth2 client initialized successfully');
     } catch (error) {
+      console.error('❌ Failed to initialize Google Calendar OAuth2 client:', error);
       this.oauth2Client = null;
     }
   }
@@ -217,6 +224,8 @@ export class CalendarService {
           console.log(`🔄 Auto-refreshed token for user ${userId}, agent ${agentId} - TOKEN NEVER EXPIRES!`);
         } catch (error) {
           console.error(`❌ Failed to save auto-refreshed token:`, error);
+          // Prevent this from causing unhandled promise rejection
+          return Promise.resolve();
         }
       }
     });
