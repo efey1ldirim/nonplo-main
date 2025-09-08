@@ -106,9 +106,45 @@ export default function DashboardAgentDetail() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [conversationMessages, setConversationMessages] = useState<any[]>([]);
 
+  // Tab indicator animation function
+  const updateIndicatorPosition = (tabIndex: number) => {
+    const indicator = document.getElementById('sliding-indicator');
+    if (indicator) {
+      const percentage = tabIndex * (100 / 6); // 6 tabs total
+      indicator.style.transform = `translateX(${percentage}%)`;
+    }
+  };
+
   useEffect(() => {
     document.title = agent ? `${agent.name} – Dijital Çalışan | Dashboard` : "Dijital Çalışan – Dashboard";
   }, [agent]);
+
+  // Initialize indicator position and listen for tab changes
+  useEffect(() => {
+    // Set initial position for 'overview' tab (index 0)
+    updateIndicatorPosition(0);
+    
+    // Listen for tab value changes via data attributes or URL params
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-state') {
+          const target = mutation.target as HTMLElement;
+          if (target.getAttribute('data-state') === 'active') {
+            const tabIndex = parseInt(target.getAttribute('data-tab-index') || '0');
+            updateIndicatorPosition(tabIndex);
+          }
+        }
+      });
+    });
+
+    // Observe all tab triggers for state changes
+    const tabTriggers = document.querySelectorAll('[data-tab-index]');
+    tabTriggers.forEach(trigger => {
+      observer.observe(trigger, { attributes: true, attributeFilter: ['data-state'] });
+    });
+
+    return () => observer.disconnect();
+  }, [agent]); // Re-run when agent changes
 
   useEffect(() => {
     const init = async () => {
@@ -800,14 +836,69 @@ export default function DashboardAgentDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex flex-wrap">
-          <TabsTrigger value="overview">Genel Bakış</TabsTrigger>
-          <TabsTrigger value="knowledge">Bilgi</TabsTrigger>
-          <TabsTrigger value="integrations">Entegrasyonlar</TabsTrigger>
-          <TabsTrigger value="settings">Ayarlar</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger>
-          <TabsTrigger value="test">Test & Yayınla</TabsTrigger>
-        </TabsList>
+        <div className="sticky top-0 z-10 mb-6">
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-gray-900/95">
+            <div className="flex relative overflow-x-auto scrollbar-hide">
+              {/* Sliding indicator */}
+              <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
+                   style={{
+                     width: `${100/6}%`,
+                     transform: 'translateX(0%)'
+                   }}
+                   id="sliding-indicator" />
+              
+              {/* Tab buttons */}
+              <TabsTrigger 
+                value="overview" 
+                className="relative z-10 flex-1 min-w-[80px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="0"
+                onClick={() => updateIndicatorPosition(0)}
+              >
+                Genel Bakış
+              </TabsTrigger>
+              <TabsTrigger 
+                value="knowledge" 
+                className="relative z-10 flex-1 min-w-[60px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="1"
+                onClick={() => updateIndicatorPosition(1)}
+              >
+                Bilgi
+              </TabsTrigger>
+              <TabsTrigger 
+                value="integrations" 
+                className="relative z-10 flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="2"
+                onClick={() => updateIndicatorPosition(2)}
+              >
+                Entegrasyonlar
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings" 
+                className="relative z-10 flex-1 min-w-[60px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="3"
+                onClick={() => updateIndicatorPosition(3)}
+              >
+                Ayarlar
+              </TabsTrigger>
+              <TabsTrigger 
+                value="chat" 
+                className="relative z-10 flex-1 min-w-[50px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="4"
+                onClick={() => updateIndicatorPosition(4)}
+              >
+                Chat
+              </TabsTrigger>
+              <TabsTrigger 
+                value="test" 
+                className="relative z-10 flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                data-tab-index="5"
+                onClick={() => updateIndicatorPosition(5)}
+              >
+                Test & Yayınla
+              </TabsTrigger>
+            </div>
+          </div>
+        </div>
 
         {/* 1) Overview */}
         <TabsContent value="overview" className="space-y-6">

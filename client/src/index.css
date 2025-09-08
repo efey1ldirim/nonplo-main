@@ -16,6 +16,15 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
