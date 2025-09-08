@@ -1822,7 +1822,10 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   try {
     const { CalendarService } = await import("./services/CalendarService");
     calendarService = new CalendarService();
+    console.log('✅ CalendarService initialized successfully');
   } catch (calendarError: any) {
+    console.error('❌ CalendarService initialization failed:', calendarError.message);
+    console.error('❌ CalendarService stack:', calendarError.stack);
     // Calendar features will be disabled
   }
 
