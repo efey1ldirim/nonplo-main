@@ -89,19 +89,17 @@ const DashboardLayout = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          {navigationItems.map((item) => (
-            <Button
-              key={item.label}
-              variant={isActiveRoute(item.path) ? "secondary" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => handleNavigation(item.path)}
-            >
-              <item.icon className="mr-3 h-4 w-4" />
-              {item.label}
-            </Button>
-          ))}
+          {/* Analizler - First item */}
+          <Button
+            variant={isActiveRoute("/dashboard") ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => handleNavigation("/dashboard")}
+          >
+            <LayoutDashboard className="mr-3 h-4 w-4" />
+            Analizler
+          </Button>
           
-          {/* Expandable Agents Section */}
+          {/* Agents - Second item (Expandable) */}
           <div className="space-y-1">
             <Button
               variant={location.pathname.startsWith("/dashboard/agents") ? "secondary" : "ghost"}
@@ -154,6 +152,34 @@ const DashboardLayout = () => {
               </div>
             </div>
           </div>
+          
+          {/* Rest of navigation items */}
+          <Button
+            variant={isActiveRoute("/dashboard/messages") ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => handleNavigation("/dashboard/messages")}
+          >
+            <MessageSquare className="mr-3 h-4 w-4" />
+            Messages
+          </Button>
+          
+          <Button
+            variant={isActiveRoute("/dashboard/integrations") ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => handleNavigation("/dashboard/integrations")}
+          >
+            <Wrench className="mr-3 h-4 w-4" />
+            Integrations & Tools
+          </Button>
+          
+          <Button
+            variant={isActiveRoute("/dashboard/support") ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => handleNavigation("/dashboard/support")}
+          >
+            <HelpCircle className="mr-3 h-4 w-4" />
+            Destek
+          </Button>
         </nav>
 
         {/* User Section */}
@@ -246,20 +272,18 @@ const DashboardLayout = () => {
 
                   {/* Mobile Navigation */}
                   <nav className="flex-1 p-4 space-y-2">
-                    {navigationItems.map((item) => (
-                      <Button
-                        key={item.label}
-                        variant={isActiveRoute(item.path) ? "secondary" : "ghost"}
-                        className="w-full justify-start min-h-[48px] text-sidebar-foreground"
-                        onClick={() => {
-                          handleNavigation(item.path);
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <item.icon className="mr-3 h-4 w-4" />
-                        {item.label}
-                      </Button>
-                    ))}
+                    {/* Analizler - First item */}
+                    <Button
+                      variant={isActiveRoute("/dashboard") ? "secondary" : "ghost"}
+                      className="w-full justify-start min-h-[48px] text-sidebar-foreground"
+                      onClick={() => {
+                        handleNavigation("/dashboard");
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <LayoutDashboard className="mr-3 h-4 w-4" />
+                      Analizler
+                    </Button>
                     
                     {/* Mobile Expandable Agents Section */}
                     <div className="space-y-1">
@@ -318,6 +342,43 @@ const DashboardLayout = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Rest of mobile navigation items */}
+                    <Button
+                      variant={isActiveRoute("/dashboard/messages") ? "secondary" : "ghost"}
+                      className="w-full justify-start min-h-[48px] text-sidebar-foreground"
+                      onClick={() => {
+                        handleNavigation("/dashboard/messages");
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <MessageSquare className="mr-3 h-4 w-4" />
+                      Messages
+                    </Button>
+                    
+                    <Button
+                      variant={isActiveRoute("/dashboard/integrations") ? "secondary" : "ghost"}
+                      className="w-full justify-start min-h-[48px] text-sidebar-foreground"
+                      onClick={() => {
+                        handleNavigation("/dashboard/integrations");
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <Wrench className="mr-3 h-4 w-4" />
+                      Integrations & Tools
+                    </Button>
+                    
+                    <Button
+                      variant={isActiveRoute("/dashboard/support") ? "secondary" : "ghost"}
+                      className="w-full justify-start min-h-[48px] text-sidebar-foreground"
+                      onClick={() => {
+                        handleNavigation("/dashboard/support");
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <HelpCircle className="mr-3 h-4 w-4" />
+                      Destek
+                    </Button>
                   </nav>
 
                   {/* Mobile User Section */}
