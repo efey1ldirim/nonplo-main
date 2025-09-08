@@ -254,9 +254,54 @@ export const chatWithAgent = async (req: any, res: Response) => {
 
           console.log(`🔧 Tool call: ${fnName}`);
 
-          // For now, we'll handle basic tool calls
-          // This can be expanded later with web search, calendar, etc.
-          let result = { message: `Tool ${fnName} executed successfully with args: ${JSON.stringify(args)}` };
+          // Handle Google Calendar tools
+          let result: any = {};
+          
+          try {
+            switch (fnName) {
+              case 'gcal_list_events':
+                console.log('📅 Executing gcal_list_events with args:', args);
+                const eventsList = await calendarService.listEvents(
+                  userId,
+                  agentId,
+                  args.timeMin,
+                  args.timeMax,
+                  args.maxResults || 10,
+                  args.q
+                );
+                result = {
+                  success: true,
+                  events: eventsList.events,
+                  message: `Found ${eventsList.events?.length || 0} events`
+                };
+                break;
+                
+              case 'gcal_create_event':
+                console.log('📅 Executing gcal_create_event with args:', args);
+                const createResult = await calendarService.createEvent(userId, agentId, {
+                  title: args.summary,
+                  startTime: args.startISO,
+                  endTime: args.endISO,
+                  description: args.description,
+                  attendees: args.attendees?.map((a: any) => a.email) || []
+                });
+                result = createResult;
+                break;
+                
+              default:
+                result = { 
+                  success: false,
+                  message: `Unknown tool: ${fnName}` 
+                };
+            }
+          } catch (error: any) {
+            console.error(`❌ Tool execution error for ${fnName}:`, error);
+            result = { 
+              success: false, 
+              error: error.message || 'Tool execution failed',
+              message: `Failed to execute ${fnName}: ${error.message || 'Unknown error'}`
+            };
+          }
 
           toolOutputs.push({
             tool_call_id: toolCall.id,
