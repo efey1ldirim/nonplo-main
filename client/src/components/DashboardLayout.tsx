@@ -113,7 +113,7 @@ const DashboardLayout = () => {
             >
               <div className="flex items-center">
                 <Bot className="mr-3 h-4 w-4" />
-                Dijital Çalışanlar
+                Dijital Çalışanlarım
               </div>
               {agentsExpanded ? (
                 <ChevronDown className="h-4 w-4 transition-transform duration-200" />
@@ -300,7 +300,7 @@ const DashboardLayout = () => {
                       >
                         <div className="flex items-center">
                           <Bot className="mr-3 h-4 w-4" />
-                          Dijital Çalışanlar
+                          Dijital Çalışanlarım
                         </div>
                         {agentsExpanded ? (
                           <ChevronDown className="h-4 w-4 transition-transform duration-200" />
