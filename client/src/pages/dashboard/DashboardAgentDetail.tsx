@@ -892,7 +892,7 @@ export default function DashboardAgentDetail() {
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="sticky top-0 z-10 mb-6">
-          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-gray-900/95">
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-1 sm:p-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-gray-900/95">
             <TabsList className="relative h-auto w-full bg-transparent p-0 overflow-x-auto scrollbar-hide">
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
@@ -905,23 +905,25 @@ export default function DashboardAgentDetail() {
               {/* Tab buttons */}
               <TabsTrigger 
                 value="overview" 
-                className="relative z-10 flex-1 min-w-[80px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                className="relative z-10 flex-1 min-w-[60px] px-2 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent text-center"
                 data-tab-index="0"
                 onClick={() => updateIndicatorPosition(0)}
               >
-                Genel Bakış
+                <span className="hidden sm:inline">Genel Bakış</span>
+                <span className="sm:hidden">Genel</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="integrations" 
-                className="relative z-10 flex-1 min-w-[100px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                className="relative z-10 flex-1 min-w-[60px] px-2 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent text-center"
                 data-tab-index="1"
                 onClick={() => updateIndicatorPosition(1)}
               >
-                Entegrasyonlar
+                <span className="hidden sm:inline">Entegrasyonlar</span>
+                <span className="sm:hidden">Entegr.</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="settings" 
-                className="relative z-10 flex-1 min-w-[60px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                className="relative z-10 flex-1 min-w-[50px] px-2 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent text-center"
                 data-tab-index="2"
                 onClick={() => updateIndicatorPosition(2)}
               >
@@ -929,7 +931,7 @@ export default function DashboardAgentDetail() {
               </TabsTrigger>
               <TabsTrigger 
                 value="chat" 
-                className="relative z-10 flex-1 min-w-[50px] px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent whitespace-nowrap text-center"
+                className="relative z-10 flex-1 min-w-[40px] px-2 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-xl transition-colors duration-200 data-[state=active]:text-white data-[state=active]:shadow-none data-[state=active]:bg-transparent text-center"
                 data-tab-index="3"
                 onClick={() => updateIndicatorPosition(3)}
               >
