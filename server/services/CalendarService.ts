@@ -62,10 +62,12 @@ export class CalendarService {
       
       const { userId, agentId } = JSON.parse(Buffer.from(state, 'base64').toString());
       
-      // Check if already connected to prevent duplicate processing
+      // Check if already connected and update tokens if needed
       const existingConnection = await storage.getGoogleCalendarByUserAgent(userId, agentId);
+      let isUpdate = false;
       if (existingConnection) {
-        return { userId, agentId, success: true };
+        console.log(`🔄 Updating existing Google Calendar connection for user ${userId}, agent ${agentId}`);
+        isUpdate = true;
       }
       
       // Token al
@@ -89,15 +91,24 @@ export class CalendarService {
         const encryptedAccessToken = encrypt(tokens.access_token);
         const encryptedRefreshToken = encrypt(tokens.refresh_token!);
         
-        // Database'e kaydet
-        const calendarConnection = await storage.createGoogleCalendarConnection({
-          userId,
-          agentId,
-          googleEmail: email,
-          googleAccessToken: encryptedAccessToken,
-          googleRefreshToken: encryptedRefreshToken,
-          calendarId: 'primary'
-        });
+        // Database'e kaydet veya güncelle (UPSERT)
+        let calendarConnection;
+        if (isUpdate) {
+          // Existing connection'ı güncelle
+          calendarConnection = await storage.updateGoogleCalendarTokens(userId, agentId, encryptedAccessToken, encryptedRefreshToken);
+          console.log(`✅ Google Calendar tokens updated for user ${userId}, agent ${agentId}`);
+        } else {
+          // Yeni connection oluştur
+          calendarConnection = await storage.createGoogleCalendarConnection({
+            userId,
+            agentId,
+            googleEmail: email,
+            googleAccessToken: encryptedAccessToken,
+            googleRefreshToken: encryptedRefreshToken,
+            calendarId: 'primary'
+          });
+          console.log(`✅ New Google Calendar connection created for user ${userId}, agent ${agentId}`);
+        }
         
         // Kaydı doğrula
         const verifyConnection = await storage.getGoogleCalendarByUserAgent(userId, agentId);
