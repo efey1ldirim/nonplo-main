@@ -140,7 +140,12 @@ export default function DashboardAgentDetail() {
     // Set initial position for 'overview' tab (index 0) with a small delay
     const timer = setTimeout(() => {
       updateIndicatorPosition(0);
-    }, 100);
+    }, 200);
+    
+    // Also try to set it immediately if DOM is ready
+    requestAnimationFrame(() => {
+      updateIndicatorPosition(0);
+    });
     
     // Listen for tab value changes via data attributes or URL params
     const observer = new MutationObserver((mutations) => {
@@ -875,7 +880,7 @@ export default function DashboardAgentDetail() {
               {/* Sliding indicator */}
               <div className="absolute top-0 left-0 h-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 shadow-md transition-all duration-300 ease-out z-0" 
                    style={{
-                     width: 'auto',
+                     width: '0px',
                      transform: 'translateX(0px)'
                    }}
                    id="sliding-indicator" />
