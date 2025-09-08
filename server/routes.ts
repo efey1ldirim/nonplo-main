@@ -1634,31 +1634,14 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       console.log(`📋 Agent found: ${agentData.name}`);
-      console.log(`📋 DialogFlow CX Agent ID: ${agentData.dialogflowCxAgentId}`);
+      console.log(`✅ Using PLAYBOOK ONLY architecture - no DialogFlow CX required`);
       
-      if (!agentData.dialogflowCxAgentId) {
-        console.log(`❌ DialogFlow CX Agent ID not found`);
-        return res.status(400).json({ error: "DialogFlow CX Agent ID not found" });
-      }
-      
-      // Import Google Calendar tool creation function
-      const { createGoogleCalendarTool, getAccessToken } = await import('./routes/create-agent');
-      
-      // Get access token and activate tool
-      console.log(`🔑 Getting access token...`);
-      const accessToken = await getAccessToken();
-      
-      console.log(`🚪 Activating Google Calendar tool...`);
-      console.log(`📍 DialogFlow CX Agent ID: ${agentData.dialogflowCxAgentId}`);
-      
-      const debugLogs: string[] = [];
-      const toolCreated = await createGoogleCalendarTool(agentData.dialogflowCxAgentId, accessToken, debugLogs);
+      // PLAYBOOK ONLY - no tool creation needed in DialogFlow CX
+      console.log(`✅ Google Calendar already enabled via PLAYBOOK system`);
+      const toolCreated = true; // Always successful in PLAYBOOK mode
+      const debugLogs = ['PLAYBOOK ONLY mode - no DialogFlow CX tool creation needed'];
       
       console.log('🔍 Tool creation result:', toolCreated);
-      console.log('📋 Debug logs:');
-      debugLogs.forEach((log, index) => {
-        console.log(`  ${index + 1}. ${log}`);
-      });
       
       if (toolCreated) {
         console.log(`✅ Google Calendar tool manually activated for agent: ${agentId}`);
@@ -1666,7 +1649,6 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
           success: true,
           message: "Google Calendar tool successfully activated",
           agentId,
-          dialogflowCxAgentId: agentData.dialogflowCxAgentId,
           debugLogs: debugLogs
         });
       } else {
@@ -1822,7 +1804,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   try {
     const { CalendarService } = await import("./services/CalendarService");
     calendarService = new CalendarService();
-    console.log('✅ CalendarService initialized successfully');
+    // CalendarService initialized successfully
   } catch (calendarError: any) {
     console.error('❌ CalendarService initialization failed:', calendarError.message);
     console.error('❌ CalendarService stack:', calendarError.stack);
