@@ -133,12 +133,18 @@ export default function DashboardAgentDetail() {
             if (response.ok) {
               const settings = await response.json();
               console.log('✅ Tool settings loaded directly:', settings);
+              console.log('🔍 Checking for google-calendar key:', settings['google-calendar']);
+              console.log('🔍 All settings keys:', Object.keys(settings));
+              
               setAgentProviderEnabled(settings);
               
               // Also update Google Calendar tool activation state
-              if (settings['google-calendar']) {
+              if (settings['google_calendar']) {
                 setGoogleCalendarToolActivated(true);
                 console.log('✅ Google Calendar tool state updated to active');
+              } else {
+                setGoogleCalendarToolActivated(false);
+                console.log('❌ Google Calendar tool state set to inactive - key not found or false');
               }
             } else {
               console.error('❌ Tool settings API failed:', response.status);
@@ -566,6 +572,8 @@ export default function DashboardAgentDetail() {
   };
 
   const onToggleAgentProvider = async (providerKey: string, enabled: boolean) => {
+    console.log('🔄 Toggle provider:', { providerKey, enabled, agentId, userId });
+    
     // Validation: require global connection first
     if (!globalConnections[providerKey] && enabled) {
       toast({ title: "Önce global bağlantı yapın", description: "Entegrasyonlar & Araçlar'ı açarak bağlanın.", variant: "destructive" });
@@ -578,6 +586,12 @@ export default function DashboardAgentDetail() {
       if (!session?.access_token) {
         throw new Error('No authentication token');
       }
+
+      console.log('📡 Sending POST to tool-settings:', {
+        toolKey: providerKey,
+        enabled: enabled,
+        url: `/api/agents/${agentId}/tool-settings`
+      });
 
       const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
         method: 'POST',
@@ -592,13 +606,18 @@ export default function DashboardAgentDetail() {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
         throw new Error('Failed to save setting');
       }
+
+      const result = await response.json();
+      console.log('✅ Tool setting saved:', result);
 
       setAgentProviderEnabled((prev) => ({ ...prev, [providerKey]: enabled }));
       toast({ title: "Kaydedildi", description: "Ajana özel ayar güncellendi." });
     } catch (error: any) {
-      console.error('Error saving agent provider setting:', error);
+      console.error('❌ Error saving agent provider setting:', error);
       toast({ 
         title: "Kaydetme Hatası", 
         description: "Ayar kaydedilemedi, tekrar deneyin.", 
