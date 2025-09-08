@@ -3,16 +3,16 @@ import { storage } from '../storage';
 import { encrypt, decrypt } from '../utils/encryption';
 import type { UserGoogleCalendar } from '@shared/schema';
 import { checkTokenExpiry, metricsStore } from '../middleware/calendarMonitoring';
+import { productionConfig, setupDevelopmentKeys } from '../config/production';
 
 export class CalendarService {
   private oauth2Client: any;
 
   constructor() {
-    const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+    // Development ortamında encryption key setup
+    setupDevelopmentKeys();
     
-
+    const { clientId, clientSecret, redirectUri } = productionConfig.googleCalendar;
     
     if (!clientId || !clientSecret || !redirectUri) {
       // OAuth credentials not configured, calendar features will be disabled
