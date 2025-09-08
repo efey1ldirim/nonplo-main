@@ -121,10 +121,10 @@ export default function DashboardAgentDetail() {
         setUserId(user.id);
         await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id)]);
         
-        // Load agent tool settings separately after userId is set
-        setTimeout(() => {
-          loadAgentToolSettings();
-        }, 100);
+        // Load agent tool settings after userId is set
+        if (user.id && agentId) {
+          await loadAgentToolSettings();
+        }
       } catch (e) {
         console.error(e);
         toast({ title: "Hata", description: "Dijital çalışan yüklenemedi.", variant: "destructive" });
@@ -589,10 +589,12 @@ export default function DashboardAgentDetail() {
   
   // Load agent-specific tool settings
   const loadAgentToolSettings = async () => {
-    console.log('🔄 Loading agent tool settings...', { userId, agentId });
+    const currentUserId = userId;
+    const currentAgentId = agentId;
+    console.log('🔄 Loading agent tool settings...', { currentUserId, currentAgentId });
     
-    if (!userId || !agentId) {
-      console.log('❌ Missing userId or agentId:', { userId, agentId });
+    if (!currentUserId || !currentAgentId) {
+      console.log('❌ Missing userId or agentId:', { currentUserId, currentAgentId });
       return;
     }
     
@@ -604,7 +606,7 @@ export default function DashboardAgentDetail() {
       }
 
       console.log('📡 Fetching agent tool settings...');
-      const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
+      const response = await fetch(`/api/agents/${currentAgentId}/tool-settings`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
