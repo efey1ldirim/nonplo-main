@@ -142,7 +142,17 @@ export default function DashboardAgentDetail() {
     // Set initial position for 'overview' tab (index 0) with multiple attempts
     const setInitialPosition = () => {
       const overviewTab = document.querySelector('[value="overview"][data-tab-index="0"]') as HTMLElement;
-      if (overviewTab) {
+      const indicator = document.getElementById('sliding-indicator');
+      
+      if (overviewTab && indicator) {
+        // Get the actual button dimensions
+        const tabRect = overviewTab.getBoundingClientRect();
+        
+        // Set initial size to match the button exactly
+        indicator.style.width = `${tabRect.width}px`;
+        indicator.style.transform = 'translateX(0px)';
+        
+        // Also call the updateIndicatorPosition for consistency
         updateIndicatorPosition(0);
         return true;
       }
