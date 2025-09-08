@@ -27,6 +27,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
   const [message, setMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -47,6 +48,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
       assistantId: string;
       message: string;
       agentId: string;
+      threadId?: string;
     }) => {
       return await apiRequest('/api/chat', {
         method: 'POST',
@@ -55,6 +57,11 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     },
     onSuccess: (data) => {
       console.log('✅ Message sent successfully:', data);
+      
+      // Store threadId for future messages
+      if (data.threadId) {
+        setThreadId(data.threadId);
+      }
       
       // Add assistant response to chat
       if (data.response) {
@@ -107,7 +114,8 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     const messageData = {
       assistantId,
       message: message.trim(),
-      agentId
+      agentId,
+      ...(threadId && { threadId })
     };
 
     setMessage('');

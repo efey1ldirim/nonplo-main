@@ -124,6 +124,7 @@ export default function LiveTestConsole({ agentId, agentName, agentRole }: LiveT
         assistantId: agent?.openaiAssistantId || 'default-assistant',
         message: messageToSend,
         agentId: agentId,
+        ...(sessionId && { threadId: sessionId })
       };
       
       console.log('Test Console - İstek gönderiliyor:', requestPayload);
