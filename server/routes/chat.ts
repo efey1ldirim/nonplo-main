@@ -83,7 +83,7 @@ const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
         type: "function",
         function: {
             name: "gcal_create_event",
-            description: "Create an event in the user primary Google Calendar.",
+            description: "Create an event in the user primary Google Calendar. IMPORTANT: Always confirm the details with the user before creating the event. Ask for confirmation like 'Shall I create this appointment for you?' and wait for user approval.",
             parameters: {
                 type: "object",
                 properties: {
