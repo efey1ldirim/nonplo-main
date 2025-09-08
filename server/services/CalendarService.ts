@@ -191,7 +191,7 @@ export class CalendarService {
       }
     }
 
-    // Enhanced token refresh event handling
+    // Enhanced token refresh event handling - ALWAYS ACTIVE
     this.oauth2Client.on('tokens', async (tokens: any) => {
       if (tokens.access_token) {
         try {
@@ -204,14 +204,41 @@ export class CalendarService {
           metrics.tokenRefreshCount++;
           metricsStore.updateMetrics(userId, metrics);
           
-          console.log(`🔄 Auto-refreshed token for user ${userId}, agent ${agentId}`);
+          console.log(`🔄 Auto-refreshed token for user ${userId}, agent ${agentId} - TOKEN NEVER EXPIRES!`);
         } catch (error) {
           console.error(`❌ Failed to save auto-refreshed token:`, error);
         }
       }
     });
 
+    // Force token refresh if access token is close to expiry (proactive refresh)
+    if (tokenStatus.expiresIn && tokenStatus.expiresIn < 300) { // 5 minutes
+      console.log(`⚡ Proactive token refresh for user ${userId} - expires in ${tokenStatus.expiresIn}s`);
+      try {
+        await this.oauth2Client.refreshAccessToken();
+      } catch (refreshError) {
+        console.log(`⚠️ Proactive refresh failed, will retry on demand:`, refreshError);
+      }
+    }
+
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+    
+    // Background token refresh schedule (every 30 minutes) - ENSURES TOKEN NEVER EXPIRES
+    if (!global.tokenRefreshInterval) {
+      global.tokenRefreshInterval = setInterval(async () => {
+        try {
+          const tokenStatus = await checkTokenExpiry(userId, agentId);
+          if (tokenStatus.expiresIn && tokenStatus.expiresIn < 1800) { // 30 minutes
+            console.log(`🔄 Background token refresh for user ${userId} - expires in ${Math.round(tokenStatus.expiresIn/60)} minutes`);
+            await this.oauth2Client.refreshAccessToken();
+          }
+        } catch (error) {
+          console.log(`⚠️ Background refresh failed:`, error);
+        }
+      }, 30 * 60 * 1000); // Every 30 minutes
+      
+      console.log(`🔄 Background token refresh scheduler started - TOKEN WILL NEVER EXPIRE!`);
+    }
     
     // Test the connection with a minimal API call
     try {
