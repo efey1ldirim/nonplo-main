@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare } from "lucide-react";
 import LiveTestConsole from "@/components/LiveTestConsole";
-import { AgentChat } from "@/components/AgentChat";
+import { AgentChat } from "@/components/features/AgentChat";
 
 interface Agent {
   id: string;
