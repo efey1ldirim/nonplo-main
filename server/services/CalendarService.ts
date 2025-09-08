@@ -12,7 +12,10 @@ export class CalendarService {
     // Development ortamında encryption key setup
     setupDevelopmentKeys();
     
-    const { clientId, clientSecret, redirectUri } = productionConfig.googleCalendar;
+    // Direct environment variable access for production
+    const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
     
     if (!clientId || !clientSecret || !redirectUri) {
       // OAuth credentials not configured, calendar features will be disabled
