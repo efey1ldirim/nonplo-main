@@ -110,12 +110,13 @@ export async function createCalendarEvent(req: Request, res: Response) {
     console.log('🎯 Creating calendar event for user:', userId, 'agent:', agentId);
 
     // Use parameters from DialogFlow CX
+    const sessionParams = sessionInfo?.parameters || {};
     const eventData = {
-      title: summary || parameters?.summary || 'Randevu',
-      startTime: startDateTime || parameters?.startDateTime,
-      endTime: endDateTime || parameters?.endDateTime,
-      description: description || parameters?.description,
-      attendees: attendees ? [attendees] : parameters?.attendees ? [parameters.attendees] : undefined
+      title: summary || parameters?.summary || sessionParams?.appointment_description || 'Randevu',
+      startTime: startDateTime || parameters?.startDateTime || sessionParams?.appointment_datetime,
+      endTime: endDateTime || parameters?.endDateTime || sessionParams?.appointment_end_time,
+      description: description || parameters?.description || sessionParams?.appointment_description,
+      attendees: attendees ? [attendees] : parameters?.attendees ? [parameters.attendees] : sessionParams?.contact_email ? [sessionParams.contact_email] : undefined
     };
 
     console.log('📋 Event data:', eventData);
