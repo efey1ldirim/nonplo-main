@@ -113,7 +113,7 @@ const DashboardLayout = () => {
             >
               <div className="flex items-center">
                 <Bot className="mr-3 h-4 w-4" />
-                Agents
+                Dijital Çalışanlar
               </div>
               {agentsExpanded ? (
                 <ChevronDown className="h-4 w-4 transition-transform duration-200" />
@@ -160,7 +160,7 @@ const DashboardLayout = () => {
             onClick={() => handleNavigation("/dashboard/messages")}
           >
             <MessageSquare className="mr-3 h-4 w-4" />
-            Messages
+            Mesajlar
           </Button>
           
           <Button
@@ -169,7 +169,7 @@ const DashboardLayout = () => {
             onClick={() => handleNavigation("/dashboard/integrations")}
           >
             <Wrench className="mr-3 h-4 w-4" />
-            Integrations & Tools
+            Entegrasyonlar & Araçlar
           </Button>
           
           <Button
@@ -300,7 +300,7 @@ const DashboardLayout = () => {
                       >
                         <div className="flex items-center">
                           <Bot className="mr-3 h-4 w-4" />
-                          Agents
+                          Dijital Çalışanlar
                         </div>
                         {agentsExpanded ? (
                           <ChevronDown className="h-4 w-4 transition-transform duration-200" />
@@ -353,7 +353,7 @@ const DashboardLayout = () => {
                       }}
                     >
                       <MessageSquare className="mr-3 h-4 w-4" />
-                      Messages
+                      Mesajlar
                     </Button>
                     
                     <Button
@@ -365,7 +365,7 @@ const DashboardLayout = () => {
                       }}
                     >
                       <Wrench className="mr-3 h-4 w-4" />
-                      Integrations & Tools
+                      Entegrasyonlar & Araçlar
                     </Button>
                     
                     <Button
