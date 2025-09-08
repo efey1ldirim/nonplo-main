@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, uuid, timestamp, jsonb, varchar, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, uuid, timestamp, jsonb, varchar, json, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -92,7 +92,7 @@ export const conversations = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
   agentId: uuid("agent_id").notNull(),
-  threadId: text("thread_id").unique(), // OpenAI thread ID
+  threadId: text("thread_id"), // OpenAI thread ID - unique geçici olarak kaldırıldı
   channel: text("channel").notNull().default('web'),
   status: text("status").notNull().default('active'),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
@@ -324,7 +324,10 @@ export const userGoogleCalendars = pgTable("user_google_calendars", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  // Unique constraint: Bir user-agent kombinasyonu sadece bir kez olabilir
+  uniqueUserAgent: unique("unique_user_agent").on(table.userId, table.agentId),
+}));
 
 // Calendar işlem logları tablosu  
 export const calendarOperations = pgTable("calendar_operations", {
