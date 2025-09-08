@@ -32,7 +32,7 @@ const DashboardLayout = () => {
   const [agentsExpanded, setAgentsExpanded] = useState(false);
 
   const navigationItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    { icon: LayoutDashboard, label: "Analizler", path: "/dashboard" },
     { icon: MessageSquare, label: "Messages", path: "/dashboard/messages" },
     { icon: Wrench, label: "Integrations & Tools", path: "/dashboard/integrations" },
     { icon: HelpCircle, label: "Destek", path: "/dashboard/support" },
