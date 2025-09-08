@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Bot, Calendar, MoreVertical, Edit, Trash2, Power, CalendarCheck, CalendarX } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import AgentCreationWizard from "@/components/AgentCreationWizard";
+import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 
 interface Agent {
   id: string;

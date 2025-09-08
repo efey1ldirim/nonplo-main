@@ -13,7 +13,7 @@ import {
   Menu,
   X
 } from "lucide-react";
-import AgentCreationWizard from "@/components/AgentCreationWizard";
+import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 import DashboardSupport from "@/pages/dashboard/DashboardSupport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
