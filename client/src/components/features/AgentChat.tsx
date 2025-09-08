@@ -48,7 +48,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
       message: string;
       agentId: string;
     }) => {
-      return await apiRequest('/api/chat', {
+      return await apiRequest('/api/chat-with-cx-agent', {
         method: 'POST',
         body: messageData
       });
