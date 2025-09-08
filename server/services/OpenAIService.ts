@@ -45,13 +45,12 @@ export class OpenAIService {
   }
 
   /**
-   * Handle chat with agent using OpenAI with calendar booking support
+   * Handle chat with agent using OpenAI
    */
   async chatWithAgent(
     agentInstructions: string,
     userMessage: string,
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
-    options?: { userId?: string; agentId?: string; calendarService?: any }
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = []
   ): Promise<string> {
     try {
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -66,187 +65,14 @@ export class OpenAIService {
         }
       ];
 
-      // Define calendar booking tools
-      const tools = options?.calendarService ? [
-        {
-          type: "function",
-          function: {
-            name: "check_calendar_availability",
-            description: "Belirtilen tarih ve saat aralığında takvimde müsaitlik kontrol et",
-            parameters: {
-              type: "object",
-              properties: {
-                startDateTime: {
-                  type: "string",
-                  description: "Başlangıç tarihi ve saati (ISO 8601 format, örn: 2025-09-09T08:00:00Z)"
-                },
-                endDateTime: {
-                  type: "string",
-                  description: "Bitiş tarihi ve saati (ISO 8601 format, örn: 2025-09-09T09:00:00Z)"
-                }
-              },
-              required: ["startDateTime", "endDateTime"]
-            }
-          }
-        },
-        {
-          type: "function",
-          function: {
-            name: "create_calendar_event",
-            description: "Takvimde yeni bir randevu/etkinlik oluştur",
-            parameters: {
-              type: "object",
-              properties: {
-                title: {
-                  type: "string",
-                  description: "Randevu başlığı"
-                },
-                startDateTime: {
-                  type: "string",
-                  description: "Başlangıç tarihi ve saati (ISO 8601 format)"
-                },
-                endDateTime: {
-                  type: "string",
-                  description: "Bitiş tarihi ve saati (ISO 8601 format)"
-                },
-                description: {
-                  type: "string",
-                  description: "Randevu açıklaması (opsiyonel)"
-                },
-                attendeeEmail: {
-                  type: "string",
-                  description: "Katılımcı e-mail adresi (opsiyonel)"
-                }
-              },
-              required: ["title", "startDateTime", "endDateTime"]
-            }
-          }
-        }
-      ] : undefined;
-
       const response = await this.openai.chat.completions.create({
         model: OPENAI_MODEL,
         messages,
-        tools,
         temperature: 0.8,
         max_tokens: 1000
       });
 
-      const message = response.choices[0].message;
-
-      // Handle function calls
-      if (message.tool_calls && options?.calendarService && options?.userId && options?.agentId) {
-        const toolResults = [];
-        
-        for (const toolCall of message.tool_calls) {
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
-          
-          console.log(`🔧 Function call: ${functionName}`, functionArgs);
-          
-          if (functionName === "check_calendar_availability") {
-            try {
-              const result = await options.calendarService.checkAvailability(
-                options.userId,
-                options.agentId,
-                functionArgs.startDateTime,
-                functionArgs.endDateTime
-              );
-              
-              const resultText = result.isAvailable 
-                ? `✅ Bu saatte (${functionArgs.startDateTime} - ${functionArgs.endDateTime}) müsaitsiniz!`
-                : `❌ Bu saatte müsait değilsiniz. ${result.busyTimes.length} çakışan randevu var.`;
-              
-              toolResults.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                content: JSON.stringify({ 
-                  success: true, 
-                  available: result.isAvailable,
-                  message: resultText,
-                  busyTimes: result.busyTimes
-                })
-              });
-            } catch (error: any) {
-              toolResults.push({
-                tool_call_id: toolCall.id,
-                role: "tool", 
-                content: JSON.stringify({ 
-                  success: false, 
-                  error: `Müsaitlik kontrolü başarısız: ${error.message}` 
-                })
-              });
-            }
-          } else if (functionName === "create_calendar_event") {
-            try {
-              const eventData = {
-                summary: functionArgs.title,
-                description: functionArgs.description || '',
-                start: { dateTime: functionArgs.startDateTime },
-                end: { dateTime: functionArgs.endDateTime },
-                attendees: functionArgs.attendeeEmail ? [{ email: functionArgs.attendeeEmail }] : []
-              };
-              
-              const result = await options.calendarService.createEvent(
-                options.userId,
-                options.agentId,
-                eventData
-              );
-              
-              if (result.success) {
-                toolResults.push({
-                  tool_call_id: toolCall.id,
-                  role: "tool",
-                  content: JSON.stringify({ 
-                    success: true, 
-                    eventId: result.event?.id,
-                    message: `✅ Randevu başarıyla oluşturuldu: ${functionArgs.title} (${functionArgs.startDateTime})`,
-                    eventLink: result.event?.htmlLink
-                  })
-                });
-              } else {
-                toolResults.push({
-                  tool_call_id: toolCall.id,
-                  role: "tool",
-                  content: JSON.stringify({ 
-                    success: false, 
-                    error: `Randevu oluşturulamadı: ${result.message}` 
-                  })
-                });
-              }
-            } catch (error: any) {
-              toolResults.push({
-                tool_call_id: toolCall.id,
-                role: "tool",
-                content: JSON.stringify({ 
-                  success: false, 
-                  error: `Randevu oluşturma hatası: ${error.message}` 
-                })
-              });
-            }
-          }
-        }
-
-        // If we have tool results, make a second call to get the final response
-        if (toolResults.length > 0) {
-          const followUpMessages = [
-            ...messages,
-            message,
-            ...toolResults
-          ];
-
-          const followUpResponse = await this.openai.chat.completions.create({
-            model: OPENAI_MODEL,
-            messages: followUpMessages,
-            temperature: 0.8,
-            max_tokens: 1000
-          });
-
-          return followUpResponse.choices[0].message.content || "Randevu işlemi tamamlandı.";
-        }
-      }
-
-      return message.content || "Üzgünüm, şu anda yanıt veremiyorum.";
+      return response.choices[0].message.content || "Üzgünüm, şu anda yanıt veremiyorum.";
     } catch (error: any) {
       console.error("OpenAI chat error:", error);
       const customError = ErrorHandler.classifyError(error);

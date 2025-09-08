@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +30,6 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useSupabaseAuth();
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -49,9 +47,8 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
       assistantId: string;
       message: string;
       agentId: string;
-      userId: string;
     }) => {
-      return await apiRequest('/api/chat-with-cx-agent', {
+      return await apiRequest('/api/chat', {
         method: 'POST',
         body: messageData
       });
@@ -95,15 +92,6 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
       return;
     }
 
-    if (!user?.id) {
-      toast({
-        title: "Hata",
-        description: "Kullanıcı girişi gerekli",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     // Add user message to chat immediately
@@ -119,8 +107,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     const messageData = {
       assistantId,
       message: message.trim(),
-      agentId,
-      userId: user.id
+      agentId
     };
 
     setMessage('');
