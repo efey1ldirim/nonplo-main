@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { storage } from '../database/storage';
 import { openaiService } from '../services/OpenAIService';
+import { CalendarService } from '../services/CalendarService';
 import { db } from '../database/storage';
 import { agents, conversations, messages } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -221,6 +222,30 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
     // Store user message
     await storeMessage(conversationId, 'user', message);
 
+    // Check if Google Calendar is enabled for this agent
+    const hasGoogleCalendar = agentData.tools && 
+      (agentData.tools as any).googleCalendar === true;
+    
+    let calendarService = null;
+    if (hasGoogleCalendar) {
+      addDebugLog(debugLogs, '📅 Google Calendar enabled for agent', isDebug);
+      calendarService = new CalendarService();
+      
+      // Check if calendar is connected
+      try {
+        const calendarStatus = await calendarService.getConnectionStatus(userId, agentId);
+        if (!calendarStatus.connected) {
+          addDebugLog(debugLogs, '⚠️ Google Calendar not connected - disabling calendar features', isDebug);
+          calendarService = null;
+        } else {
+          addDebugLog(debugLogs, `✅ Google Calendar connected: ${calendarStatus.email}`, isDebug);
+        }
+      } catch (calendarError) {
+        addDebugLog(debugLogs, `⚠️ Calendar status check failed: ${calendarError}`, isDebug);
+        calendarService = null;
+      }
+    }
+
     // Chat with OpenAI
     let openaiResponse = '';
     let responseMetadata: any = {};
@@ -228,10 +253,18 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
     try {
       addDebugLog(debugLogs, '🔄 Sending request to OpenAI...', isDebug);
       
+      // Pass calendar service if available
+      const chatOptions = calendarService ? {
+        userId,
+        agentId,
+        calendarService
+      } : undefined;
+      
       openaiResponse = await openaiService.chatWithAgent(
         agentData.openaiInstructions,
         message,
-        conversationHistory
+        conversationHistory,
+        chatOptions
       );
 
       responseMetadata = {
