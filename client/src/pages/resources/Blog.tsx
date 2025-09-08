@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Calendar, User, ArrowRight, PenTool, Loader2 } from "lucide-react";
 
 const Blog = () => {

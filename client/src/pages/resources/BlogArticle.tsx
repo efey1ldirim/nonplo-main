@@ -1,8 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Calendar, User, ArrowLeft, Clock } from "lucide-react";
 
 const BlogArticle = () => {
