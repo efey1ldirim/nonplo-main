@@ -79,7 +79,7 @@ export default function DashboardAgentDetail() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState("");
 
-  // Per-agent toggles (local only for now with validation)
+  // Per-agent toggles with persistent storage
   const [globalConnections, setGlobalConnections] = useState<Record<string, boolean>>({});
   const [agentProviderEnabled, setAgentProviderEnabled] = useState<Record<string, boolean>>({});
   const [integrationsLoading, setIntegrationsLoading] = useState(false);
@@ -538,16 +538,73 @@ export default function DashboardAgentDetail() {
     URL.revokeObjectURL(url);
   };
 
-  const onToggleAgentProvider = (providerKey: string, enabled: boolean) => {
+  const onToggleAgentProvider = async (providerKey: string, enabled: boolean) => {
     // Validation: require global connection first
     if (!globalConnections[providerKey] && enabled) {
       toast({ title: "Önce global bağlantı yapın", description: "Entegrasyonlar & Araçlar'ı açarak bağlanın.", variant: "destructive" });
       return;
     }
-    setAgentProviderEnabled((prev) => ({ ...prev, [providerKey]: enabled }));
-    toast({ title: "Kaydedildi", description: "Ajana özel ayar güncellendi." });
+    
+    setIntegrationsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          toolKey: providerKey,
+          enabled: enabled
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save setting');
+      }
+
+      setAgentProviderEnabled((prev) => ({ ...prev, [providerKey]: enabled }));
+      toast({ title: "Kaydedildi", description: "Ajana özel ayar güncellendi." });
+    } catch (error: any) {
+      console.error('Error saving agent provider setting:', error);
+      toast({ 
+        title: "Kaydetme Hatası", 
+        description: "Ayar kaydedilemedi, tekrar deneyin.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIntegrationsLoading(false);
+    }
   };
   
+  // Load agent-specific tool settings
+  const loadAgentToolSettings = async () => {
+    if (!userId || !agentId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.ok) {
+        const settings = await response.json();
+        setAgentProviderEnabled(settings);
+      }
+    } catch (error) {
+      console.error('Error loading agent tool settings:', error);
+    }
+  };
+
   // Phase 3: Manual Google Calendar tool activation function
   const activateGoogleCalendarTool = async () => {
     if (!agentId || !userId || toolActivationLoading) return;

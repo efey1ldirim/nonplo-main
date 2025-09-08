@@ -226,6 +226,8 @@ export interface IStorage {
   // Tools settings
   getToolsSettingsByUserId(userId: string): Promise<ToolsSettings[]>;
   upsertToolsSetting(setting: InsertToolsSettings): Promise<ToolsSettings>;
+  getAgentToolSettings(userId: string, agentId: string): Promise<ToolsSettings[]>;
+  upsertAgentToolSetting(userId: string, agentId: string, toolKey: string, enabled: boolean): Promise<ToolsSettings>;
 
   // Integrations
   getIntegrationsByUserId(userId: string): Promise<IntegrationsConnection[]>;
@@ -632,11 +634,24 @@ export class DatabaseStorage implements IStorage {
     const result = await db.insert(toolsSettings)
       .values(setting)
       .onConflictDoUpdate({
-        target: [toolsSettings.userId, toolsSettings.toolKey],
+        target: setting.agentId 
+          ? [toolsSettings.userId, toolsSettings.agentId, toolsSettings.toolKey]
+          : [toolsSettings.userId, toolsSettings.toolKey],
         set: { enabled: setting.enabled, updatedAt: new Date() }
       })
       .returning();
     return result[0];
+  }
+
+  // Agent-specific tool settings methods
+  async getAgentToolSettings(userId: string, agentId: string): Promise<ToolsSettings[]> {
+    return await db.select().from(toolsSettings)
+      .where(and(eq(toolsSettings.userId, userId), eq(toolsSettings.agentId, agentId)));
+  }
+
+  async upsertAgentToolSetting(userId: string, agentId: string, toolKey: string, enabled: boolean): Promise<ToolsSettings> {
+    const setting = { userId, agentId, toolKey, enabled };
+    return await this.upsertToolsSetting(setting);
   }
 
   // Integrations

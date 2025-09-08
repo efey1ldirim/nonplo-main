@@ -57,6 +57,7 @@ export const agents = pgTable("agents", {
 export const toolsSettings = pgTable("tools_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
+  agentId: uuid("agent_id"), // Optional: for agent-specific settings
   toolKey: text("tool_key").notNull(),
   enabled: boolean("enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -248,6 +249,7 @@ export type AgentWizardData = z.infer<typeof agentWizardSchema>;
 
 export const insertToolsSettingsSchema = createInsertSchema(toolsSettings).pick({
   userId: true,
+  agentId: true,
   toolKey: true,
   enabled: true,
 });

@@ -2730,6 +2730,51 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
 
 
 
+  // Agent-specific tool settings endpoints
+  app.get('/api/agents/:agentId/tool-settings', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { agentId } = req.params;
+      const userId = getUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
+      const settings = await storage.getAgentToolSettings(userId, agentId);
+      const settingsMap: Record<string, boolean> = {};
+      settings.forEach(setting => {
+        settingsMap[setting.toolKey] = setting.enabled;
+      });
+      
+      res.json(settingsMap);
+    } catch (error: any) {
+      console.error('Error getting agent tool settings:', error);
+      res.status(500).json({ error: 'Failed to get agent tool settings' });
+    }
+  });
+
+  app.post('/api/agents/:agentId/tool-settings', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { agentId } = req.params;
+      const { toolKey, enabled } = req.body;
+      const userId = getUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
+      if (!toolKey || typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: 'toolKey and enabled (boolean) are required' });
+      }
+      
+      const setting = await storage.upsertAgentToolSetting(userId, agentId, toolKey, enabled);
+      res.json({ success: true, setting });
+    } catch (error: any) {
+      console.error('Error updating agent tool setting:', error);
+      res.status(500).json({ error: 'Failed to update agent tool setting' });
+    }
+  });
+
   // Auto-broadcast dashboard stats every 15 seconds for all connected users
   setInterval(async () => {
     for (const [userId, clients] of connectedClients.entries()) {
