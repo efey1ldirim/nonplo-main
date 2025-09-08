@@ -64,7 +64,10 @@ if (!process.env.DATABASE_URL) {
 
 console.log('🔗 storage.ts using DATABASE_URL connection');
 const client = postgres(process.env.DATABASE_URL, {
-  max: 1, // Limit connections
+  max: 10, // Optimized connection pool size
+  idle_timeout: 20, // Close idle connections after 20 seconds
+  connect_timeout: 10, // Connection timeout 10 seconds
+  prepare: false, // Disable prepared statements for better compatibility
 });
 
 const db = drizzle(client);
