@@ -4,41 +4,57 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Pricing from "./pages/Pricing";
-import Account from "./pages/Account";
-import Auth from "./pages/Auth";
-import Builder from "./pages/Builder";
-import DashboardLayout from "./components/DashboardLayout";
-import DashboardHome from "./pages/dashboard/DashboardHome";
-import DashboardAgents from "./pages/dashboard/DashboardAgents";
-import DashboardMessages from "./pages/dashboard/DashboardMessages";
-import DashboardIntegrations from "./pages/dashboard/DashboardIntegrations";
-import DashboardSettings from "./pages/dashboard/DashboardSettings";
-import DashboardAgentDetail from "./pages/dashboard/DashboardAgentDetail";
-import Documentation from "./pages/resources/Documentation";
-import DocumentationArticle from "./pages/resources/DocumentationArticle";
-import Blog from "./pages/resources/Blog";
-import BlogArticle from "./pages/resources/BlogArticle";
-import VideoTutorials from "./pages/resources/VideoTutorials";
-import VideoTutorialArticle from "./pages/resources/VideoTutorialArticle";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import CookiePolicy from "./pages/CookiePolicy";
-import AccountDeletion from "./pages/AccountDeletion";
-import NotFound from "./pages/NotFound";
+import { lazy, Suspense } from 'react';
 import ProtectedRoute from "./components/ProtectedRoute";
-import { ChatPage } from "./pages/ChatPage";
 import { useLoginNotifications } from "./hooks/useLoginNotifications";
-import { DevTestLogin } from "./pages/DevTestLogin";
+
+// Immediate load components (critical for initial page load)
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import NotFound from "./pages/NotFound";
+
+// Lazy load components for better performance
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Account = lazy(() => import("./pages/Account"));
+const Builder = lazy(() => import("./pages/Builder"));
+const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
+const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
+const DashboardAgents = lazy(() => import("./pages/dashboard/DashboardAgents"));
+const DashboardMessages = lazy(() => import("./pages/dashboard/DashboardMessages"));
+const DashboardIntegrations = lazy(() => import("./pages/dashboard/DashboardIntegrations"));
+const DashboardSettings = lazy(() => import("./pages/dashboard/DashboardSettings"));
+const DashboardAgentDetail = lazy(() => import("./pages/dashboard/DashboardAgentDetail"));
+const Documentation = lazy(() => import("./pages/resources/Documentation"));
+const DocumentationArticle = lazy(() => import("./pages/resources/DocumentationArticle"));
+const Blog = lazy(() => import("./pages/resources/Blog"));
+const BlogArticle = lazy(() => import("./pages/resources/BlogArticle"));
+const VideoTutorials = lazy(() => import("./pages/resources/VideoTutorials"));
+const VideoTutorialArticle = lazy(() => import("./pages/resources/VideoTutorialArticle"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+const AccountDeletion = lazy(() => import("./pages/AccountDeletion"));
+const ChatPage = lazy(() => import("./pages/ChatPage").then(module => ({ default: module.ChatPage })));
+const DevTestLogin = lazy(() => import("./pages/DevTestLogin").then(module => ({ default: module.DevTestLogin })));
 
 import { queryClient } from "@/lib/queryClient";
+
+// Loading component for lazy loaded routes
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <p className="text-sm text-muted-foreground">Sayfa yükleniyor...</p>
+    </div>
+  </div>
+);
 
 const AppContent = () => {
   useLoginNotifications();
   
   return (
     <BrowserRouter>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<Pricing />} />
@@ -69,6 +85,7 @@ const AppContent = () => {
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };
