@@ -2,6 +2,7 @@ import { google, calendar_v3 } from 'googleapis';
 import { storage } from '../storage';
 import { encrypt, decrypt } from '../utils/encryption';
 import type { UserGoogleCalendar } from '@shared/schema';
+import { checkTokenExpiry, metricsStore } from '../middleware/calendarMonitoring';
 
 export class CalendarService {
   private oauth2Client: any;
@@ -108,7 +109,7 @@ export class CalendarService {
     }
   }
 
-  // Kullanıcının calendar client'ını al
+  // Kullanıcının calendar client'ını al - Enhanced with monitoring and better error handling
   private async getCalendarClient(userId: string, agentId: string): Promise<calendar_v3.Calendar> {
     if (!this.oauth2Client) {
       throw new Error('Google Calendar service not configured');
@@ -118,6 +119,14 @@ export class CalendarService {
     
     if (!userCalendar) {
       throw new Error('Google Calendar not connected');
+    }
+
+    // Check token expiry and warn if needed
+    const connection = await storage.getGoogleCalendarConnection(userId, agentId);
+    const tokenStatus = await checkTokenExpiry(userId, agentId);
+    
+    if (tokenStatus.warning) {
+      console.warn(`⚠️  Token expiry warning for user ${userId}, agent ${agentId}: expires in ${Math.round(tokenStatus.expiresIn / (1000 * 60))} minutes`);
     }
 
     let accessToken: string;
@@ -135,16 +144,96 @@ export class CalendarService {
       refresh_token: refreshToken
     });
 
-    // Token refresh handling
+    // Enhanced token refresh handling with monitoring
+    if (tokenStatus.needsRefresh) {
+      try {
+        console.log(`🔄 Refreshing token for user ${userId}, agent ${agentId}`);
+        
+        const { credentials } = await this.oauth2Client.refreshAccessToken();
+        
+        if (credentials.access_token) {
+          // Update stored tokens
+          const encryptedAccessToken = encrypt(credentials.access_token);
+          const encryptedRefreshToken = credentials.refresh_token ? encrypt(credentials.refresh_token) : undefined;
+          await storage.updateGoogleCalendarTokens(userId, agentId, encryptedAccessToken, encryptedRefreshToken);
+
+          // Update monitoring metrics
+          const metrics = metricsStore.getMetrics(userId);
+          metrics.tokenRefreshCount++;
+          metricsStore.updateMetrics(userId, metrics);
+
+          console.log(`✅ Token refreshed successfully for user ${userId}, agent ${agentId}`);
+        }
+      } catch (refreshError: any) {
+        console.error(`❌ Token refresh failed for user ${userId}, agent ${agentId}:`, refreshError);
+        
+        // Log token refresh failure
+        await storage.logCalendarOperation({
+          userId,
+          agentId,
+          operationType: 'token_refresh',
+          success: false,
+          errorMessage: refreshError.message || 'Token refresh failed',
+          inputData: { expiresIn: tokenStatus.expiresIn }
+        });
+
+        // Specific error handling for different token failures
+        if (refreshError.message?.includes('invalid_grant') || 
+            refreshError.message?.includes('Token has been expired') ||
+            refreshError.code === 400) {
+          throw new Error('Google Calendar bağlantınızın süresi dolmuş. Lütfen yeniden bağlanın.');
+        }
+        
+        throw new Error(`Token yenilenemedi: ${refreshError.message}`);
+      }
+    }
+
+    // Enhanced token refresh event handling
     this.oauth2Client.on('tokens', async (tokens: any) => {
       if (tokens.access_token) {
-        const encryptedAccessToken = encrypt(tokens.access_token);
-        const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined;
-        await storage.updateGoogleCalendarTokens(userId, agentId, encryptedAccessToken, encryptedRefreshToken);
+        try {
+          const encryptedAccessToken = encrypt(tokens.access_token);
+          const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : undefined;
+          await storage.updateGoogleCalendarTokens(userId, agentId, encryptedAccessToken, encryptedRefreshToken);
+          
+          // Update metrics for automatic token refresh
+          const metrics = metricsStore.getMetrics(userId);
+          metrics.tokenRefreshCount++;
+          metricsStore.updateMetrics(userId, metrics);
+          
+          console.log(`🔄 Auto-refreshed token for user ${userId}, agent ${agentId}`);
+        } catch (error) {
+          console.error(`❌ Failed to save auto-refreshed token:`, error);
+        }
       }
     });
 
-    return google.calendar({ version: 'v3', auth: this.oauth2Client });
+    const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+    
+    // Test the connection with a minimal API call
+    try {
+      await calendar.calendarList.list({ maxResults: 1 });
+    } catch (testError: any) {
+      console.error(`❌ Calendar API test failed for user ${userId}, agent ${agentId}:`, testError);
+      
+      // Enhanced error classification
+      if (testError.code === 401) {
+        throw new Error('Google Calendar bağlantınızın süresi dolmuş. Lütfen yeniden bağlanın.');
+      } else if (testError.code === 403) {
+        if (testError.message?.includes('Daily Limit Exceeded')) {
+          throw new Error('Google Calendar günlük kullanım limitine ulaşıldı. Lütfen yarın tekrar deneyin.');
+        }
+        throw new Error('Google Calendar erişim izni bulunamadı. Lütfen yeniden bağlanın.');
+      } else if (testError.code === 429) {
+        throw new Error('Google Calendar API limite ulaşıldı. Lütfen daha sonra tekrar deneyin.');
+      } else if (testError.code === 500 || testError.code === 503) {
+        throw new Error('Google Calendar servisi geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
+      }
+      
+      throw new Error(`Google Calendar bağlantı hatası: ${testError.message}`);
+    }
+
+    return calendar;
   }
 
   // Event oluştur

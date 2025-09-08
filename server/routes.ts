@@ -9,6 +9,8 @@ import { rateLimiters } from "./middleware/rateLimiter";
 import { metricsMiddleware } from "./monitoring/metricsCollector";
 import { cacheMiddleware, cacheManager } from "./performance/cacheManager";
 import * as monitoring from "./routes/monitoring";
+import { calendarMonitoring, validateCalendarRequest, getCalendarAnalytics, calendarErrorAlert } from "./middleware/calendarMonitoring";
+import { sanitizeRequest } from "./middleware/security";
 import { chatWithAgent, getChatHistory, getMessages } from "./routes/chat";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
@@ -2018,7 +2020,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   // ============ CALENDAR API ENDPOINTS ============
 
   // Generate OAuth URL for calendar connection
-  app.get('/api/calendar/auth/url', authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/calendar/auth/url', rateLimiters.calendarOAuth, authenticate, sanitizeRequest, calendarMonitoring('oauth_url'), validateCalendarRequest(['userId', 'agentId']), async (req: AuthenticatedRequest, res) => {
     try {
       if (!calendarService) {
         return res.status(503).json({ error: 'Google Calendar service not available' });

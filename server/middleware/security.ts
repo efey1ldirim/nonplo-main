@@ -36,6 +36,9 @@ export const securityHeaders = helmet({
         "'self'",
         "https://*.supabase.co", // Supabase API
         "https://api.openai.com", // OpenAI API
+        "https://www.googleapis.com", // Google Calendar API
+        "https://oauth2.googleapis.com", // Google OAuth
+        "https://accounts.google.com", // Google Auth
         "wss://*.supabase.co", // Supabase Realtime
         process.env.NODE_ENV === 'development' ? "ws://localhost:*" : null
       ].filter(Boolean),
@@ -86,6 +89,8 @@ export const corsConfig = {
       'http://127.0.0.1:5000',
       'https://*.replit.app',
       'https://*.replit.dev',
+      'https://accounts.google.com', // Google OAuth redirect
+      'https://oauth2.googleapis.com', // Google OAuth endpoints
       process.env.FRONTEND_URL,
       process.env.REPLIT_DOMAIN ? `https://${process.env.REPLIT_DOMAIN}` : null
     ].filter(Boolean);

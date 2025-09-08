@@ -144,5 +144,26 @@ export const rateLimiters = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 5,
     message: 'Too many authentication attempts, please try again later'
+  }),
+
+  // Calendar API operations (moderate restrictions)
+  calendar: createRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    maxRequests: 50,
+    message: 'Too many calendar requests, please try again later'
+  }),
+
+  // Calendar OAuth (very restrictive)
+  calendarOAuth: createRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    maxRequests: 10,
+    message: 'Too many OAuth attempts, please wait before trying again'
+  }),
+
+  // Calendar event operations (balanced)
+  calendarEvents: createRateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    maxRequests: 20,
+    message: 'Too many calendar event operations, please slow down'
   })
 };
