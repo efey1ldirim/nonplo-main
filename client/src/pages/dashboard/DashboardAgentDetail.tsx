@@ -119,7 +119,12 @@ export default function DashboardAgentDetail() {
           return;
         }
         setUserId(user.id);
-        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id), loadAgentToolSettings()]);
+        await Promise.all([fetchAgent(user.id), fetchGlobalConnections(user.id), fetchRecentConversations(user.id), fetchResponseTime(user.id), fetchCalendarStatus(user.id)]);
+        
+        // Load agent tool settings separately after userId is set
+        setTimeout(() => {
+          loadAgentToolSettings();
+        }, 100);
       } catch (e) {
         console.error(e);
         toast({ title: "Hata", description: "Dijital çalışan yüklenemedi.", variant: "destructive" });
@@ -584,12 +589,21 @@ export default function DashboardAgentDetail() {
   
   // Load agent-specific tool settings
   const loadAgentToolSettings = async () => {
-    if (!userId || !agentId) return;
+    console.log('🔄 Loading agent tool settings...', { userId, agentId });
+    
+    if (!userId || !agentId) {
+      console.log('❌ Missing userId or agentId:', { userId, agentId });
+      return;
+    }
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        console.log('❌ No session token');
+        return;
+      }
 
+      console.log('📡 Fetching agent tool settings...');
       const response = await fetch(`/api/agents/${agentId}/tool-settings`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -598,10 +612,13 @@ export default function DashboardAgentDetail() {
 
       if (response.ok) {
         const settings = await response.json();
+        console.log('✅ Agent tool settings loaded:', settings);
         setAgentProviderEnabled(settings);
+      } else {
+        console.error('❌ Failed to load settings:', response.status);
       }
     } catch (error) {
-      console.error('Error loading agent tool settings:', error);
+      console.error('❌ Error loading agent tool settings:', error);
     }
   };
 
