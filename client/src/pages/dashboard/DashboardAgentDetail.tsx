@@ -139,21 +139,13 @@ export default function DashboardAgentDetail() {
   useLayoutEffect(() => {
     let timer: NodeJS.Timeout;
     
-    // Set initial position for 'overview' tab (index 0) with multiple attempts
+    // Auto-click 'overview' tab to set proper initial state
     const setInitialPosition = () => {
       const overviewTab = document.querySelector('[value="overview"][data-tab-index="0"]') as HTMLElement;
-      const indicator = document.getElementById('sliding-indicator');
       
-      if (overviewTab && indicator) {
-        // Get the actual button dimensions
-        const tabRect = overviewTab.getBoundingClientRect();
-        
-        // Set initial size to match the button exactly + extra padding
-        indicator.style.width = `${tabRect.width + 8}px`;
-        indicator.style.transform = 'translateX(0px)';
-        
-        // Also call the updateIndicatorPosition for consistency
-        updateIndicatorPosition(0);
+      if (overviewTab) {
+        // Programmatically click the overview button to trigger all proper states
+        overviewTab.click();
         return true;
       }
       return false;
