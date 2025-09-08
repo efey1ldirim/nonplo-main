@@ -371,7 +371,7 @@ const DashboardAgents = () => {
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Yapay Zeka Destekli Dijital Çalışanlarım</h1>
           <p className="text-muted-foreground text-base md:text-lg">
-            Tüm Yapay Zeka Destekli Dijital Çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
+            Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -398,9 +398,9 @@ const DashboardAgents = () => {
     <div className="p-4 md:p-6 lg:p-8 max-w-full">
       {/* Header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">AI Çalışanlarım</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Yapay Zeka Destekli Dijital Çalışanlarım</h1>
         <p className="text-muted-foreground text-base md:text-lg">
-          Tüm AI çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
+          Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
         </p>
       </div>
 
