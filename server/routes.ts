@@ -14,6 +14,7 @@ import { sanitizeRequest } from "./middleware/security";
 import { chatWithAgent, getChatHistory, getMessages } from "./routes/chat";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
+import OpenAI from "openai";
 import { 
   insertAgentSchema,
   insertConversationSchema,
@@ -31,6 +32,11 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize OpenAI client
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
   // CORS configuration for Replit domains
   const corsOptions = {
     origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -973,6 +979,87 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     } catch (error) {
       console.error("PUT update agent error:", error);
       res.status(500).json({ error: "Failed to update agent" });
+    }
+  });
+
+  // Update agent temperature
+  app.patch("/api/agents/:id/temperature", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { temperature } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      if (temperature === undefined) {
+        return res.status(400).json({ error: "Temperature değeri gerekli" });
+      }
+
+      // Temperature değerini sınırla (0.0 - 2.0)
+      const validTemperature = Math.min(Math.max(parseFloat(temperature), 0.0), 2.0).toString();
+
+      console.log(`🌡️ Temperature Update - Agent ID: ${id}, User ID: ${userId}, Temperature: ${validTemperature}`);
+
+      // Get agent first to check ownership and get OpenAI assistant ID
+      const agent = await storage.getAgentById(id, userId);
+      if (!agent) {
+        return res.status(404).json({ error: "Agent bulunamadı" });
+      }
+
+      // Update temperature in database
+      const updatedAgent = await storage.updateAgent(id, userId, { temperature: validTemperature });
+      if (!updatedAgent) {
+        return res.status(500).json({ error: "Agent temperature güncellenemedi" });
+      }
+
+      // Update OpenAI assistant if assistant ID exists
+      if (agent.openaiAssistantId) {
+        try {
+          await openai.beta.assistants.update(agent.openaiAssistantId, {
+            temperature: parseFloat(validTemperature)
+          });
+          console.log(`✅ OpenAI Assistant temperature updated: ${agent.openaiAssistantId}`);
+        } catch (openaiError: any) {
+          console.error("OpenAI temperature update error:", openaiError);
+          // Don't fail the whole request if OpenAI update fails
+        }
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.delete(`route:/api/agents?userId=${userId}:anonymous`);
+
+      // Broadcast real-time updates
+      if (global.broadcastToUser) {
+        setTimeout(async () => {
+          try {
+            const stats = await storage.getDashboardStats(userId);
+            global.broadcastToUser(userId, 'dashboard_stats', stats);
+            global.broadcastToUser(userId, 'agent_updated', updatedAgent);
+          } catch (error) {
+            console.error('Failed to broadcast temperature update:', error);
+          }
+        }, 1000);
+      }
+
+      res.json({
+        success: true,
+        message: 'Agent temperature başarıyla güncellendi',
+        agent: {
+          id: updatedAgent.id,
+          name: updatedAgent.name,
+          temperature: validTemperature
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Agent temperature güncelleme hatası:', error);
+      res.status(500).json({ 
+        error: 'Agent temperature güncellenemedi',
+        details: error.message 
+      });
     }
   });
 
