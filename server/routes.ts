@@ -2284,6 +2284,75 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Calendar Analytics and Monitoring
+  app.get('/api/calendar/analytics', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const days = parseInt(req.query.days as string) || 7;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+      
+      const analytics = getCalendarAnalytics(userId, days);
+      
+      // Check if alerts should be sent
+      const alertCheck = calendarErrorAlert.shouldAlert(userId);
+      if (alertCheck.shouldAlert) {
+        await calendarErrorAlert.sendAlert(userId, alertCheck.reason!, alertCheck.metrics!);
+      }
+      
+      res.json({
+        success: true,
+        analytics,
+        alertStatus: alertCheck
+      });
+    } catch (error) {
+      console.error('Calendar analytics error:', error);
+      res.status(500).json({ error: 'Failed to get calendar analytics' });
+    }
+  });
+
+  // Calendar Health Check
+  app.get('/api/calendar/health', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const agentId = req.query.agentId as string;
+      
+      if (!userId || !agentId) {
+        return res.status(400).json({ error: 'userId and agentId are required' });
+      }
+      
+      // Check token status
+      const tokenStatus = await checkTokenExpiry(userId, agentId);
+      
+      // Get connection info
+      const connection = await storage.getGoogleCalendarConnection(userId, agentId);
+      
+      res.json({
+        success: true,
+        health: {
+          connected: !!connection,
+          tokenValid: !tokenStatus.needsRefresh,
+          expiresIn: tokenStatus.expiresIn,
+          warning: tokenStatus.warning,
+          email: connection?.email,
+          lastUpdated: connection?.updatedAt
+        }
+      });
+    } catch (error) {
+      console.error('Calendar health check error:', error);
+      res.status(500).json({ 
+        success: false,
+        health: {
+          connected: false,
+          tokenValid: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      });
+    }
+  });
+
   app.post("/api/webhooks/calendar/check-availability", async (req, res) => {
     try {
       const { checkCalendarAvailability } = await import("./routes/calendar-webhooks");
