@@ -66,7 +66,7 @@ const DashboardLayout = () => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col bg-sidebar border-r">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col bg-sidebar border-r sticky top-0 h-screen">
         <div className="flex h-16 items-center px-6 border-b">
           <h2 
             className="text-xl font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity"
