@@ -61,6 +61,7 @@ interface PlaybookConfig {
     emailNotifications?: boolean;
     whatsappIntegration?: boolean;
     calendarBooking?: boolean;
+    webSearch?: boolean;
     socialMediaMonitoring?: boolean;
     crmIntegration?: boolean;
     analyticsReporting?: boolean;
@@ -235,6 +236,7 @@ function formatTools(tools: any): string {
         emailNotifications: 'E-mail Bildirimleri',
         whatsappIntegration: 'WhatsApp Entegrasyonu',
         calendarBooking: 'Takvim Rezervasyonu',
+        webSearch: 'Web Arama',
         socialMediaMonitoring: 'Sosyal Medya Takibi',
         crmIntegration: 'CRM Entegrasyonu',
         analyticsReporting: 'Analitik Raporlama',

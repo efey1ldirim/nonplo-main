@@ -305,7 +305,7 @@ Kriterler:
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS];
+        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
         
         const assistant = await openai.beta.assistants.create({
             name: agentName,
@@ -549,7 +549,7 @@ Kriterler:
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS];
+        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
         
         const assistant = await openai.beta.assistants.create({
             name: agentName,
