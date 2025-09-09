@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { storage } from '../database/storage';
 import { CalendarService } from '../services/CalendarService';
+import { webSearch, validateWebSearchQuery } from '../tools/webSearch';
 import { v4 as uuidv4 } from 'uuid';
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -286,6 +287,34 @@ export const chatWithAgent = async (req: any, res: Response) => {
                   attendees: args.attendees?.map((a: any) => a.email) || []
                 });
                 result = createResult;
+                break;
+                
+              case 'web_search':
+                console.log('🔍 Executing web_search with args:', args);
+                
+                // Validate the search query
+                const validation = validateWebSearchQuery(args.query);
+                if (!validation.valid) {
+                  result = {
+                    success: false,
+                    error: validation.error,
+                    message: `Web search failed: ${validation.error}`
+                  };
+                  break;
+                }
+                
+                const searchResult = await webSearch({
+                  query: args.query,
+                  maxResults: args.max_results || 3,
+                  language: args.language || 'tr'
+                });
+                
+                result = {
+                  success: true,
+                  summary: searchResult.summary,
+                  sources: searchResult.sources,
+                  message: `Web search completed for: ${args.query}`
+                };
                 break;
                 
               default:
