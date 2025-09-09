@@ -118,6 +118,35 @@ const GMAIL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
     }
 ];
 
+// Web Search Tools
+const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+    {
+        type: "function",
+        function: {
+            name: "web_search",
+            description: "Search the web for current information using Google and return a summary with reliable sources. Use this when you need up-to-date information that may not be in your training data.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { 
+                        type: "string", 
+                        description: "The search query to find information about" 
+                    },
+                    max_results: { 
+                        type: "number", 
+                        description: "Maximum number of results to return (default 3, max 5)" 
+                    },
+                    language: {
+                        type: "string",
+                        description: "Language for search results (e.g., 'tr' for Turkish, 'en' for English). Default is 'tr'"
+                    }
+                },
+                required: ["query"]
+            }
+        }
+    }
+];
+
 function sanitize(str?: string, max = 4000) {
     if (!str) return "";
     return String(str).slice(0, max).trim();
