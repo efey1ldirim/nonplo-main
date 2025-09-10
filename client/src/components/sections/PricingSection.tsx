@@ -51,12 +51,13 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto pt-6">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {plans.map((plan, index) => <div key={index} className={`relative bg-card rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-1 flex flex-col h-full ${plan.popular ? "border-primary shadow-primary/20 shadow-lg scale-105" : "border-border shadow-card hover:shadow-primary/10"}`}>
               {/* Popular badge */}
-              {plan.popular && <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-                  <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wide shadow-xl border-2 border-white">
-                    ⭐ En Çok Tercih Edilen
+              {plan.popular && <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-50">
+                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+                    <Star className="w-5 h-5" />
+                    En Çok Tercih Edilen
                   </div>
                 </div>}
 
