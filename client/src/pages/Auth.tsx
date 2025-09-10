@@ -14,10 +14,6 @@ const Auth = () => {
   const { user, loading: authLoading } = useSupabaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [showResetForm, setShowResetForm] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -119,83 +115,6 @@ const Auth = () => {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/auth?mode=reset-password`
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Şifre sıfırlama e-postası gönderildi!",
-        description: "E-posta adresinizi kontrol edin ve bağlantıya tıklayarak şifrenizi sıfırlayın.",
-      });
-      
-      setShowResetForm(false);
-      setResetEmail("");
-    } catch (error: any) {
-      toast({
-        title: "Şifre sıfırlama hatası!",
-        description: error.message || "Şifre sıfırlama e-postası gönderilirken bir hata oluştu.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    if (newPassword !== confirmNewPassword) {
-      toast({
-        title: "Şifreler eşleşmiyor!",
-        description: "Yeni şifre ve şifre tekrarı aynı olmalıdır.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Şifre çok kısa!",
-        description: "Şifreniz en az 6 karakter olmalıdır.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Şifre başarıyla güncellendi!",
-        description: "Yeni şifrenizle giriş yapabilirsiniz.",
-      });
-      
-      // Redirect to signin mode
-      window.location.href = "/auth?mode=signin";
-    } catch (error: any) {
-      toast({
-        title: "Şifre güncelleme hatası!",
-        description: error.message || "Şifre güncellenirken bir hata oluştu.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    }
-  };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -263,75 +182,17 @@ const Auth = () => {
 
         <Card className="backdrop-blur-lg bg-white/10 border-white/20 shadow-2xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-foreground">
-              {mode === "reset-password" ? "Şifre Sıfırlama" : "Hesap İşlemleri"}
-            </CardTitle>
+            <CardTitle className="text-2xl text-foreground">Hesap İşlemleri</CardTitle>
             <CardDescription className="text-muted-foreground">
-              {mode === "reset-password" 
-                ? "Yeni şifrenizi belirleyin ve hesabınıza güvenli bir şekilde giriş yapın" 
-                : "Yapay Zeka Destekli Dijital Çalışan otomasyonu yolculuğunuza başlamak için giriş yapın"
-              }
+              Yapay Zeka Destekli Dijital Çalışan otomasyonu yolculuğunuza başlamak için giriş yapın
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {mode === "reset-password" ? (
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="new-password" className="text-foreground flex items-center">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Yeni Şifre
-                  </Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    placeholder="En az 6 karakter"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    className="bg-background/80 backdrop-blur-sm border-border/50 focus:border-primary/50"
-                    data-testid="input-new-password"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-new-password" className="text-foreground flex items-center">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Yeni Şifre Tekrar
-                  </Label>
-                  <Input
-                    id="confirm-new-password"
-                    type="password"
-                    placeholder="Yeni şifrenizi tekrar girin"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    required
-                    className="bg-background/80 backdrop-blur-sm border-border/50 focus:border-primary/50"
-                    data-testid="input-confirm-new-password"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                  disabled={isLoading}
-                  data-testid="button-reset-password"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Şifre güncelleniyor...
-                    </>
-                  ) : (
-                    "Şifreyi Güncelle"
-                  )}
-                </Button>
-              </form>
-            ) : (
-              <Tabs defaultValue={mode} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="signin">Giriş Yap</TabsTrigger>
-                  <TabsTrigger value="signup">Kayıt Ol</TabsTrigger>
-                </TabsList>
+            <Tabs defaultValue={mode} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="signin">Giriş Yap</TabsTrigger>
+                <TabsTrigger value="signup">Kayıt Ol</TabsTrigger>
+              </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
@@ -439,65 +300,13 @@ const Auth = () => {
                   </div>
 
                   <div className="text-center mt-4">
-                    <button 
-                      type="button"
-                      onClick={() => setShowResetForm(!showResetForm)}
+                    <a 
+                      href="/forgot-password" 
                       className="text-sm text-primary hover:text-primary/80 hover:underline transition-colors"
-                      data-testid="button-forgot-password"
                     >
                       Şifremi Unuttum
-                    </button>
+                    </a>
                   </div>
-
-                  {showResetForm && (
-                    <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/50">
-                      <form onSubmit={handleForgotPassword} className="space-y-3">
-                        <Label htmlFor="reset-email" className="text-sm font-medium">
-                          E-posta Adresiniz
-                        </Label>
-                        <Input
-                          id="reset-email"
-                          type="email"
-                          placeholder="E-posta adresinizi girin"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          required
-                          className="bg-background/80 backdrop-blur-sm border-border/50 focus:border-primary/50"
-                          data-testid="input-reset-email"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            type="submit"
-                            size="sm"
-                            disabled={isLoading || !resetEmail}
-                            className="flex-1"
-                            data-testid="button-send-reset"
-                          >
-                            {isLoading ? (
-                              <>
-                                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                                Gönderiliyor...
-                              </>
-                            ) : (
-                              "Sıfırlama Linki Gönder"
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setShowResetForm(false);
-                              setResetEmail("");
-                            }}
-                            data-testid="button-cancel-reset"
-                          >
-                            İptal
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
                 </form>
               </TabsContent>
 
@@ -630,8 +439,7 @@ const Auth = () => {
                   </div>
                 </form>
               </TabsContent>
-              </Tabs>
-            )}
+            </Tabs>
           </CardContent>
         </Card>
 
