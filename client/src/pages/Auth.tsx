@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 
 const Auth = () => {
   const { toast } = useToast();
+  const { user, loading: authLoading } = useSupabaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -21,6 +23,14 @@ const Auth = () => {
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next") || "/";
   const mode = params.get("mode") || "signin";
+
+  // Redirect to dashboard if user is already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log("🚀 User already logged in, redirecting to:", next);
+      window.location.href = next;
+    }
+  }, [user, authLoading, next]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -68,7 +78,7 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}${next}`
+          redirectTo: `${window.location.origin}/auth?next=${encodeURIComponent(next)}`
         }
       });
 
