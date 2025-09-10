@@ -143,12 +143,11 @@ const Pricing = () => {
                   <TableRow>
                     <TableHead className="w-1/4">Özellikler</TableHead>
                     <TableHead className="text-center">Temel Plan</TableHead>
-                    <TableHead className="text-center bg-primary/5 font-semibold relative pt-8">
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
-                        <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 whitespace-nowrap shadow-lg">
-                          <Star className="w-3 h-3" />
-                          En Çok Tercih Edilen
-                        </div>
+                    <TableHead className="text-center bg-primary/5 font-semibold relative">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                        <span className="bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                          ⭐ En Çok Tercih Edilen
+                        </span>
                       </div>
                       Plus Plan
                     </TableHead>
