@@ -1,6 +1,32 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { format, formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
+
+// Native JavaScript date formatting functions
+const formatDate = (date: Date) => {
+  return date.toLocaleDateString('tr-TR', { 
+    day: 'numeric', month: 'short', year: 'numeric' 
+  });
+};
+
+const formatTime = (date: Date) => {
+  return date.toLocaleTimeString('tr-TR', { 
+    hour: '2-digit', minute: '2-digit' 
+  });
+};
+
+const formatDistanceToNow = (date: Date) => {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  if (minutes < 1) return 'şimdi';
+  if (minutes < 60) return `${minutes} dakika önce`;
+  if (hours < 24) return `${hours} saat önce`;
+  if (days < 7) return `${days} gün önce`;
+  
+  return formatDate(date);
+};
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,7 +37,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -167,10 +192,10 @@ const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (r: 
           {value.from ? (
             value.to ? (
               <span>
-                {format(value.from, "d MMM yyyy", { locale: tr })} – {format(value.to, "d MMM yyyy", { locale: tr })}
+                {formatDate(value.from)} – {formatDate(value.to)}
               </span>
             ) : (
-              <span>{format(value.from, "d MMM yyyy", { locale: tr })}</span>
+              <span>{formatDate(value.from)}</span>
             )
           ) : (
             <span>Tarih aralığı</span>
@@ -178,15 +203,31 @@ const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (r: 
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="p-3">
-          <Calendar
-            mode="range"
-            numberOfMonths={2}
-            selected={value as any}
-            onSelect={(r: any) => onChange(r ?? {})}
-            className="p-3 pointer-events-auto"
-            initialFocus
-          />
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Başlangıç Tarihi</label>
+            <input
+              type="date"
+              value={value.from ? value.from.toISOString().split('T')[0] : ''}
+              onChange={(e) => {
+                const date = e.target.value ? new Date(e.target.value) : undefined;
+                onChange({ ...value, from: date });
+              }}
+              className="w-full px-3 py-2 border border-input rounded-md text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Bitiş Tarihi</label>
+            <input
+              type="date"
+              value={value.to ? value.to.toISOString().split('T')[0] : ''}
+              onChange={(e) => {
+                const date = e.target.value ? new Date(e.target.value) : undefined;
+                onChange({ ...value, to: date });
+              }}
+              className="w-full px-3 py-2 border border-input rounded-md text-sm"
+            />
+          </div>
         </div>
       </PopoverContent>
     </Popover>
@@ -838,10 +879,7 @@ export default function DashboardMessages() {
                               <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                                 <Clock className="h-3 w-3" />
                                 <span className="whitespace-nowrap">
-                                  {formatDistanceToNow(new Date(conversation.last_message_at), {
-                                    addSuffix: true,
-                                    locale: tr,
-                                  })}
+                                  {formatDistanceToNow(new Date(conversation.last_message_at))}
                                 </span>
                               </div>
                             </div>
@@ -882,10 +920,7 @@ export default function DashboardMessages() {
                               )}
                               <Clock className="h-3 w-3" />
                               <span>
-                                {formatDistanceToNow(new Date(conversation.last_message_at), {
-                                  addSuffix: true,
-                                  locale: tr,
-                                })}
+                                {formatDistanceToNow(new Date(conversation.last_message_at))}
                               </span>
                               <Button
                                 variant="ghost"
@@ -1007,7 +1042,7 @@ export default function DashboardMessages() {
                       )}
                       
                       <div className="mt-1 text-xs opacity-75">
-                        {format(new Date(message.createdAt), 'HH:mm', { locale: tr })}
+                        {formatTime(new Date(message.createdAt))}
                       </div>
                     </div>
                   </div>
