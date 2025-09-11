@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, ShieldCheck, Brain, Clock, BarChart, MessageCircle, Instagram, Calendar, ShoppingBag, Globe, Slack, Upload, X } from "lucide-react";
+import { Shield, ShieldCheck, Brain, Clock, BarChart, MessageCircle, Instagram, Calendar, ShoppingBag, Globe, Slack, Upload, X, Search } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,7 @@ const INTEGRATIONS = [
   { provider: "whatsapp", name: "WhatsApp Business API", desc: "Müşteri mesajlaşması için WhatsApp bağlantısı.", icon: MessageCircle },
   { provider: "instagram", name: "Instagram DM", desc: "Instagram direkt mesajlarını etkinleştir.", icon: Instagram },
   { provider: "google_calendar", name: "Google Takvim", desc: "Etkinlikleri ve müsaitliği senkronize et.", icon: Calendar },
+  { provider: "web_search", name: "Web Arama", desc: "Google ile web'de güncel bilgi arama yapın.", icon: Search },
   { provider: "shop_platform", name: "Shopify / WooCommerce", desc: "Mağaza verilerini ve siparişleri entegre et.", icon: ShoppingBag },
   { provider: "web_embed", name: "Web Widget", desc: "Sitenize sohbet widget'ını kurun.", icon: Globe },
   { provider: "slack", name: "Slack / Teams", desc: "Çalışma alanınızda bildirimler alın.", icon: Slack },
