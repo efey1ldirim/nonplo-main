@@ -409,18 +409,27 @@ export const chatWithAgent = async (req: any, res: Response) => {
                     summary += summaryText;
                   }
                   
+                  // Create focused content for OpenAI to use directly
+                  const openAISummary = isEnglish 
+                    ? `Here is the current information about "${query}" from reliable web sources:\n\n`
+                    : `"${query}" hakkında güncel ve güvenilir kaynaklardan alınan bilgiler:\n\n`;
+                  
+                  let directInfo = openAISummary;
+                  topResults.forEach((item, index) => {
+                    // Extract key data points from snippets
+                    directInfo += `${index + 1}. ${item.title}\n`;
+                    directInfo += `${item.snippet}\n`;
+                    directInfo += `(Kaynak: ${item.displayLink})\n\n`;
+                  });
+                  
+                  // Add synthesis instruction
+                  directInfo += isEnglish 
+                    ? `Please provide specific data and numbers from these search results. Do not just list website links - extract and present the actual information requested.`
+                    : `Lütfen bu arama sonuçlarından spesifik veri ve sayıları sunun. Sadece web site linklerini listelemek yerine, istenen gerçek bilgileri çıkarıp sunun.`;
+
                   result = {
                     success: true,
-                    results: results,
-                    summary: summary,
-                    extractedInfo: topResults.map(r => ({
-                      source: r.displayLink,
-                      title: r.title,
-                      information: r.snippet
-                    })),
-                    totalResults: parseInt(searchData.searchInformation?.totalResults || '0'),
-                    searchTime: searchTime,
-                    message: summary
+                    message: directInfo
                   };
                 } catch (searchError: any) {
                   console.error('🔍 Web search error:', searchError);
@@ -447,9 +456,14 @@ export const chatWithAgent = async (req: any, res: Response) => {
             };
           }
 
+          // For web_search, send plain text instead of JSON for better OpenAI processing
+          const output = fnName === 'web_search' && result.success && result.message 
+            ? result.message 
+            : JSON.stringify(result);
+            
           toolOutputs.push({
             tool_call_id: toolCall.id,
-            output: JSON.stringify(result)
+            output: output
           });
         }
 
