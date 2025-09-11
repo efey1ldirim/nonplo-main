@@ -2852,6 +2852,105 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Google Web Search API endpoint for agents
+  app.post('/api/agents/:agentId/web-search', rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { agentId } = req.params;
+      const { query, maxResults = 5, language = 'tr' } = req.body;
+      const userId = getUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: 'Query is required and must be a string' });
+      }
+      
+      // Check if web search is enabled for this agent
+      const toolSettings = await storage.getAgentToolSettings(userId, agentId);
+      const webSearchEnabled = toolSettings.find(setting => 
+        setting.toolKey === 'web_search' && setting.enabled
+      );
+      
+      if (!webSearchEnabled) {
+        return res.status(403).json({ 
+          error: 'Web search is not enabled for this agent' 
+        });
+      }
+      
+      // Check if agent belongs to user
+      const agent = await storage.getAgent(agentId);
+      if (!agent || agent.userId !== userId) {
+        return res.status(403).json({ error: 'Agent not found or unauthorized' });
+      }
+      
+      // Get Google API credentials
+      const apiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
+      const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+      
+      if (!apiKey || !searchEngineId) {
+        return res.status(500).json({ 
+          error: 'Google Search API not configured' 
+        });
+      }
+      
+      // Build Google Custom Search API URL
+      const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
+      searchUrl.searchParams.set('key', apiKey);
+      searchUrl.searchParams.set('cx', searchEngineId);
+      searchUrl.searchParams.set('q', query);
+      searchUrl.searchParams.set('num', Math.min(maxResults, 10).toString());
+      if (language) {
+        searchUrl.searchParams.set('lr', `lang_${language}`);
+      }
+      
+      console.log(`🔍 Web search request for agent ${agentId}: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`); // Redact long queries
+      
+      // Make request to Google Custom Search API
+      const response = await fetch(searchUrl.toString());
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Google Search API error:', response.status, errorText);
+        return res.status(response.status).json({ 
+          error: 'Search request failed',
+          details: errorText 
+        });
+      }
+      
+      const data = await response.json();
+      
+      // Process and return results
+      const results = data.items?.map((item: any) => ({
+        title: item.title,
+        link: item.link,
+        snippet: item.snippet,
+        displayLink: item.displayLink,
+        formattedUrl: item.formattedUrl
+      })) || [];
+      
+      const searchResponse = {
+        query,
+        results,
+        searchTime: data.searchInformation?.searchTime,
+        totalResults: data.searchInformation?.totalResults,
+        agentId,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`✅ Web search completed: ${results.length} results found`);
+      res.json(searchResponse);
+      
+    } catch (error: any) {
+      console.error('Web search error:', error);
+      res.status(500).json({ 
+        error: 'Internal server error during web search',
+        details: error.message 
+      });
+    }
+  });
+
   // Auto-broadcast dashboard stats every 15 seconds for all connected users
   setInterval(async () => {
     for (const [userId, clients] of connectedClients.entries()) {

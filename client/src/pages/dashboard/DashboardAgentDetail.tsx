@@ -58,6 +58,7 @@ const providers = [
   { key: "whatsapp", name: "WhatsApp Business API", desc: "WhatsApp üzerinde iş mesajlaşmasını yönetin." },
   { key: "instagram", name: "Instagram DM", desc: "Instagram direkt mesajlarını yanıtlayın." },
   { key: "google_calendar", name: "Google Calendar", desc: "Takvim etkinliklerini planlayın ve okuyun." },
+  { key: "web_search", name: "Web Arama", desc: "Google ile web'de güncel bilgi arama yapın." },
   { key: "shop", name: "Shopify / WooCommerce", desc: "Ürünleri ve siparişleri senkronize edin." },
   { key: "web_embed", name: "Web Embed", desc: "Chat widget'ını web sitenize yerleştirin." },
   { key: "slack", name: "Slack", desc: "Slack'e bildirimler gönderin." },
