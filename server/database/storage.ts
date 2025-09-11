@@ -338,7 +338,24 @@ export class DatabaseStorage implements IStorage {
     };
 
     const result = await db.insert(agents).values(agentData).returning();
-    return result[0];
+    const createdAgent = result[0];
+
+    // Auto-add default tools for new agents (disabled by default)
+    const defaultTools = [
+      { toolKey: 'web_search', enabled: false },
+      { toolKey: 'google_calendar', enabled: false }
+    ];
+
+    for (const tool of defaultTools) {
+      try {
+        await this.upsertAgentToolSetting(userId, createdAgent.id, tool.toolKey, tool.enabled);
+        console.log(`🔧 Auto-added ${tool.toolKey} tool for agent ${createdAgent.name} (${tool.enabled ? 'enabled' : 'disabled'})`);
+      } catch (error) {
+        console.error(`❌ Failed to add ${tool.toolKey} tool for agent ${createdAgent.id}:`, error);
+      }
+    }
+
+    return createdAgent;
   }
 
   async updateAgent(id: string, userId: string, updates: Partial<InsertAgent>): Promise<Agent | undefined> {
