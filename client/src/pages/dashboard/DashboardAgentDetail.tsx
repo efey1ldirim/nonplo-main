@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare } from "lucide-react";
+import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon } from "lucide-react";
 import LiveTestConsole from "@/components/LiveTestConsole";
 import { AgentChat } from "@/components/features/AgentChat";
 
@@ -98,6 +98,12 @@ export default function DashboardAgentDetail() {
   }>({ connected: false });
   const [calendarStatusLoading, setCalendarStatusLoading] = useState(false);
   const [calendarDisconnecting, setCalendarDisconnecting] = useState(false);
+
+  // Web Search states
+  const [webSearchQuery, setWebSearchQuery] = useState<string>("");
+  const [webSearchTesting, setWebSearchTesting] = useState(false);
+  const [webSearchResults, setWebSearchResults] = useState<any>(null);
+  const [webSearchError, setWebSearchError] = useState<string>("");
 
   // Settings/Knowledge draft state (unsaved guard demo)
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
@@ -867,6 +873,58 @@ export default function DashboardAgentDetail() {
     }
   };
 
+  // Web Search test function
+  const testWebSearch = async () => {
+    if (!agentId || !userId || !webSearchQuery.trim() || webSearchTesting) return;
+
+    setWebSearchTesting(true);
+    setWebSearchError("");
+    setWebSearchResults(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Oturum bulunamadı');
+      }
+
+      const response = await fetch(`/api/agents/${agentId}/web-search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          query: webSearchQuery.trim(),
+          maxResults: 5,
+          language: 'tr'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Web arama başarısız`);
+      }
+
+      setWebSearchResults(data);
+      toast({
+        title: "🔍 Web Arama Başarılı",
+        description: `${data.totalResults} sonuç bulundu (${data.searchTime}ms)`,
+      });
+
+    } catch (error: any) {
+      console.error('❌ Web search test error:', error);
+      setWebSearchError(error.message || 'Web arama sırasında bir hata oluştu');
+      toast({
+        title: "❌ Web Arama Hatası",
+        description: error.message || 'Web arama test edilemedi',
+        variant: "destructive",
+      });
+    } finally {
+      setWebSearchTesting(false);
+    }
+  };
+
   const headerBadges = useMemo(() => (
     <div className="flex flex-wrap gap-2 text-sm">
       <Badge variant="secondary">Oluşturuldu: {formatDate(agent?.created_at)}</Badge>
@@ -1321,6 +1379,106 @@ export default function DashboardAgentDetail() {
                                 <CalendarIcon className="h-4 w-4 mr-2" />
                                 Google Calendar'a Bağlan
                               </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Enhanced Web Search UI
+                if (p.key === 'web_search') {
+                  return (
+                    <div key={p.key} className="rounded border bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+                      <div className="p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                              <SearchIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-lg">{p.name}</div>
+                              <div className="text-sm text-muted-foreground">{p.desc}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                              Hazır
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Agent Settings */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">Bu Ajan için Etkin</div>
+                            <div className="text-xs text-muted-foreground">Ajanın web arama yapmasına izin ver</div>
+                          </div>
+                          <Switch
+                            disabled={integrationsLoading}
+                            checked={!!agentProviderEnabled[p.key]}
+                            onCheckedChange={(v) => onToggleAgentProvider(p.key, v)}
+                          />
+                        </div>
+
+                        {/* Web Search Test Interface */}
+                        {agentProviderEnabled[p.key] && (
+                          <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                            <div className="text-sm font-medium">Web Arama Testi</div>
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Arama sorgusu girin (örn: son dakika haberler)"
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800"
+                                  value={webSearchQuery}
+                                  onChange={(e) => setWebSearchQuery(e.target.value)}
+                                  onKeyPress={(e) => e.key === 'Enter' && testWebSearch()}
+                                  data-testid="input-web-search-query"
+                                />
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={testWebSearch}
+                                  disabled={webSearchTesting || !webSearchQuery.trim()}
+                                  data-testid="button-test-web-search"
+                                >
+                                  <SearchIcon className="h-3 w-3 mr-1" />
+                                  {webSearchTesting ? 'Aranıyor...' : 'Test Et'}
+                                </Button>
+                              </div>
+                              
+                              {/* Search Results */}
+                              {webSearchResults && (
+                                <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 space-y-2">
+                                  <div className="text-sm font-medium text-muted-foreground">
+                                    Arama Sonuçları ({webSearchResults.totalResults} sonuç, {webSearchResults.searchTime}ms)
+                                  </div>
+                                  <div className="space-y-2">
+                                    {webSearchResults.results.slice(0, 3).map((result: any, index: number) => (
+                                      <div key={index} className="border-l-2 border-green-400 pl-3">
+                                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                          <a href={result.link} target="_blank" rel="noopener noreferrer">
+                                            {result.title}
+                                          </a>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">{result.displayLink}</div>
+                                        <div className="text-xs mt-1">{result.snippet}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Error Message */}
+                              {webSearchError && (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                                  <div className="text-sm text-red-800 dark:text-red-200">
+                                    <strong>Hata:</strong> {webSearchError}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
