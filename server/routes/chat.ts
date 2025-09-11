@@ -219,17 +219,31 @@ export const chatWithAgent = async (req: any, res: Response) => {
     });
     console.log('📤 User message added to OpenAI thread');
 
-    // Define tools - including Google Calendar tools and Web Search
+    // Get agent tool settings to determine which tools to enable
+    const agentTools = await storage.getAgentToolSettings(userId, agentId);
+    console.log('🔧 Agent tool settings:', agentTools);
+    
+    // Define base tools
     const tools: any[] = [
       // Code interpreter tool
       { type: 'code_interpreter' },
       // File search tool  
-      { type: 'file_search' },
-      // Google Calendar tools
-      ...GCAL_TOOLS,
-      // Web Search tools
-      ...WEB_SEARCH_TOOLS
+      { type: 'file_search' }
     ];
+
+    // Add Google Calendar tools (always enabled for now)
+    tools.push(...GCAL_TOOLS);
+
+    // Add Web Search tools only if enabled for this agent
+    const webSearchTool = agentTools.find(tool => tool.toolKey === 'web_search');
+    const webSearchEnabled = webSearchTool?.enabled;
+    console.log(`🔍 Web search enabled for agent: ${webSearchEnabled}`);
+    if (webSearchEnabled) {
+      tools.push(...WEB_SEARCH_TOOLS);
+      console.log('✅ Web search tools added to OpenAI assistant');
+    } else {
+      console.log('❌ Web search tools NOT added - disabled for agent');
+    }
 
     // Start OpenAI run
     let run = await openai.beta.threads.runs.create(currentThreadId!, {
@@ -332,7 +346,8 @@ export const chatWithAgent = async (req: any, res: Response) => {
                   
                   // Check if agent has web search tool enabled
                   const toolSettings = await storage.getAgentToolSettings(userId, agentId);
-                  if (!toolSettings || !toolSettings['web_search']) {
+                  const webSearchSetting = toolSettings.find(tool => tool.toolKey === 'web_search');
+                  if (!webSearchSetting?.enabled) {
                     throw new Error('Web search tool not enabled for this agent');
                   }
                   
