@@ -32,6 +32,26 @@ interface CustomAgentRequest {
     userId: string;
 }
 
+// Web Search Tools
+const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+    {
+        type: "function",
+        function: {
+            name: "web_search",
+            description: "Search the web for current information, news, prices, or general knowledge. Use when you need up-to-date information that you might not know.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "Search query in Turkish or English" },
+                    maxResults: { type: "number", description: "Maximum results to return (1-10, default 5)" },
+                    language: { type: "string", description: "Search language code (tr, en, default tr)" }
+                },
+                required: ["query"]
+            }
+        }
+    }
+];
+
 // Google Calendar Tools
 const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
     {
@@ -276,7 +296,7 @@ Kriterler:
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS];
+        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
         
         const assistant = await openai.beta.assistants.create({
             name: agentName,
@@ -520,7 +540,7 @@ Kriterler:
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS];
+        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
         
         const assistant = await openai.beta.assistants.create({
             name: agentName,

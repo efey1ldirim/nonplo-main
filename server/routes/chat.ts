@@ -60,6 +60,26 @@ const detectLanguage = (text: string): string => {
   return turkishScore > englishScore ? 'tr' : 'en';
 };
 
+// Web Search Tools
+const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+    {
+        type: "function",
+        function: {
+            name: "web_search",
+            description: "Search the web for current information, news, prices, or general knowledge. Use when you need up-to-date information that you might not know.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "Search query in Turkish or English" },
+                    maxResults: { type: "number", description: "Maximum results to return (1-10, default 5)" },
+                    language: { type: "string", description: "Search language code (tr, en, default tr)" }
+                },
+                required: ["query"]
+            }
+        }
+    }
+];
+
 // Google Calendar Tools
 const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
     {
@@ -199,14 +219,16 @@ export const chatWithAgent = async (req: any, res: Response) => {
     });
     console.log('📤 User message added to OpenAI thread');
 
-    // Define tools - including Google Calendar tools
+    // Define tools - including Google Calendar tools and Web Search
     const tools: any[] = [
       // Code interpreter tool
       { type: 'code_interpreter' },
       // File search tool  
       { type: 'file_search' },
       // Google Calendar tools
-      ...GCAL_TOOLS
+      ...GCAL_TOOLS,
+      // Web Search tools
+      ...WEB_SEARCH_TOOLS
     ];
 
     // Start OpenAI run
@@ -286,6 +308,80 @@ export const chatWithAgent = async (req: any, res: Response) => {
                   attendees: args.attendees?.map((a: any) => a.email) || []
                 });
                 result = createResult;
+                break;
+                
+              case 'web_search':
+                console.log('🔍 Executing web_search with args:', args);
+                try {
+                  // Validate inputs
+                  const maxResults = Math.max(1, Math.min(args.maxResults || 5, 10));
+                  const language = args.language || detectedLanguage || 'tr';
+                  const query = args.query?.trim();
+                  
+                  if (!query) {
+                    throw new Error('Search query is required');
+                  }
+                  
+                  // Check environment variables
+                  const googleApiKey = process.env.GOOGLE_CUSTOM_SEARCH_API_KEY;
+                  const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+                  
+                  if (!googleApiKey || !searchEngineId) {
+                    throw new Error('Google Custom Search not configured');
+                  }
+                  
+                  // Check if agent has web search tool enabled
+                  const toolSettings = await storage.getAgentToolSettings(userId, agentId);
+                  if (!toolSettings || !toolSettings['web_search']) {
+                    throw new Error('Web search tool not enabled for this agent');
+                  }
+                  
+                  // Direct Google Custom Search API call (avoiding internal HTTP hop)
+                  const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
+                  searchUrl.searchParams.set('key', googleApiKey);
+                  searchUrl.searchParams.set('cx', searchEngineId);
+                  searchUrl.searchParams.set('q', query);
+                  searchUrl.searchParams.set('num', maxResults.toString());
+                  
+                  if (language) {
+                    searchUrl.searchParams.set('lr', `lang_${language}`);
+                  }
+                  
+                  const searchStartTime = Date.now();
+                  console.log(`🔍 Web search request: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`);
+                  
+                  const searchResponse = await fetch(searchUrl.toString());
+                  const searchTime = Date.now() - searchStartTime;
+                  
+                  if (!searchResponse.ok) {
+                    const errorText = await searchResponse.text();
+                    throw new Error(`Google Search API error: ${searchResponse.status} - ${errorText}`);
+                  }
+                  
+                  const searchData = await searchResponse.json();
+                  const results = (searchData.items || []).map((item: any) => ({
+                    title: item.title,
+                    link: item.link,
+                    snippet: item.snippet,
+                    displayLink: item.displayLink,
+                    formattedUrl: item.formattedUrl
+                  }));
+                  
+                  result = {
+                    success: true,
+                    results: results,
+                    totalResults: parseInt(searchData.searchInformation?.totalResults || '0'),
+                    searchTime: searchTime,
+                    message: `Found ${results.length} web results for "${query}"`
+                  };
+                } catch (searchError: any) {
+                  console.error('🔍 Web search error:', searchError);
+                  result = {
+                    success: false,
+                    error: searchError.message,
+                    message: `Web search failed: ${searchError.message}`
+                  };
+                }
                 break;
                 
               default:
