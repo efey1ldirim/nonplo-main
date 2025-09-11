@@ -66,11 +66,11 @@ const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
         type: "function",
         function: {
             name: "web_search",
-            description: "Search the web for current information, news, prices, or general knowledge. Use when you need up-to-date information that you might not know.",
+            description: "ALWAYS use this function when the user asks about current events, recent news, prices, statistics, or any information from 2024-2025. Search the web to get the most recent and accurate information instead of relying on your training data. This tool will search and summarize the information for you.",
             parameters: {
                 type: "object",
                 properties: {
-                    query: { type: "string", description: "Search query in Turkish or English" },
+                    query: { type: "string", description: "Search query in Turkish or English - be specific and detailed" },
                     maxResults: { type: "number", description: "Maximum results to return (1-10, default 5)" },
                     language: { type: "string", description: "Search language code (tr, en, default tr)" }
                 },
@@ -382,12 +382,45 @@ export const chatWithAgent = async (req: any, res: Response) => {
                     formattedUrl: item.formattedUrl
                   }));
                   
+                  // Create a comprehensive summary from search results
+                  const topResults = results.slice(0, 3);
+                  const isEnglish = language === 'en' || detectedLanguage === 'en';
+                  
+                  let summary = isEnglish 
+                    ? `Found ${results.length} search results for "${query}":\n\n`
+                    : `Web araması "${query}" için ${results.length} sonuç bulundu:\n\n`;
+                  
+                  topResults.forEach((item, index) => {
+                    summary += `${index + 1}. **${item.title}**\n`;
+                    summary += `   ${item.snippet}\n`;
+                    const sourceLabel = isEnglish ? 'Source' : 'Kaynak';
+                    summary += `   (${sourceLabel}: ${item.displayLink})\n\n`;
+                  });
+                  
+                  // Add key information synthesis
+                  const allSnippets = topResults.map(r => r.snippet).join(' ');
+                  if (allSnippets.length > 100) {
+                    const summaryLabel = isEnglish ? '**Key Information:**' : '**Özet Bilgiler:**';
+                    const summaryText = isEnglish 
+                      ? `Based on search results, important information about ${query} is detailed above. This information comes from sources like ${topResults.map(r => r.displayLink).join(', ')}.\n\n`
+                      : `Arama sonuçlarına göre ${query} ile ilgili önemli bilgiler yukarıda detaylandırılmıştır. Bu bilgiler ${topResults.map(r => r.displayLink).join(', ')} gibi kaynaklardan alınmıştır.\n\n`;
+                    
+                    summary += summaryLabel + '\n';
+                    summary += summaryText;
+                  }
+                  
                   result = {
                     success: true,
                     results: results,
+                    summary: summary,
+                    extractedInfo: topResults.map(r => ({
+                      source: r.displayLink,
+                      title: r.title,
+                      information: r.snippet
+                    })),
                     totalResults: parseInt(searchData.searchInformation?.totalResults || '0'),
                     searchTime: searchTime,
-                    message: `Found ${results.length} web results for "${query}"`
+                    message: summary
                   };
                 } catch (searchError: any) {
                   console.error('🔍 Web search error:', searchError);
