@@ -1,6 +1,3 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-
 import { eq, and, desc, asc, sql, inArray, gt } from "drizzle-orm";
 import axios from "axios";
 import {
@@ -56,27 +53,14 @@ import {
   type UserStatus,
   type InsertUserStatus,
 } from "@shared/schema";
+import { db } from './db';
 
-// Use DATABASE_URL (Neon) connection to match Drizzle
+// Use DATABASE_URL (Supabase PostgreSQL) connection
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
 }
 
-console.log('🔗 storage.ts using DATABASE_URL connection');
-const client = postgres(process.env.DATABASE_URL, {
-  max: parseInt(process.env.DB_MAX_CONNECTIONS || '5'), // Configurable pool size, default 5 for serverless
-  idle_timeout: 20, // Close idle connections after 20 seconds
-  connect_timeout: 10, // Connection timeout 10 seconds
-  prepare: false, // Disable prepared statements for better compatibility
-  transform: postgres.camel, // Enable camelCase transformation for better performance
-});
-
-const db = drizzle(client);
-
-
-
-// Export db for use in other modules
-export { db };
+console.log('🔗 storage.ts using shared Supabase PostgreSQL connection');
 
 // Previous Dialogflow CX configuration removed - no longer using Dialogflow
 

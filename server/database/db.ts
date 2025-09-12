@@ -2,16 +2,21 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-// Unified database connection using DATABASE_URL
+// Unified Supabase PostgreSQL connection with SSL and application name in URL
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
 }
 
-console.log('🔗 db.ts using DATABASE_URL connection');
-const client = postgres(process.env.DATABASE_URL, {
-  max: parseInt(process.env.DB_MAX_CONNECTIONS || '5'), // Configurable pool size, default 5 for serverless
-  idle_timeout: 20, // Close idle connections after 20 seconds
-  connect_timeout: 10, // Connection timeout 10 seconds
+// Add SSL and application name to DATABASE_URL for Supabase compatibility
+const databaseUrl = process.env.DATABASE_URL.includes('?') 
+  ? `${process.env.DATABASE_URL}&sslmode=require&application_name=nonplo_saas_platform`
+  : `${process.env.DATABASE_URL}?sslmode=require&application_name=nonplo_saas_platform`;
+
+console.log('🔗 db.ts using Supabase PostgreSQL connection with SSL');
+const client = postgres(databaseUrl, {
+  max: parseInt(process.env.DB_MAX_CONNECTIONS || '10'), // Supabase optimized connection pool
+  idle_timeout: 30, // Supabase optimized idle timeout
+  connect_timeout: 15, // Increased timeout for Supabase
   prepare: false, // Disable prepared statements for better compatibility
   onnotice: () => {}, // Suppress notices
 });
