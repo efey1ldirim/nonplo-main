@@ -13,10 +13,10 @@ export async function createCalendarEvent(req: Request, res: Response) {
     console.log('🔍 Request URL:', req.url);
     console.log('🔍 Request Method:', req.method);
     
-    // Extract parameters from DialogFlow CX request
+    // Extract parameters from PLAYBOOK ONLY request
     const { 
-      sessionInfo,
-      parameters,
+      userId,
+      agentId,
       summary,
       startDateTime, 
       endDateTime,
@@ -24,14 +24,10 @@ export async function createCalendarEvent(req: Request, res: Response) {
       attendees
     } = req.body;
 
-    // Extract user and agent info from session
-    const sessionPath = sessionInfo?.session || '';
-    const pathParts = sessionPath.split('/');
-    
-    console.log('🔍 Session Analysis:');
-    console.log('  📍 Full session path:', sessionPath);
-    console.log('  📍 Path parts:', pathParts);
-    console.log('  📍 Parts count:', pathParts.length);
+    // PLAYBOOK ONLY mode - direct user and agent info
+    console.log('🔍 PLAYBOOK Request Analysis:');
+    console.log('  📍 User ID:', userId);
+    console.log('  📍 Agent ID:', agentId);
     
     // Session format: projects/PROJECT_ID/locations/LOCATION/agents/AGENT_ID/sessions/SESSION_ID
     let agentId = null;
@@ -61,7 +57,8 @@ export async function createCalendarEvent(req: Request, res: Response) {
       });
       
       console.log('🔍 Searching for matching CX Agent ID:', cxAgentId);
-      const matchingAgent = allAgents.find(agent => agent.dialogflowCxAgentId === cxAgentId);
+      // PLAYBOOK ONLY mode - direct agent lookup by ID
+      const matchingAgent = allAgents.find(agent => agent.id === cxAgentId);
       
       if (matchingAgent) {
         agentId = matchingAgent.id;
@@ -199,7 +196,8 @@ export async function checkCalendarAvailability(req: Request, res: Response) {
       
       const { storage } = await import('../storage');
       const allAgents = await storage.getAllAgents();
-      const matchingAgent = allAgents.find(agent => agent.dialogflowCxAgentId === cxAgentId);
+      // PLAYBOOK ONLY mode - direct agent lookup by ID
+      const matchingAgent = allAgents.find(agent => agent.id === cxAgentId);
       
       if (matchingAgent) {
         agentId = matchingAgent.id;

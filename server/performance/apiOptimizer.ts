@@ -33,7 +33,7 @@ interface ApiMetrics {
 }
 
 class ApiOptimizer {
-  private dialogflowInstance: AxiosInstance;
+  // Dialogflow instance removed - no longer using Dialogflow
   private googleApiInstance: AxiosInstance;
   private generalInstance: AxiosInstance;
   
@@ -69,18 +69,7 @@ class ApiOptimizer {
       freeSocketTimeout: 30000
     });
 
-    // Optimized DialogFlow CX instance
-    this.dialogflowInstance = axios.create({
-      baseURL: 'https://europe-west3-dialogflow.googleapis.com/v3',
-      timeout: 45000,           // Reduced from 60s to 45s
-      httpsAgent: httpsAgent,   // Use httpsAgent for HTTPS
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Nonplo-API-Client/1.0'
-      },
-      maxRedirects: 3,
-      validateStatus: (status) => status >= 200 && status < 300, // Standard success range - 5xx will trigger retries
-    });
+    // Dialogflow instance removed - no longer using Dialogflow
 
     // Optimized Google APIs instance  
     this.googleApiInstance = axios.create({
@@ -145,7 +134,7 @@ class ApiOptimizer {
     };
 
     // Apply interceptors to all instances
-    [this.dialogflowInstance, this.googleApiInstance, this.generalInstance].forEach(instance => {
+    [this.googleApiInstance, this.generalInstance].forEach(instance => {
       instance.interceptors.request.use(requestInterceptor);
       instance.interceptors.response.use(responseInterceptor, errorInterceptor);
     });
@@ -159,9 +148,7 @@ class ApiOptimizer {
     
     // Choose appropriate instance based on URL
     let instance = this.generalInstance;
-    if (config.url?.includes('dialogflow.googleapis.com')) {
-      instance = this.dialogflowInstance;
-    } else if (config.url?.includes('googleapis.com')) {
+    if (config.url?.includes('googleapis.com')) {
       instance = this.googleApiInstance;
     }
 
@@ -214,53 +201,9 @@ class ApiOptimizer {
     }
   }
 
-  /**
-   * Optimized DialogFlow CX detect intent call
-   */
-  async detectIntent(
-    sessionPath: string,
-    queryInput: any,
-    token: string,
-    options: { timeout?: number; retries?: number } = {}
-  ): Promise<any> {
-    const { timeout = 45000, retries = 2 } = options;
-    
-    return this.request({
-      method: 'POST',
-      url: `/${sessionPath}:detectIntent`,
-      data: { queryInput },
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      timeout,
-      retries,
-      priority: 'high' // DialogFlow calls are high priority
-    });
-  }
+  // Dialogflow detectIntent method removed - no longer using Dialogflow
 
-  /**
-   * Optimized playbook creation with timeout management
-   */
-  async createPlaybook(
-    parent: string,
-    playbookData: any,
-    token: string,
-    options: { timeout?: number; retries?: number } = {}
-  ): Promise<any> {
-    const { timeout = 60000, retries = 1 } = options; // Only 1 retry for creation operations
-    
-    return this.request({
-      method: 'POST',
-      url: `/${parent}/playbooks`,
-      data: playbookData,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      timeout,
-      retries,
-      priority: 'high'
-    });
-  }
+  // Dialogflow createPlaybook method removed - now using PLAYBOOK ONLY architecture
 
   /**
    * Optimized Google Calendar API calls
@@ -313,25 +256,17 @@ class ApiOptimizer {
    * Health check for API connections
    */
   async healthCheck(): Promise<{
-    dialogflow: boolean;
     googleApi: boolean;
     general: boolean;
     metrics: ApiMetrics;
   }> {
     const results = {
-      dialogflow: false,
       googleApi: false,
       general: false,
       metrics: this.metrics
     };
 
-    try {
-      // Test DialogFlow connection
-      await this.dialogflowInstance.get('/projects', { timeout: 5000 });
-      results.dialogflow = true;
-    } catch (error) {
-      console.error('DialogFlow health check failed:', error.message);
-    }
+    // Dialogflow health check removed - no longer using Dialogflow
 
     try {
       // Test Google API connection

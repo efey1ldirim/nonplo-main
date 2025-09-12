@@ -78,117 +78,11 @@ const db = drizzle(client);
 // Export db for use in other modules
 export { db };
 
-// Dialogflow CX configuration for deletion (Fixed values)
-const projectId = 'nonplo-auth2';     // Correct Google Cloud project ID
-const location = 'europe-west3';      // Correct Google Cloud location
-
-// Google Cloud access token helper for deletion
-async function getAccessToken(): Promise<string> {
-  try {
-    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    if (!credentialsJson) {
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not set');
-    }
-
-    const credentials = JSON.parse(credentialsJson);
-    const { GoogleAuth } = await import('google-auth-library');
-
-    const auth = new GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/cloud-platform']
-    });
-
-    const client = await auth.getClient();
-    const accessTokenResponse = await client.getAccessToken();
-
-    if (!accessTokenResponse.token) {
-      throw new Error('Failed to get access token');
-    }
-
-    return accessTokenResponse.token;
-  } catch (error: any) {
-    throw new Error(`Google Cloud authentication failed: ${error.message}`);
-  }
-}
-
-// List all CX agents
-async function listAllCXAgents(): Promise<any[]> {
-  try {
-    const accessToken = await getAccessToken();
-    const listUrl = `https://${location}-dialogflow.googleapis.com/v3/projects/${projectId}/locations/${location}/agents`;
-    
-    const response = await axios.get(listUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000
-    });
-    
-    return response.data?.agents || [];
-  } catch (error: any) {
-    console.error(`❌ CX agent listeleme hatası: ${error.message}`);
-    return [];
-  }
-}
-
-// Delete agent from DialogFlow CX by ID
-async function deleteDialogFlowCXAgent(dialogflowCxAgentId: string): Promise<boolean> {
-  try {
-
-
-    const accessToken = await getAccessToken();
-
-
-    const deleteUrl = `https://${location}-dialogflow.googleapis.com/v3/projects/${projectId}/locations/${location}/agents/${dialogflowCxAgentId}`;
+// Previous Dialogflow CX configuration removed - no longer using Dialogflow
 
 
 
-    const response = await axios.delete(deleteUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000
-    });
 
-
-    return true;
-  } catch (error: any) {
-    console.error(`❌ Dialogflow CX agent silme hatası: ${error.message}`);
-    if (error.response?.data) {
-      console.error(`API Error Details: ${JSON.stringify(error.response.data)}`);
-    }
-    return false;
-  }
-}
-
-// Find and delete CX agent by name (for orphaned agents)
-async function findAndDeleteCXAgentByName(agentName: string): Promise<boolean> {
-  try {
-    const cxAgents = await listAllCXAgents();
-    
-    // Find matching agent by name (fuzzy match)
-    const matchingAgent = cxAgents.find(agent => {
-      const displayName = agent.displayName || '';
-      // Match exact name or name + " AI Asistanı"
-      return displayName === agentName || 
-             displayName === `${agentName} AI Asistanı` ||
-             displayName.includes(agentName);
-    });
-    
-    if (matchingAgent) {
-      const agentId = matchingAgent.name?.split('/').pop();
-      const deleted = await deleteDialogFlowCXAgent(agentId);
-      return deleted;
-    } else {
-      return false;
-    }
-  } catch (error: any) {
-    console.error(`❌ CX agent arama/silme hatası: ${error.message}`);
-    return false;
-  }
-}
 
 export interface IStorage {
   // Agents
@@ -381,48 +275,11 @@ export class DatabaseStorage implements IStorage {
   async deleteAgent(id: string, userId: string): Promise<void> {
 
     
-    // First get the agent to check if it has a Dialogflow CX agent ID
+    // Check if agent exists before deletion
     const agent = await this.getAgentById(id, userId);
     
     if (!agent) {
-      return; // Don't throw error, just return - agent was already deleted
-    }
-
-    // Check for CX agent ID in both agent table and playbook config
-    let cxAgentId = agent.dialogflowCxAgentId;
-    
-    // If no CX agent ID in agent table, check playbook config
-    if (!cxAgentId) {
-      try {
-        const playbook = await this.getPlaybookByAgentId(id);
-        if (playbook?.config?.dialogflowCxAgentId) {
-          cxAgentId = playbook.config.dialogflowCxAgentId;
-        }
-      } catch (playbookError: any) {
-        // Ignore playbook errors
-      }
-    }
-
-    // Try to delete from Dialogflow CX if we found an agent ID
-    let cxDeleted = false;
-    
-    if (cxAgentId) {
-      try {
-        cxDeleted = await deleteDialogFlowCXAgent(cxAgentId);
-      } catch (cxError: any) {
-        // Ignore CX deletion errors
-      }
-      
-      // If ID-based deletion failed, try name-based deletion as fallback
-      if (!cxDeleted) {
-        try {
-          cxDeleted = await findAndDeleteCXAgentByName(agent.name);
-        } catch (cxError: any) {
-          // Ignore CX deletion errors
-        }
-      }
-    } else {
-      cxDeleted = true; // Mark as successful since there's nothing to delete in CX
+      return; // Agent already deleted or doesn't exist
     }
 
     // Delete from database (this will also cascade delete related playbooks)
@@ -1413,10 +1270,10 @@ export class DatabaseStorage implements IStorage {
   // Complete account deletion (actually delete data)
   async completeAccountDeletion(userId: string): Promise<void> {
     try {
-      // Get all agents for this user first (for Dialogflow cleanup)
+      // Get all agents for this user first
       const userAgents = await this.getAgentsByUserId(userId);
       
-      // Delete each agent (this will also clean up Dialogflow CX agents)
+      // Delete each agent (cascade delete related data)
       for (const agent of userAgents) {
         await this.deleteAgent(agent.id, userId);
       }
