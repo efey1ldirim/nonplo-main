@@ -143,6 +143,24 @@ class InMemoryCacheManager {
     return this.get(this.generateCacheKey('conversation_messages', conversationId));
   }
 
+  // AI Response Caching
+  cacheAIResponse(promptHash: string, response: string, model: string, ttl: number = 60 * 60 * 1000): void { // 1 hour TTL
+    this.set(this.generateCacheKey('ai_response', model, promptHash), response, ttl);
+  }
+
+  getCachedAIResponse(promptHash: string, model: string): string | null {
+    return this.get(this.generateCacheKey('ai_response', model, promptHash));
+  }
+
+  // AI Chat Caching (shorter TTL for conversations)
+  cacheAIChatResponse(conversationId: string, messageHash: string, response: string, ttl: number = 10 * 60 * 1000): void { // 10 minutes
+    this.set(this.generateCacheKey('ai_chat', conversationId, messageHash), response, ttl);
+  }
+
+  getCachedAIChatResponse(conversationId: string, messageHash: string): string | null {
+    return this.get(this.generateCacheKey('ai_chat', conversationId, messageHash));
+  }
+
   invalidateUserData(userId: string): void {
     // Find and delete all cache entries for this user
     const keysToDelete: string[] = [];

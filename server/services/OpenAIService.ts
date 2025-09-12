@@ -1,8 +1,56 @@
 import OpenAI from "openai";
 import { Agent, AgentWizardData } from "../../shared/schema";
 import { ErrorHandler } from "../utils/errorHandler";
+import { cacheManager } from "../performance/cacheManager";
+import crypto from "crypto";
 
 const OPENAI_MODEL = "gpt-4o-mini";
+const PLAYBOOK_MODEL = "gpt-4o-mini";
+const CHAT_MODEL = "gpt-4o-mini";
+
+// AI Analytics tracking
+interface AIUsageMetric {
+  model: string;
+  tokens: number;
+  cost: number;
+  timestamp: Date;
+  type: 'playbook' | 'chat' | 'custom';
+  cached: boolean;
+}
+
+class AIAnalytics {
+  private metrics: AIUsageMetric[] = [];
+  
+  trackUsage(metric: AIUsageMetric) {
+    this.metrics.push(metric);
+    // Keep only last 1000 metrics to prevent memory bloat
+    if (this.metrics.length > 1000) {
+      this.metrics = this.metrics.slice(-1000);
+    }
+  }
+  
+  getUsageStats(hours: number = 24) {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const recentMetrics = this.metrics.filter(m => m.timestamp > cutoff);
+    
+    return {
+      totalRequests: recentMetrics.length,
+      totalTokens: recentMetrics.reduce((sum, m) => sum + m.tokens, 0),
+      totalCost: recentMetrics.reduce((sum, m) => sum + m.cost, 0),
+      cacheHitRate: recentMetrics.length > 0 ? 
+        Math.round((recentMetrics.filter(m => m.cached).length / recentMetrics.length) * 100) : 0,
+      byModel: recentMetrics.reduce((acc, m) => {
+        if (!acc[m.model]) acc[m.model] = { requests: 0, tokens: 0, cost: 0 };
+        acc[m.model].requests++;
+        acc[m.model].tokens += m.tokens;
+        acc[m.model].cost += m.cost;
+        return acc;
+      }, {} as Record<string, {requests: number, tokens: number, cost: number}>)
+    };
+  }
+}
+
+const aiAnalytics = new AIAnalytics();
 
 export class OpenAIService {
   public openai: OpenAI;
@@ -19,9 +67,25 @@ export class OpenAIService {
   async generateAgentPlaybook(agentData: Agent, wizardData?: AgentWizardData): Promise<string> {
     try {
       const prompt = this.buildPlaybookPrompt(agentData, wizardData);
+      const promptHash = crypto.createHash('md5').update(prompt).digest('hex');
+      
+      // Check cache first
+      const cached = cacheManager.getCachedAIResponse(promptHash, PLAYBOOK_MODEL);
+      if (cached) {
+        console.log(`🧠 Cache hit for playbook generation`);
+        aiAnalytics.trackUsage({
+          model: PLAYBOOK_MODEL,
+          tokens: 0, // Cached response
+          cost: 0,
+          timestamp: new Date(),
+          type: 'playbook',
+          cached: true
+        });
+        return cached;
+      }
 
       const response = await this.openai.chat.completions.create({
-        model: OPENAI_MODEL,
+        model: PLAYBOOK_MODEL,
         messages: [
           {
             role: "system",
@@ -36,7 +100,25 @@ export class OpenAIService {
         max_tokens: 4000
       });
 
-      return response.choices[0].message.content || "";
+      const result = response.choices[0].message.content || "";
+      const tokens = response.usage?.total_tokens || 0;
+      const cost = this.calculateCost(tokens, PLAYBOOK_MODEL);
+      
+      // Cache the result
+      cacheManager.cacheAIResponse(promptHash, result, PLAYBOOK_MODEL, 60 * 60 * 1000); // 1 hour cache
+      
+      // Track analytics
+      aiAnalytics.trackUsage({
+        model: PLAYBOOK_MODEL,
+        tokens,
+        cost,
+        timestamp: new Date(),
+        type: 'playbook',
+        cached: false
+      });
+      
+      console.log(`🧠 Generated playbook: ${tokens} tokens, $${cost.toFixed(4)}`);
+      return result;
     } catch (error: any) {
       console.error("OpenAI playbook generation error:", error);
       const customError = ErrorHandler.classifyError(error);
@@ -50,9 +132,29 @@ export class OpenAIService {
   async chatWithAgent(
     agentInstructions: string,
     userMessage: string,
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = []
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+    conversationId?: string
   ): Promise<string> {
     try {
+      const messageHash = crypto.createHash('md5').update(userMessage + agentInstructions).digest('hex');
+      
+      // Check cache for similar conversations (optional for chat)
+      if (conversationId) {
+        const cached = cacheManager.getCachedAIChatResponse(conversationId, messageHash);
+        if (cached) {
+          console.log(`🧠 Cache hit for chat response`);
+          aiAnalytics.trackUsage({
+            model: CHAT_MODEL,
+            tokens: 0,
+            cost: 0,
+            timestamp: new Date(),
+            type: 'chat',
+            cached: true
+          });
+          return cached;
+        }
+      }
+
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         {
           role: "system",
@@ -66,13 +168,33 @@ export class OpenAIService {
       ];
 
       const response = await this.openai.chat.completions.create({
-        model: OPENAI_MODEL,
+        model: CHAT_MODEL,
         messages,
         temperature: 0.8,
         max_tokens: 1000
       });
 
-      return response.choices[0].message.content || "Üzgünüm, şu anda yanıt veremiyorum.";
+      const result = response.choices[0].message.content || "Üzgünüm, şu anda yanıt veremiyorum.";
+      const tokens = response.usage?.total_tokens || 0;
+      const cost = this.calculateCost(tokens, CHAT_MODEL);
+      
+      // Cache chat response (shorter TTL)
+      if (conversationId) {
+        cacheManager.cacheAIChatResponse(conversationId, messageHash, result, 5 * 60 * 1000); // 5 minutes
+      }
+      
+      // Track analytics
+      aiAnalytics.trackUsage({
+        model: CHAT_MODEL,
+        tokens,
+        cost,
+        timestamp: new Date(),
+        type: 'chat',
+        cached: false
+      });
+      
+      console.log(`🧠 Chat response: ${tokens} tokens, $${cost.toFixed(4)}`);
+      return result;
     } catch (error: any) {
       console.error("OpenAI chat error:", error);
       const customError = ErrorHandler.classifyError(error);
@@ -279,16 +401,16 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
   }
 
   /**
-   * Validate OpenAI API key
+   * Calculate cost based on tokens and model
    */
-  async validateApiKey(): Promise<boolean> {
-    try {
-      await this.openai.models.list();
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
+  private calculateCost(tokens: number, model: string): number {
+    // OpenAI pricing (approximate, as of 2024)
+    const pricing: Record<string, { input: number; output: number }> = {
+      'gpt-4o-mini': { input: 0.00015, output: 0.0006 }, // per 1K tokens
+      'gpt-4o': { input: 0.005, output: 0.015 },
+      'gpt-4': { input: 0.03, output: 0.06 }
+    };\n    
+    const modelPricing = pricing[model] || pricing['gpt-4o-mini'];\n    // Assuming roughly 50/50 input/output ratio\n    return (tokens / 1000) * ((modelPricing.input + modelPricing.output) / 2);\n  }\n\n  /**\n   * Get AI usage analytics\n   */\n  getUsageAnalytics(hours: number = 24) {\n    return aiAnalytics.getUsageStats(hours);\n  }\n\n  /**\n   * Validate OpenAI API key\n   */\n  async validateApiKey(): Promise<boolean> {\n    try {\n      await this.openai.models.list();\n      return true;\n    } catch (error) {\n      return false;\n    }\n  }
 }
 
 // Create singleton instance

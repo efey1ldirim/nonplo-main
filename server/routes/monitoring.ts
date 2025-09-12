@@ -237,6 +237,63 @@ export const runE2ETests = async (req: Request, res: Response) => {
   }
 };
 
+// AI Usage Analytics
+export const getAIAnalytics = (req: Request, res: Response) => {
+  try {
+    const { openaiService } = require('../services/OpenAIService');
+    const hours = parseInt(req.query.hours as string) || 24;
+    const analytics = openaiService.getUsageAnalytics(hours);
+    
+    res.json({
+      ai: {
+        ...analytics,
+        efficiency: analytics.cacheHitRate > 70 ? 'excellent' : 
+                   analytics.cacheHitRate > 50 ? 'good' : 
+                   analytics.cacheHitRate > 30 ? 'fair' : 'poor',
+        costEffectiveness: analytics.totalCost < 1 ? 'excellent' :
+                          analytics.totalCost < 5 ? 'good' :
+                          analytics.totalCost < 10 ? 'fair' : 'needs_attention'
+      },
+      period: `${hours} hours`,
+      timestamp: new Date().toISOString(),
+      recommendations: generateAIRecommendations(analytics)
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get AI analytics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// Generate AI optimization recommendations
+function generateAIRecommendations(analytics: any): string[] {
+  const recommendations: string[] = [];
+  
+  if (analytics.cacheHitRate < 30) {
+    recommendations.push('Low AI cache hit rate. Consider increasing cache TTL for stable prompts.');
+  }
+  
+  if (analytics.totalCost > 10) {
+    recommendations.push('High AI costs detected. Consider optimizing prompts or using caching more effectively.');
+  }
+  
+  if (analytics.totalRequests > 1000) {
+    recommendations.push('High AI usage volume. Monitor for potential rate limiting.');
+  }
+  
+  const gpt4Usage = analytics.byModel['gpt-4'] || analytics.byModel['gpt-4o'];
+  if (gpt4Usage && gpt4Usage.cost > analytics.totalCost * 0.8) {
+    recommendations.push('Consider using gpt-4o-mini for simpler tasks to reduce costs.');
+  }
+  
+  if (recommendations.length === 0) {
+    recommendations.push('AI usage is optimized and cost-effective!');
+  }
+  
+  return recommendations;
+}
+
 // Generate test recommendations
 function generateTestRecommendations(results: any[]): string[] {
   const recommendations: string[] = [];
