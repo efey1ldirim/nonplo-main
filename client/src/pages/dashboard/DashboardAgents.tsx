@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,23 @@ interface CalendarStatus {
   email?: string;
   connectedAt?: string;
 }
+
+// Hoisted EmptyState component to module scope for proper memoization
+const EmptyState = memo(({ onCreateAgent }: { onCreateAgent: () => void }) => (
+  <div className="text-center py-12">
+    <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+      <Bot className="w-12 h-12 text-muted-foreground" />
+    </div>
+    <h3 className="text-xl font-semibold mb-2">Henüz hiç Yapay Zeka Destekli Dijital Çalışanınız yok</h3>
+    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+      İlk Yapay Zeka Destekli Dijital Çalışanınızı oluşturmak için aşağıdaki butona tıklayın ve işletmeniz için özel olarak tasarlanmış dijital asistanınızı yapılandırın.
+    </p>
+    <Button onClick={onCreateAgent} size="lg" className="gap-2">
+      <Plus className="w-4 h-4" />
+      İlk Yapay Zeka Destekli Dijital Çalışanı Oluştur
+    </Button>
+  </div>
+));
 
 const DashboardAgents = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -86,7 +103,7 @@ const DashboardAgents = () => {
     }
   }, [agents.length]); // Only depend on agents count, not the full array
 
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -133,7 +150,7 @@ const DashboardAgents = () => {
       }));
       
       // Sort agents by created_at in descending order (newest first)
-      mappedAgents.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      mappedAgents.sort((a: Agent, b: Agent) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
       console.log('Mapped agents count:', mappedAgents.length);
       console.log('Sample mapped agent:', mappedAgents[0]);
@@ -149,7 +166,7 @@ const DashboardAgents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const fetchAllCalendarStatuses = async () => {
     try {
@@ -235,11 +252,11 @@ const DashboardAgents = () => {
     }
   };
 
-  const handleAgentClick = (agentId: string) => {
+  const handleAgentClick = useCallback((agentId: string) => {
     navigate(`/dashboard/agents/${agentId}`);
-  };
+  }, [navigate]);
 
-  const handleToggleAgent = async (agentId: string, currentStatus: boolean) => {
+  const handleToggleAgent = useCallback(async (agentId: string, currentStatus: boolean) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -263,8 +280,8 @@ const DashboardAgents = () => {
         throw new Error('Failed to update agent');
       }
 
-      // Update local state
-      setAgents(agents.map(agent => 
+      // Update local state using functional update
+      setAgents(prev => prev.map(agent => 
         agent.id === agentId 
           ? { ...agent, is_active: !currentStatus }
           : agent
@@ -282,7 +299,7 @@ const DashboardAgents = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   const handleDeleteAgent = async (agentId: string) => {
     try {
@@ -332,14 +349,14 @@ const DashboardAgents = () => {
     }
   };
 
-  const handleWizardSuccess = () => {
+  const handleWizardSuccess = useCallback(() => {
     setShowWizard(false);
     fetchAgents(); // Refresh the agents list
     toast({
       title: "Success",
       description: "Dijital Çalışan başarıyla oluşturuldu.",
     });
-  };
+  }, [fetchAgents, toast]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('tr-TR', {
@@ -349,21 +366,6 @@ const DashboardAgents = () => {
     });
   };
 
-  const EmptyState = () => (
-    <div className="text-center py-12">
-      <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
-        <Bot className="w-12 h-12 text-muted-foreground" />
-      </div>
-      <h3 className="text-xl font-semibold mb-2">Henüz hiç Yapay Zeka Destekli Dijital Çalışanınız yok</h3>
-      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-        İlk Yapay Zeka Destekli Dijital Çalışanınızı oluşturmak için aşağıdaki butona tıklayın ve işletmeniz için özel olarak tasarlanmış dijital asistanınızı yapılandırın.
-      </p>
-      <Button onClick={() => setShowWizard(true)} size="lg" className="gap-2">
-        <Plus className="w-4 h-4" />
-        İlk Yapay Zeka Destekli Dijital Çalışanı Oluştur
-      </Button>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -406,7 +408,7 @@ const DashboardAgents = () => {
 
       {/* Agents Grid or Empty State */}
       {agents.length === 0 ? (
-        <EmptyState />
+        <EmptyState onCreateAgent={() => setShowWizard(true)} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
