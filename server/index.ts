@@ -2,40 +2,35 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./config/vite";
 import { setupStorageBucket } from "./database/setup-storage";
+import { 
+  healthCheckFastPath, 
+  optimizedRequestLogger,
+  conditionalJsonParser,
+  requestOptimizer,
+  earlyRequestFilter,
+  responseCacheHeaders 
+} from "./middleware/requestOptimizer";
+import { memoryManager } from "./performance/memoryManager";
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Apply optimized middleware stack
+app.use(earlyRequestFilter);           // Block malicious requests early
+app.use(healthCheckFastPath);          // Fast path for health checks
+app.use(responseCacheHeaders);         // Set cache headers
+app.use(requestOptimizer);             // Connection and header optimization
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
+// Conditional JSON parsing - only for requests that need it
+app.use('/api', (req, res, next) => {
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+    express.json({ limit: '50mb' })(req, res, next);
+  } else {
+    next();
+  }
 });
+
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+app.use(optimizedRequestLogger);       // Optimized logging
 
 // Global unhandled promise rejection handler
 process.on('unhandledRejection', (reason, promise) => {
@@ -57,6 +52,10 @@ process.on('uncaughtException', (error) => {
   try {
     // Setup storage bucket
     await setupStorageBucket();
+    
+    // Initialize memory manager for leak prevention and optimization
+    console.log('🧠 Memory manager initialized');
+    // Memory manager starts monitoring automatically in constructor
     
     const server = await registerRoutes(app);
 

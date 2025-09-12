@@ -64,10 +64,11 @@ if (!process.env.DATABASE_URL) {
 
 console.log('🔗 storage.ts using DATABASE_URL connection');
 const client = postgres(process.env.DATABASE_URL, {
-  max: 10, // Optimized connection pool size
+  max: parseInt(process.env.DB_MAX_CONNECTIONS || '5'), // Configurable pool size, default 5 for serverless
   idle_timeout: 20, // Close idle connections after 20 seconds
   connect_timeout: 10, // Connection timeout 10 seconds
   prepare: false, // Disable prepared statements for better compatibility
+  transform: postgres.camel, // Enable camelCase transformation for better performance
 });
 
 const db = drizzle(client);
@@ -464,50 +465,88 @@ export class DatabaseStorage implements IStorage {
 
   async getConversationsByAgentId(userId: string, agentId: string, limit = 5): Promise<any[]> {
     try {
-      const conversationsResult = await db
-        .select({
-          id: conversations.id,
-          user_id: conversations.userId,
-          agent_id: conversations.agentId,
-          channel: conversations.channel,
-          status: conversations.status,
-          last_message_at: conversations.lastMessageAt,
-          unread: conversations.unread,
-          meta: conversations.meta,
-          created_at: conversations.createdAt,
-          updated_at: conversations.updatedAt,
-        })
-        .from(conversations)
-        .where(and(eq(conversations.userId, userId), eq(conversations.agentId, agentId)))
-        .orderBy(desc(conversations.lastMessageAt))
-        .limit(limit);
+      // Optimized: Single query with window function to get latest message per conversation
+      const optimizedQuery = await db.execute(sql`
+        WITH latest_messages AS (
+          SELECT DISTINCT ON (conversation_id) 
+            conversation_id,
+            id as message_id,
+            content,
+            sender,
+            created_at as message_created_at,
+            ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY created_at DESC) as rn
+          FROM messages
+        )
+        SELECT 
+          c.id,
+          c.user_id,
+          c.agent_id,
+          c.channel,
+          c.status,
+          c.last_message_at,
+          c.unread,
+          c.meta,
+          c.created_at,
+          c.updated_at,
+          lm.message_id,
+          lm.content as latest_content,
+          lm.sender as latest_sender,
+          lm.message_created_at as latest_created_at
+        FROM conversations c
+        LEFT JOIN latest_messages lm ON c.id = lm.conversation_id AND lm.rn = 1
+        WHERE c.user_id = ${userId} AND c.agent_id = ${agentId}
+        ORDER BY c.last_message_at DESC
+        LIMIT ${limit}
+      `);
 
-      // Get latest message for each conversation
-      const conversationsWithMessages = await Promise.all(
-        conversationsResult.map(async (conv) => {
-          const latestMessage = await db
-            .select({
-              id: messages.id,
-              content: messages.content,
-              sender: messages.sender,
-              created_at: messages.createdAt,
-            })
-            .from(messages)
-            .where(eq(messages.conversationId, conv.id))
-            .orderBy(desc(messages.createdAt))
-            .limit(1);
-
-          return {
-            ...conv,
-            latest_message: latestMessage[0] || null,
-          };
-        })
-      );
+      // Transform the result to match expected format (accounting for camelCase transformation)
+      const conversationsWithMessages = optimizedQuery.map((row: any) => ({
+        id: row.id,
+        user_id: row.userId || row.user_id,           // Handle both camelCase and snake_case
+        agent_id: row.agentId || row.agent_id,
+        channel: row.channel,
+        status: row.status,
+        last_message_at: row.lastMessageAt || row.last_message_at,
+        unread: row.unread,
+        meta: row.meta,
+        created_at: row.createdAt || row.created_at,
+        updated_at: row.updatedAt || row.updated_at,
+        latest_message: (row.messageId || row.message_id) ? {
+          id: row.messageId || row.message_id,
+          content: row.latestContent || row.latest_content,
+          sender: row.latestSender || row.latest_sender,
+          created_at: row.messageCreatedAt || row.latest_created_at,
+        } : null,
+      }));
 
       return conversationsWithMessages;
     } catch (error) {
       console.error("Error getting conversations by agent ID:", error);
-      return [];
+      // Fallback to the previous implementation if optimized query fails
+      try {
+        const conversationsResult = await db
+          .select({
+            id: conversations.id,
+            user_id: conversations.userId,
+            agent_id: conversations.agentId,
+            channel: conversations.channel,
+            status: conversations.status,
+            last_message_at: conversations.lastMessageAt,
+            unread: conversations.unread,
+            meta: conversations.meta,
+            created_at: conversations.createdAt,
+            updated_at: conversations.updatedAt,
+          })
+          .from(conversations)
+          .where(and(eq(conversations.userId, userId), eq(conversations.agentId, agentId)))
+          .orderBy(desc(conversations.lastMessageAt))
+          .limit(limit);
+
+        return conversationsResult.map(conv => ({ ...conv, latest_message: null }));
+      } catch (fallbackError) {
+        console.error("Fallback query also failed:", fallbackError);
+        return [];
+      }
     }
   }
 

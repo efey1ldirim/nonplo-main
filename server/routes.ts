@@ -719,13 +719,15 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
 
   // Agents CRUD with authentication and caching
-  app.get("/api/agents", optionalAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/agents", optionalAuth, cacheMiddleware(3 * 60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       // Try to get userId from auth middleware first, then fallback to query parameter
       const userId = getUserId(req) || (req.query.userId as string);
       if (!userId) {
         return res.status(400).json({ error: "User ID is required" });
       }
+      
+      // Use middleware cache only - remove duplicate manual caching
       const agents = await storage.getAgentsByUserId(userId);
       res.json(agents);
     } catch (error) {
@@ -1115,7 +1117,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
 
   // Get conversations for a specific agent
-  app.get("/api/agents/:agentId/conversations", optionalAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/agents/:agentId/conversations", optionalAuth, cacheMiddleware(60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       // Try to get userId from auth middleware first, then fallback to query parameter
       const userId = getUserId(req) || (req.query.userId as string);
@@ -1532,15 +1534,26 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
-  // Dashboard Statistics
-  app.get("/api/dashboard/stats", authenticate, async (req: AuthenticatedRequest, res) => {
+  // Dashboard Statistics (with aggressive caching)
+  app.get("/api/dashboard/stats", authenticate, cacheMiddleware(2 * 60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
+      // Check if stats are cached first
+      const cachedStats = cacheManager.getCachedDashboardStats(userId);
+      if (cachedStats) {
+        res.setHeader('X-Cache-Source', 'dashboard-cache');
+        return res.json(cachedStats);
+      }
+      
       const stats = await storage.getDashboardStats(userId);
+      
+      // Cache the results for 2 minutes
+      cacheManager.cacheDashboardStats(userId, stats, 2 * 60 * 1000);
+      
       res.json(stats);
     } catch (error: any) {
       console.error("Dashboard stats error:", error);
