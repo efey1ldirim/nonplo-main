@@ -17,6 +17,11 @@ import {
   bundleTracking,
   webpDetection 
 } from "./middleware/compressionOptimizer";
+import { 
+  analyticsTrackingMiddleware,
+  performanceTrackingMiddleware,
+  errorTrackingMiddleware 
+} from "./middleware/analyticsMiddleware";
 import { memoryManager } from "./performance/memoryManager";
 
 const app = express();
@@ -24,6 +29,8 @@ const app = express();
 // Apply optimized middleware stack
 app.use(earlyRequestFilter);           // Block malicious requests early
 app.use(healthCheckFastPath);          // Fast path for health checks
+app.use(analyticsTrackingMiddleware);  // Analytics and user tracking
+app.use(performanceTrackingMiddleware); // Performance monitoring
 app.use(compressionOptimizer);         // Gzip/Brotli compression
 app.use(assetOptimization);            // Asset caching and optimization
 app.use(resourceHints);                // Preload hints for critical assets
@@ -70,6 +77,8 @@ process.on('uncaughtException', (error) => {
     // Memory manager starts monitoring automatically in constructor
     
     const server = await registerRoutes(app);
+
+    app.use(errorTrackingMiddleware);      // Track errors in analytics
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

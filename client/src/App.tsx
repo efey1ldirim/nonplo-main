@@ -4,9 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense, memo } from 'react';
+import { lazy, Suspense, memo, useEffect } from 'react';
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useLoginNotifications } from "./hooks/useLoginNotifications";
+import { initGA } from "./lib/analytics";
+import { useAnalytics } from "./hooks/use-analytics";
 
 // Immediate load components (critical for initial page load)
 import Index from "./pages/Index";
@@ -109,6 +111,18 @@ const QuickLoader = memo(() => (
 
 const AppContent = () => {
   useLoginNotifications();
+
+  // Initialize Google Analytics
+  useEffect(() => {
+    if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
+      console.warn('Missing required Google Analytics key: VITE_GA_MEASUREMENT_ID');
+    } else {
+      initGA();
+    }
+  }, []);
+
+  // Track page views when routes change
+  useAnalytics();
   
   return (
     <BrowserRouter>

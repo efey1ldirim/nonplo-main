@@ -94,6 +94,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/monitoring/cache-analytics', monitoring.getCacheAnalytics);
   app.get('/api/monitoring/ai-analytics', monitoring.getAIAnalytics);
   app.get('/api/monitoring/bundle-analytics', monitoring.getBundleAnalytics);
+
+  // Analytics endpoints
+  const analytics = await import('./routes/analytics');
+  app.get('/api/analytics/dashboard', analytics.getAnalyticsDashboard);
+  app.get('/api/analytics/realtime', analytics.getRealTimeMetrics);
+  app.get('/api/analytics/user/:userId', analytics.getUserBehavior);
+  app.get('/api/analytics/performance', analytics.getPerformanceAnalytics);
+  app.get('/api/analytics/errors', analytics.getErrorAnalytics);
+  app.post('/api/analytics/track', analytics.trackEvent);
   app.delete('/api/monitoring/cache', monitoring.clearCache);
   app.delete('/api/monitoring/cache/user/:userId', monitoring.invalidateUserCache);
   app.get('/api/monitoring/queries', monitoring.getQueryStats);
