@@ -54,9 +54,18 @@ export const analyticsTrackingMiddleware = (req: Request, res: Response, next: N
     });
   }
 
-  // Track page views for non-API routes
-  if (!req.path.startsWith('/api') && req.method === 'GET') {
-    analyticsManager.trackPageView(sessionId, req.path, req.analyticsUserId);
+  // Track page views for non-API routes (exclude assets and static files)
+  if (!req.path.startsWith('/api') && 
+      !req.path.startsWith('/@') &&
+      !req.path.startsWith('/src/') &&
+      !req.path.includes('.') && // Skip files with extensions
+      req.method === 'GET') {
+    
+    const userAgent = req.headers['user-agent'] || '';
+    // Skip bots and crawlers
+    if (!/bot|crawler|spider|crawling/i.test(userAgent)) {
+      analyticsManager.trackPageView(sessionId, req.path, req.analyticsUserId);
+    }
   }
 
   // Track API calls

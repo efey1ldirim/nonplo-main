@@ -82,6 +82,11 @@ export class AnalyticsManager {
     ip: string;
     referrer?: string;
   }): UserSession {
+    // Check if session already exists to prevent duplicates
+    if (this.sessions.has(sessionId)) {
+      return this.sessions.get(sessionId)!;
+    }
+
     const session: UserSession = {
       sessionId,
       userId: metadata.userId,
@@ -96,7 +101,7 @@ export class AnalyticsManager {
 
     this.sessions.set(sessionId, session);
     
-    // Track session start event
+    // Track session start event only for new sessions
     this.trackEvent({
       event: 'session_start',
       userId: metadata.userId,
