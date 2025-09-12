@@ -10,6 +10,13 @@ import {
   earlyRequestFilter,
   responseCacheHeaders 
 } from "./middleware/requestOptimizer";
+import { 
+  compressionOptimizer,
+  assetOptimization,
+  resourceHints,
+  bundleTracking,
+  webpDetection 
+} from "./middleware/compressionOptimizer";
 import { memoryManager } from "./performance/memoryManager";
 
 const app = express();
@@ -17,6 +24,11 @@ const app = express();
 // Apply optimized middleware stack
 app.use(earlyRequestFilter);           // Block malicious requests early
 app.use(healthCheckFastPath);          // Fast path for health checks
+app.use(compressionOptimizer);         // Gzip/Brotli compression
+app.use(assetOptimization);            // Asset caching and optimization
+app.use(resourceHints);                // Preload hints for critical assets
+app.use(webpDetection);                // WebP support detection
+app.use(bundleTracking);               // Bundle performance tracking
 app.use(responseCacheHeaders);         // Set cache headers
 app.use(requestOptimizer);             // Connection and header optimization
 

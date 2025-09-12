@@ -86,6 +86,34 @@ export const getCacheAnalytics = (req: Request, res: Response) => {
   });
 };
 
+// Bundle optimization analytics
+export const getBundleAnalytics = (req: Request, res: Response) => {
+  try {
+    const { bundleOptimizer } = require('../utils/bundleOptimizer');
+    const stats = bundleOptimizer.getBundleStats();
+    
+    res.json({
+      bundle: {
+        ...stats,
+        optimization: stats.performance.averageCompressionRatio > 50 ? 'excellent' :
+                     stats.performance.averageCompressionRatio > 30 ? 'good' :
+                     stats.performance.averageCompressionRatio > 15 ? 'fair' : 'needs_optimization'
+      },
+      timestamp: new Date().toISOString(),
+      tips: {
+        codeSplitting: 'Implement route-based code splitting for better loading',
+        assetOptimization: 'Use WebP images and font optimization',
+        bundleSize: 'Monitor bundle size and remove unused dependencies'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get bundle analytics',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 // Generate cache optimization recommendations
 function generateCacheRecommendations(basic: any, detailed: any): string[] {
   const recommendations: string[] = [];

@@ -93,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/monitoring/cache', monitoring.getCacheStats);
   app.get('/api/monitoring/cache-analytics', monitoring.getCacheAnalytics);
   app.get('/api/monitoring/ai-analytics', monitoring.getAIAnalytics);
+  app.get('/api/monitoring/bundle-analytics', monitoring.getBundleAnalytics);
   app.delete('/api/monitoring/cache', monitoring.clearCache);
   app.delete('/api/monitoring/cache/user/:userId', monitoring.invalidateUserCache);
   app.get('/api/monitoring/queries', monitoring.getQueryStats);
