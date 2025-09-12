@@ -48,15 +48,66 @@ export const getMetrics = (req: Request, res: Response) => {
 
 // Cache statistics
 export const getCacheStats = (req: Request, res: Response) => {
-  const stats = cacheManager.getStats();
+  const stats = cacheManager.getDetailedStats();
   res.json({
     cache: stats,
     operations: {
       clear: 'DELETE /api/monitoring/cache',
-      invalidateUser: 'DELETE /api/monitoring/cache/user/:userId'
+      invalidateUser: 'DELETE /api/monitoring/cache/user/:userId',
+      analytics: 'GET /api/monitoring/cache-analytics'
     }
   });
 };
+
+// Advanced cache analytics
+export const getCacheAnalytics = (req: Request, res: Response) => {
+  const basicStats = cacheManager.getStats();
+  const detailedStats = cacheManager.getDetailedStats();
+  
+  res.json({
+    performance: {
+      hitRate: basicStats.hitRate,
+      totalRequests: basicStats.hits + basicStats.misses,
+      cacheEfficiency: basicStats.hitRate > 70 ? 'excellent' : 
+                      basicStats.hitRate > 50 ? 'good' : 
+                      basicStats.hitRate > 30 ? 'fair' : 'poor'
+    },
+    usage: {
+      memoryUsage: basicStats.memoryUsage,
+      activeKeys: basicStats.size,
+      expiringSoon: detailedStats.expiringSoon.length
+    },
+    insights: {
+      topCachedData: detailedStats.topKeys,
+      expiringEntries: detailedStats.expiringSoon,
+      recommendations: generateCacheRecommendations(basicStats, detailedStats)
+    },
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Generate cache optimization recommendations
+function generateCacheRecommendations(basic: any, detailed: any): string[] {
+  const recommendations: string[] = [];
+  
+  if (basic.hitRate < 50) {
+    recommendations.push('Cache hit rate is low (<50%). Consider increasing TTL values for stable data.');
+  }
+  
+  if (detailed.expiringSoon.length > 5) {
+    recommendations.push('Many cache entries expiring soon. Consider staggered TTL values.');
+  }
+  
+  if (basic.size > 1000) {
+    recommendations.push('High number of cache keys. Consider implementing cache size limits.');
+  }
+  
+  if (recommendations.length === 0) {
+    recommendations.push('Cache performance is optimal!');
+  }
+  
+  return recommendations;
+}
 
 // Clear cache
 export const clearCache = (req: Request, res: Response) => {

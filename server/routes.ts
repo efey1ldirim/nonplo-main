@@ -91,6 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/health', monitoring.healthCheck);
   app.get('/api/monitoring/metrics', monitoring.getMetrics);
   app.get('/api/monitoring/cache', monitoring.getCacheStats);
+  app.get('/api/monitoring/cache-analytics', monitoring.getCacheAnalytics);
   app.delete('/api/monitoring/cache', monitoring.clearCache);
   app.delete('/api/monitoring/cache/user/:userId', monitoring.invalidateUserCache);
   app.get('/api/monitoring/queries', monitoring.getQueryStats);
@@ -372,7 +373,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
 
   // Conversations endpoint - Get conversations for a user
-  app.get("/api/conversations", rateLimiters.api, optionalAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/conversations", rateLimiters.api, optionalAuth, cacheMiddleware(2 * 60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -388,7 +389,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
 
   // Messages endpoint - Get messages for a conversation
-  app.get("/api/conversations/:conversationId/messages", rateLimiters.api, optionalAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/conversations/:conversationId/messages", rateLimiters.api, optionalAuth, cacheMiddleware(30 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserId(req);
       const conversationId = req.params.conversationId;
@@ -1213,7 +1214,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
 
   // Notification Settings
-  app.get("/api/notification-settings", optionalAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/notification-settings", optionalAuth, cacheMiddleware(5 * 60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -1624,7 +1625,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
-  app.get("/api/agents/:agentId/chat-history", authenticate, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/agents/:agentId/chat-history", authenticate, cacheMiddleware(1 * 60 * 1000), async (req: AuthenticatedRequest, res) => {
     try {
       return getChatHistory(req, res);
     } catch (error) {

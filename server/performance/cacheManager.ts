@@ -42,6 +42,25 @@ class InMemoryCacheManager {
     return item.data;
   }
 
+  getEntry<T>(key: string): CacheItem<T> | null {
+    const item = this.cache.get(key);
+    
+    if (!item) {
+      this.missCount++;
+      return null;
+    }
+
+    const now = Date.now();
+    if (now - item.timestamp > item.ttl) {
+      this.cache.delete(key);
+      this.missCount++;
+      return null;
+    }
+
+    this.hitCount++;
+    return item;
+  }
+
   delete(key: string): boolean {
     return this.cache.delete(key);
   }
@@ -150,12 +169,73 @@ class InMemoryCacheManager {
     const keysToDelete: string[] = [];
     for (const [key] of this.cache.entries()) {
       if (key.includes(`agent_details:${agentId}`) ||
-          key.includes(`conversation_messages:`) && key.includes(agentId)) {
+          key.includes(`conversation_messages:`) && key.includes(agentId) ||
+          key.includes(`route:/api/agents/${agentId}`) ||
+          key.includes(`route:/api/agents/${agentId}/conversations`)) {
         keysToDelete.push(key);
       }
     };
     
+    console.log(`🗑️ Invalidating cache for agent ${agentId}: ${keysToDelete.length} keys`);
     keysToDelete.forEach(key => this.delete(key));
+  }
+  // Advanced cache strategies
+  warmCache(prefix: string, dataLoader: () => Promise<any>, ttl?: number): void {
+    dataLoader().then(data => {
+      this.set(prefix, data, ttl);
+      console.log(`🔥 Cache warmed for: ${prefix}`);
+    }).catch(err => {
+      console.error(`❌ Cache warming failed for ${prefix}:`, err);
+    });
+  }
+
+  // Multi-level cache invalidation
+  invalidateByPattern(pattern: string): void {
+    const keysToDelete: string[] = [];
+    for (const [key] of this.cache.entries()) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    console.log(`🧹 Pattern invalidation for "${pattern}": ${keysToDelete.length} keys`);
+    keysToDelete.forEach(key => this.delete(key));
+  }
+
+  // Cache analytics
+  getDetailedStats(): {
+    basic: any;
+    topKeys: Array<{key: string, hits: number, size: string}>;
+    expiringSoon: Array<{key: string, expiresIn: number}>;
+  } {
+    const basic = this.getStats();
+    const now = Date.now();
+    
+    const topKeys: Array<{key: string, hits: number, size: string}> = [];
+    const expiringSoon: Array<{key: string, expiresIn: number}> = [];
+    
+    for (const [key, item] of this.cache.entries()) {
+      const size = JSON.stringify(item.data).length;
+      topKeys.push({
+        key: key.length > 50 ? key.substring(0, 47) + '...' : key,
+        hits: 0, // We'd need to track this per key
+        size: `${Math.round(size / 1024)} KB`
+      });
+      
+      const expiresIn = Math.round((item.timestamp + item.ttl - now) / 1000);
+      if (expiresIn < 60 && expiresIn > 0) { // Expiring in less than 1 minute
+        expiringSoon.push({
+          key: key.length > 50 ? key.substring(0, 47) + '...' : key,
+          expiresIn
+        });
+      }
+    }
+    
+    return {
+      basic,
+      topKeys: topKeys.slice(0, 10), // Top 10
+      expiringSoon: expiringSoon.slice(0, 5) // Next 5 to expire
+    };
   }
 }
 
@@ -170,11 +250,12 @@ export const cacheMiddleware = (ttl: number = 5 * 60 * 1000) => {
     }
 
     const cacheKey = `route:${req.originalUrl}:${req.user?.id || 'anonymous'}`;
-    const cached = cacheManager.get(cacheKey);
+    const cachedEntry = cacheManager.getEntry(cacheKey);
 
-    if (cached) {
+    if (cachedEntry) {
       res.setHeader('X-Cache', 'HIT');
-      return res.json(cached);
+      res.setHeader('X-Cache-TTL', Math.round((cachedEntry.timestamp + cachedEntry.ttl - Date.now()) / 1000).toString());
+      return res.json(cachedEntry.data);
     }
 
     // Override res.json to cache the response
@@ -183,6 +264,7 @@ export const cacheMiddleware = (ttl: number = 5 * 60 * 1000) => {
       if (res.statusCode === 200) {
         cacheManager.set(cacheKey, data, ttl);
         res.setHeader('X-Cache', 'MISS');
+        res.setHeader('X-Cache-TTL', Math.round(ttl / 1000).toString());
       }
       return originalJson(data);
     };

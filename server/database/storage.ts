@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, sql, inArray, gt } from "drizzle-orm";
 import axios from "axios";
+import { cacheManager } from '../performance/cacheManager';
 import {
   agents,
   conversations,
