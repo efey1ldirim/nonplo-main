@@ -108,6 +108,11 @@ export default function DashboardAgentDetail() {
   // Settings/Knowledge draft state (unsaved guard demo)
   const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
 
+  // Forbidden words state
+  const [forbiddenWords, setForbiddenWords] = useState<string[]>([]);
+  const [loadingForbiddenWords, setLoadingForbiddenWords] = useState(false);
+  const [savingForbiddenWords, setSavingForbiddenWords] = useState(false);
+
   // Temperature control
   const [temperature, setTemperature] = useState<string>("1.0");
   const [temperatureLoading, setTemperatureLoading] = useState(false);
@@ -267,6 +272,79 @@ export default function DashboardAgentDetail() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId]);
+
+  // Load forbidden words
+  const loadForbiddenWords = async () => {
+    if (!userId) return;
+    
+    setLoadingForbiddenWords(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch('/api/tools/forbidden-words', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setForbiddenWords(data.words || []);
+      }
+    } catch (error) {
+      console.error('Error loading forbidden words:', error);
+    } finally {
+      setLoadingForbiddenWords(false);
+    }
+  };
+
+  // Save forbidden words
+  const saveForbiddenWords = async (newWords: string[]) => {
+    if (!userId) return;
+    
+    setSavingForbiddenWords(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch('/api/tools/forbidden-words', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ words: newWords }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setForbiddenWords(newWords);
+        toast({
+          title: "Güncellendi",
+          description: `${newWords.length} yasaklı kelime kaydedildi.`,
+        });
+      } else {
+        throw new Error('Failed to save forbidden words');
+      }
+    } catch (error) {
+      console.error('Error saving forbidden words:', error);
+      toast({
+        title: "Hata",
+        description: "Yasaklı kelimeler kaydedilemedi.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingForbiddenWords(false);
+    }
+  };
+
+  // Load forbidden words when userId is available
+  useEffect(() => {
+    if (userId) {
+      loadForbiddenWords();
+    }
+  }, [userId]);
 
   const fetchAgent = async (uid: string) => {
     if (!agentId) return;
@@ -1587,7 +1665,32 @@ export default function DashboardAgentDetail() {
             <CardContent className="grid gap-4">
               <div>
                 <Label>Engellenmiş anahtar kelimeler</Label>
-                <Textarea rows={3} placeholder="virgül,ile,ayrılmış,kelimeler" onChange={() => setHasUnsavedDraft(true)} />
+                <Textarea 
+                  rows={3} 
+                  placeholder="virgül,ile,ayrılmış,kelimeler" 
+                  value={forbiddenWords.join(', ')}
+                  onChange={(e) => {
+                    const words = e.target.value
+                      .split(',')
+                      .map(word => word.trim())
+                      .filter(word => word.length > 0);
+                    setForbiddenWords(words);
+                  }}
+                  onBlur={() => {
+                    saveForbiddenWords(forbiddenWords);
+                  }}
+                  disabled={loadingForbiddenWords || savingForbiddenWords}
+                  data-testid="textarea-forbidden-words"
+                />
+                {loadingForbiddenWords && (
+                  <div className="text-xs text-muted-foreground mt-1">Yasaklı kelimeler yükleniyor...</div>
+                )}
+                {savingForbiddenWords && (
+                  <div className="text-xs text-muted-foreground mt-1">Kaydediliyor...</div>
+                )}
+                <div className="text-xs text-muted-foreground mt-1">
+                  Ajanın kullanmaması gereken kelimeleri virgülle ayırarak yazın. (Örn: şiddet, hakaret, küfür)
+                </div>
               </div>
               <div>
                 <Label>Yönlendirme kuralları</Label>
