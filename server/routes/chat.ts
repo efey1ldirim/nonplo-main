@@ -61,7 +61,7 @@ const detectLanguage = (text: string): string => {
 };
 
 // Web Search Tools
-const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+export const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
     {
         type: "function",
         function: {
@@ -81,7 +81,7 @@ const WEB_SEARCH_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
 ];
 
 // Google Calendar Tools
-const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
+export const GCAL_TOOLS: OpenAI.Beta.Assistants.AssistantTool[] = [
     {
         type: "function",
         function: {

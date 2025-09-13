@@ -11,7 +11,7 @@ import { cacheMiddleware, cacheManager } from "./performance/cacheManager";
 import * as monitoring from "./routes/monitoring";
 import { calendarMonitoring, validateCalendarRequest, getCalendarAnalytics, calendarErrorAlert } from "./middleware/calendarMonitoring";
 import { sanitizeRequest } from "./middleware/security";
-import { chatWithAgent, getChatHistory, getMessages } from "./routes/chat";
+import { chatWithAgent, getChatHistory, getMessages, GCAL_TOOLS, WEB_SEARCH_TOOLS } from "./routes/chat";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import OpenAI from "openai";
@@ -3035,10 +3035,91 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     }
   });
 
+  // Upload file to OpenAI and update vector store
+  const uploadForbiddenWordsToOpenAI = async (fileContent: string, userId: string) => {
+    try {
+      console.log(`📤 Uploading forbidden words file to OpenAI for user ${userId}`);
+      
+      // Create a buffer from the file content
+      const fileBuffer = Buffer.from(fileContent, 'utf8');
+      
+      // Upload file to OpenAI
+      const file = await openai.files.create({
+        file: new Blob([fileBuffer], { type: 'text/plain' }),
+        purpose: 'assistants'
+      });
+      
+      console.log(`✅ File uploaded to OpenAI: ${file.id}`);
+      
+      // Create or update vector store for forbidden words
+      let vectorStore;
+      try {
+        vectorStore = await openai.beta.vectorStores.create({
+          name: `forbidden-words-${userId}`,
+          file_ids: [file.id]
+        });
+        console.log(`✅ Vector store created: ${vectorStore.id}`);
+      } catch (error: any) {
+        console.log(`🔄 Creating vector store failed, trying to find existing one...`);
+        // If creation fails, list existing stores and find or create one
+        const vectorStores = await openai.beta.vectorStores.list();
+        vectorStore = vectorStores.data.find(vs => vs.name === `forbidden-words-${userId}`);
+        
+        if (!vectorStore) {
+          vectorStore = await openai.beta.vectorStores.create({
+            name: `forbidden-words-${userId}`
+          });
+          await openai.beta.vectorStores.files.create(vectorStore.id, {
+            file_id: file.id
+          });
+        } else {
+          // Update existing vector store with new file
+          await openai.beta.vectorStores.files.create(vectorStore.id, {
+            file_id: file.id
+          });
+        }
+      }
+      
+      // Update all user's agents to use this vector store
+      const userAgents = await storage.getAgentsByUserId(userId);
+      let updatedAgents = 0;
+      
+      for (const agent of userAgents) {
+        if (agent.openaiAssistantId) {
+          try {
+            await openai.beta.assistants.update(agent.openaiAssistantId, {
+              tool_resources: {
+                file_search: {
+                  vector_store_ids: [vectorStore.id]
+                }
+              },
+              tools: [
+                { type: "file_search" },
+                ...GCAL_TOOLS,
+                ...WEB_SEARCH_TOOLS
+              ]
+            });
+            updatedAgents++;
+            console.log(`✅ Updated agent ${agent.name} with forbidden words file`);
+          } catch (agentError: any) {
+            console.error(`❌ Failed to update agent ${agent.id}:`, agentError);
+          }
+        }
+      }
+      
+      return { vectorStoreId: vectorStore.id, fileId: file.id, updatedAgents };
+      
+    } catch (error: any) {
+      console.error("Failed to upload forbidden words to OpenAI:", error);
+      throw error;
+    }
+  };
+
   // Update forbidden words in yasaklikelimeler.txt
   app.post('/api/tools/forbidden-words', rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { words } = req.body;
+      const userId = getUserId(req);
       
       // Enhanced input validation
       if (!Array.isArray(words)) {
@@ -3082,14 +3163,29 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       const { refreshBannedWords } = await import('./utils/profanity-filter');
       refreshBannedWords();
       
-      console.log(`📝 Forbidden words updated by user ${req.user?.id}, total words: ${validWords.length}, cache refreshed`);
+      // Upload to OpenAI for file search capability
+      let openaiResult = null;
+      try {
+        openaiResult = await uploadForbiddenWordsToOpenAI(fileContent, userId);
+        console.log(`🤖 OpenAI upload successful: ${openaiResult.updatedAgents} agents updated`);
+      } catch (openaiError: any) {
+        console.error("OpenAI upload failed:", openaiError);
+        // Continue even if OpenAI upload fails - local system still works
+      }
+      
+      console.log(`📝 Forbidden words updated by user ${userId}, total words: ${validWords.length}, cache refreshed`);
       
       res.json({ 
         success: true, 
         message: "Forbidden words updated successfully",
         totalWords: validWords.length,
         originalCount: words.length,
-        cacheRefreshed: true
+        cacheRefreshed: true,
+        openaiUpload: openaiResult ? {
+          vectorStoreId: openaiResult.vectorStoreId,
+          fileId: openaiResult.fileId,
+          updatedAgents: openaiResult.updatedAgents
+        } : null
       });
       
     } catch (error: any) {
