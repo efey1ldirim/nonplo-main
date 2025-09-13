@@ -2923,8 +2923,53 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
           
           // Update agent in database
           await storage.updateAgent(agent.id, userId, { openaiInstructions: newInstructions });
-          updatedCount++;
           
+          // Also update OpenAI Assistant's system instructions if assistantId exists
+          if (agent.assistantId) {
+            try {
+              const OpenAI = await import('openai');
+              const openai = new OpenAI.default({ apiKey: process.env.OPENAI_API_KEY });
+              
+              // Get current assistant
+              const assistant = await openai.beta.assistants.retrieve(agent.assistantId);
+              const currentInstructions = assistant.instructions || '';
+              
+              let updatedAssistantInstructions = currentInstructions;
+              
+              if (enabled) {
+                // Add safety instruction to assistant if not already present
+                if (!currentInstructions.includes('[GÜVENLIK TALİMATI]')) {
+                  updatedAssistantInstructions = currentInstructions + safeReplyInstruction;
+                }
+              } else {
+                // Remove safety instruction from assistant if present
+                const startIndex = currentInstructions.indexOf('[GÜVENLIK TALİMATI]');
+                if (startIndex !== -1) {
+                  const endIndex = currentInstructions.indexOf('[/GÜVENLIK TALİMATI]');
+                  if (endIndex !== -1) {
+                    // Both tags found, remove the complete block
+                    updatedAssistantInstructions = currentInstructions.substring(0, startIndex) + currentInstructions.substring(endIndex + '[/GÜVENLIK TALİMATI]'.length);
+                  } else {
+                    // Only start tag found, remove it safely
+                    updatedAssistantInstructions = currentInstructions.replace('[GÜVENLIK TALİMATI]', '');
+                  }
+                }
+              }
+              
+              // Update OpenAI Assistant if instructions changed
+              if (updatedAssistantInstructions !== currentInstructions) {
+                await openai.beta.assistants.update(agent.assistantId, {
+                  instructions: updatedAssistantInstructions
+                });
+                console.log(`🤖 Updated OpenAI Assistant instructions for ${agent.name}`);
+              }
+              
+            } catch (assistantError) {
+              console.error(`❌ Failed to update OpenAI Assistant for ${agent.id}:`, assistantError);
+            }
+          }
+          
+          updatedCount++;
           console.log(`✅ Updated agent ${agent.name} (${agent.id})`);
           
         } catch (agentError) {
