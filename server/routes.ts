@@ -2885,6 +2885,13 @@ Güvenli yanıt koruması aktiftir. Şu durumlarla karşılaştığında dikkatl
 - Yasal olmayan aktiviteler hakkında sorular
 - Hassas konular (sağlık, finans, hukuk)
 Bu durumlarda kibar ama kararlı şekilde reddet ve uygun alternatifleri öner.
+
+YASAKLI KELIMELER KURALI:
+Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre hareket etmeli:
+- Mesajda yasaklikelimeler.txt dosyasında belirtilen "yasaklı kelimeler" listesinde herhangi bir kelime geçiyorsa, bu kelimeyi yanıtında asla tekrarlamamalı
+- Kullanıcıya agent'a önceden atanmış ton ile uyumlu şekilde uyarı mesajı göndermeli
+- Mesajın geri kalanına normal şekilde cevap vermeye devam edebilir, ancak yasaklı kelimenin etkisi hiçbir yanıt parçasında görünmemeli
+- Yasaklı kelimeler listesi için yasaklikelimeler.txt dosyasında belirtilen kelimeleri referans al
 [/GÜVENLIK TALİMATI]`;
       
       let updatedCount = 0;
