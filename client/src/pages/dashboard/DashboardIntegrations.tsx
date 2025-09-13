@@ -119,11 +119,55 @@ const DashboardIntegrations: React.FC = () => {
     if (!userId || !confirmTool) return;
     const { key, nextValue } = confirmTool;
     setSavingToolKey(key);
+    
     try {
+      // If this is safe_reply_guard, first check token and update agent instructions
+      if (key === "safe_reply_guard") {
+        if (!token) {
+          console.error('No token available for safe reply guard API call');
+          toast({ 
+            title: "Hata", 
+            description: "Oturum bilgileri eksik. Lütfen sayfayı yenileyip tekrar deneyin.",
+            variant: "destructive" 
+          });
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/tools/safe-reply-guard', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ enabled: nextValue }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Agent instructions update failed');
+          }
+
+          const result = await response.json();
+          console.log(`🛡️ Safe reply guard updated for ${result.updatedAgents} agents`);
+          
+        } catch (apiError: any) {
+          console.error('Safe reply guard API error:', apiError);
+          toast({ 
+            title: "Hata", 
+            description: `Agent talimatları güncellenemedi: ${apiError.message}`,
+            variant: "destructive" 
+          });
+          return;
+        }
+      }
+
+      // Update tool setting in database only after agent instructions are successfully updated
       const { error } = await supabase
         .from("tools_settings")
         .upsert({ user_id: userId, tool_key: key, enabled: nextValue }, { onConflict: "user_id,tool_key" });
       if (error) throw error;
+
       setToolsState((prev) => ({ ...prev, [key]: nextValue }));
       toast({ title: "Güncellendi", description: `"${TOOLS.find((t) => t.key === key)?.name}" şimdi ${nextValue ? "AÇIK" : "KAPALI"}.` });
     } catch (e: any) {

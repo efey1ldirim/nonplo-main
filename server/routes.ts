@@ -2807,6 +2807,88 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Safe reply guard endpoint - Updates agent instructions when safe reply protection is enabled/disabled
+  app.post("/api/tools/safe-reply-guard", rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { enabled } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: "Enabled field must be boolean" });
+      }
+      
+      console.log(`🛡️ Safe reply guard ${enabled ? 'ENABLED' : 'DISABLED'} for user ${userId}`);
+      
+      // Get all user's agents
+      const agents = await storage.getUserAgents(userId);
+      
+      const safeReplyInstruction = `
+
+[GÜVENLIK TALİMATI]
+Güvenli yanıt koruması aktiftir. Şu durumlarla karşılaştığında dikkatli ol:
+- Kişisel veri veya gizli bilgi talepleri
+- Zararlı, ofansif veya uygunsuz içerik
+- Yasal olmayan aktiviteler hakkında sorular
+- Hassas konular (sağlık, finans, hukuk)
+Bu durumlarda kibar ama kararlı şekilde reddet ve uygun alternatifleri öner.
+[/GÜVENLIK TALİMATI]`;
+      
+      let updatedCount = 0;
+      
+      // Update each agent's instructions
+      for (const agent of agents) {
+        try {
+          let newInstructions = agent.openaiInstructions || '';
+          
+          if (enabled) {
+            // Add safety instruction if not already present
+            if (!newInstructions.includes('[GÜVENLIK TALİMATI]')) {
+              newInstructions = newInstructions + safeReplyInstruction;
+            }
+          } else {
+            // Remove safety instruction if present
+            const startIndex = newInstructions.indexOf('[GÜVENLIK TALİMATI]');
+            if (startIndex !== -1) {
+              const endIndex = newInstructions.indexOf('[/GÜVENLIK TALİMATI]');
+              if (endIndex !== -1) {
+                // Both tags found, remove the complete block
+                newInstructions = newInstructions.substring(0, startIndex) + newInstructions.substring(endIndex + '[/GÜVENLIK TALİMATI]'.length);
+              } else {
+                // Only start tag found, remove it safely
+                newInstructions = newInstructions.replace('[GÜVENLIK TALİMATI]', '');
+              }
+            }
+          }
+          
+          // Update agent in database
+          await storage.updateAgent(agent.id, { openaiInstructions: newInstructions });
+          updatedCount++;
+          
+          console.log(`✅ Updated agent ${agent.name} (${agent.id})`);
+          
+        } catch (agentError) {
+          console.error(`❌ Failed to update agent ${agent.id}:`, agentError);
+        }
+      }
+      
+      console.log(`🔄 Updated ${updatedCount} agents for safe reply guard setting`);
+      
+      res.json({ 
+        success: true, 
+        message: `Safe reply guard ${enabled ? 'enabled' : 'disabled'} successfully`,
+        updatedAgents: updatedCount
+      });
+      
+    } catch (error: any) {
+      console.error("Safe reply guard update error:", error);
+      res.status(500).json({ error: "Failed to update safe reply guard setting" });
+    }
+  });
+
   // Auto-broadcast dashboard stats every 15 seconds for all connected users
   setInterval(async () => {
     for (const [userId, clients] of connectedClients.entries()) {
