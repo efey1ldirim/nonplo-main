@@ -67,6 +67,13 @@ const DashboardIntegrations: React.FC = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
 
+  // Agent selection state for safe reply guard
+  const [showAgentSelection, setShowAgentSelection] = useState<boolean>(false);
+  const [pendingSafeReplyGuard, setPendingSafeReplyGuard] = useState<{ key: ToolKey; nextValue: boolean } | null>(null);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState<boolean>(false);
+
   // Special requests form
   const form = useForm<RequestValues>({ resolver: zodResolver(requestSchema) });
   const isSubmitting = form.formState.isSubmitting;
@@ -111,8 +118,43 @@ const DashboardIntegrations: React.FC = () => {
     init();
   }, [toast]);
 
+  // Load user agents
+  const loadAgents = async () => {
+    if (!token) return;
+    
+    setLoadingAgents(true);
+    try {
+      const response = await fetch('/api/agents', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const agentsList = await response.json();
+        setAgents(agentsList);
+        // Default to all agents selected
+        setSelectedAgentIds(agentsList.map((agent: any) => agent.id));
+      } else {
+        console.error('Failed to load agents');
+      }
+    } catch (error) {
+      console.error('Error loading agents:', error);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
   const onToggleToolIntent = (key: ToolKey, next: boolean) => {
-    setConfirmTool({ key, nextValue: next });
+    if (key === "safe_reply_guard") {
+      // For safe reply guard, show agent selection modal
+      setPendingSafeReplyGuard({ key, nextValue: next });
+      loadAgents();
+      setShowAgentSelection(true);
+    } else {
+      // For other tools, proceed normally
+      setConfirmTool({ key, nextValue: next });
+    }
   };
 
   const persistToolChange = async () => {
@@ -175,6 +217,79 @@ const DashboardIntegrations: React.FC = () => {
     } finally {
       setSavingToolKey(null);
       setConfirmTool(null);
+    }
+  };
+
+  // Persist safe reply guard with selected agents
+  const persistSafeReplyGuard = async () => {
+    if (!userId || !pendingSafeReplyGuard) return;
+    
+    const { key, nextValue } = pendingSafeReplyGuard;
+    setSavingToolKey(key);
+    
+    try {
+      if (!token) {
+        toast({ 
+          title: "Hata", 
+          description: "Oturum bilgileri eksik. Lütfen sayfayı yenileyip tekrar deneyin.",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Update agent instructions with selected agents
+      try {
+        const response = await fetch('/api/tools/safe-reply-guard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ 
+            enabled: nextValue,
+            agentIds: selectedAgentIds
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Agent instructions update failed');
+        }
+
+        const result = await response.json();
+        console.log(`🛡️ Safe reply guard updated for ${result.updatedAgents} of ${result.selectedAgents} selected agents`);
+        
+      } catch (apiError: any) {
+        console.error('Safe reply guard API error:', apiError);
+        toast({ 
+          title: "Hata", 
+          description: `Agent talimatları güncellenemedi: ${apiError.message}`,
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Update tool setting in database
+      const { error } = await supabase
+        .from("tools_settings")
+        .upsert({ user_id: userId, tool_key: key, enabled: nextValue }, { onConflict: "user_id,tool_key" });
+      if (error) throw error;
+
+      setToolsState((prev) => ({ ...prev, [key]: nextValue }));
+      
+      const selectedCount = selectedAgentIds.length;
+      const totalCount = agents.length;
+      toast({ 
+        title: "Güncellendi", 
+        description: `"${TOOLS.find((t) => t.key === key)?.name}" ${selectedCount}/${totalCount} agent için ${nextValue ? "AÇIK" : "KAPALI"}.` 
+      });
+      
+    } catch (e: any) {
+      toast({ title: "Güncelleme başarısız", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingToolKey(null);
+      setPendingSafeReplyGuard(null);
+      setShowAgentSelection(false);
     }
   };
 
@@ -610,6 +725,86 @@ const DashboardIntegrations: React.FC = () => {
       </section>
 
       {/* Confirm dialogs */}
+      {/* Agent selection dialog for safe reply guard */}
+      <Dialog open={showAgentSelection} onOpenChange={() => setShowAgentSelection(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Agent Seçimi - Güvenli Yanıt Koruması</DialogTitle>
+            <DialogDescription>
+              Güvenlik talimatının ekleneceği agent'ları seçin:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-64 overflow-y-auto">
+            {loadingAgents ? (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">Agent'lar yükleniyor...</div>
+              </div>
+            ) : agents.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground">Henüz agent oluşturulmamış</div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center space-x-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedAgentIds(agents.map(agent => agent.id))}
+                  >
+                    Tümünü Seç
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedAgentIds([])}
+                  >
+                    Hiçbirini Seçme
+                  </Button>
+                </div>
+                
+                {agents.map((agent) => (
+                  <div key={agent.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`agent-${agent.id}`}
+                      checked={selectedAgentIds.includes(agent.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAgentIds(prev => [...prev, agent.id]);
+                        } else {
+                          setSelectedAgentIds(prev => prev.filter(id => id !== agent.id));
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor={`agent-${agent.id}`} className="flex-1 cursor-pointer">
+                      <div className="text-sm font-medium">{agent.name}</div>
+                      <div className="text-xs text-muted-foreground">{agent.role}</div>
+                    </label>
+                    <div className={`text-xs px-2 py-1 rounded ${agent.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                      {agent.is_active ? 'Aktif' : 'Pasif'}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAgentSelection(false)}>
+              İptal
+            </Button>
+            <Button 
+              onClick={persistSafeReplyGuard} 
+              disabled={selectedAgentIds.length === 0 || !!savingToolKey}
+            >
+              {savingToolKey ? "Güncelleniyor..." : `${selectedAgentIds.length} Agent İçin Uygula`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!confirmTool} onOpenChange={(open) => !open && setConfirmTool(null)}>
         <DialogContent>
           <DialogHeader>

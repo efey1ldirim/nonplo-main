@@ -2807,11 +2807,39 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Get user agents endpoint
+  app.get("/api/agents", rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      
+      const agents = await storage.getUserAgents(userId);
+      
+      // Return simplified agent data for selection UI
+      const agentList = agents.map(agent => ({
+        id: agent.id,
+        name: agent.name,
+        role: agent.role,
+        is_active: agent.is_active,
+        createdAt: agent.createdAt
+      }));
+      
+      res.json(agentList);
+      
+    } catch (error: any) {
+      console.error("Get agents error:", error);
+      res.status(500).json({ error: "Failed to get agents" });
+    }
+  });
+
   // Safe reply guard endpoint - Updates agent instructions when safe reply protection is enabled/disabled
   app.post("/api/tools/safe-reply-guard", rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = getUserId(req);
-      const { enabled } = req.body;
+      const { enabled, agentIds } = req.body;
       
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
@@ -2821,10 +2849,32 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         return res.status(400).json({ error: "Enabled field must be boolean" });
       }
       
-      console.log(`🛡️ Safe reply guard ${enabled ? 'ENABLED' : 'DISABLED'} for user ${userId}`);
+      // Validate agentIds if provided
+      if (agentIds && (!Array.isArray(agentIds) || agentIds.some(id => typeof id !== 'string'))) {
+        return res.status(400).json({ error: "agentIds must be an array of strings" });
+      }
       
-      // Get all user's agents
-      const agents = await storage.getUserAgents(userId);
+      console.log(`🛡️ Safe reply guard ${enabled ? 'ENABLED' : 'DISABLED'} for user ${userId}${agentIds ? ` for ${agentIds.length} selected agents` : ' for all agents'}`);
+      
+      // Get user's agents (all or selected)
+      let agents;
+      if (agentIds && agentIds.length > 0) {
+        // Get only selected agents
+        agents = [];
+        for (const agentId of agentIds) {
+          try {
+            const agent = await storage.getAgentById(agentId);
+            if (agent && agent.userId === userId) {
+              agents.push(agent);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Agent ${agentId} not found or access denied`);
+          }
+        }
+      } else {
+        // Get all user's agents (backward compatibility)
+        agents = await storage.getUserAgents(userId);
+      }
       
       const safeReplyInstruction = `
 
@@ -2875,12 +2925,14 @@ Bu durumlarda kibar ama kararlı şekilde reddet ve uygun alternatifleri öner.
         }
       }
       
-      console.log(`🔄 Updated ${updatedCount} agents for safe reply guard setting`);
+      console.log(`🔄 Updated ${updatedCount} of ${agents.length} agents for safe reply guard setting`);
       
       res.json({ 
         success: true, 
         message: `Safe reply guard ${enabled ? 'enabled' : 'disabled'} successfully`,
-        updatedAgents: updatedCount
+        updatedAgents: updatedCount,
+        totalAgents: agents.length,
+        selectedAgents: agentIds ? agentIds.length : agents.length
       });
       
     } catch (error: any) {
