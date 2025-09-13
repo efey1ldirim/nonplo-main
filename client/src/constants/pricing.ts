@@ -13,8 +13,8 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     name: "Temel Plan",
     description: "Küçük işletmeler için başlangıç seviyesi Yapay Zeka Destekli Dijital Çalışan çözümü",
-    price: 2000,
-    originalPrice: 2000,
+    price: 3000,
+    originalPrice: 3000,
     features: [
       "5000 mesaj hakkı", 
       "Tek çalışan", 
