@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { PRICING_PLANS } from "@/constants/pricing";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -75,35 +76,7 @@ const Account = () => {
 
 
 
-  const plans = [
-    {
-      name: "Temel Plan",
-      description: "Küçük işletmeler için başlangıç seviyesi Yapay Zeka Destekli Dijital Çalışan çözümü",
-      price: 3500,
-      originalPrice: 2000,
-      features: ["Tek bir çalışan hakkı", "2 uygulama ile entegrasyon", "Temel toollara erişim", "4000 request (mesaj) hakkı", "Dashboard erişimi", "Temel analiz bilgileri", "Temel şablonlar", "E-posta desteği"],
-      popular: false,
-      plan: "basic"
-    },
-    {
-      name: "Plus Plan", 
-      description: "Büyüyen işletmeler için en çok tercih edilen çözüm",
-      price: 6500,
-      originalPrice: 5000,
-      features: ["5 çalışan hakkı", "Gelişmiş entegrasyon erişimi", "Gelişmiş toollara erişim", "10000 request (mesaj) hakkı", "Gelişmiş analiz ve raporlama", "Gelişmiş şablonlar", "Temel plandaki tüm özellikler"],
-      popular: true,
-      plan: "plus"
-    },
-    {
-      name: "Premium Plan",
-      description: "Kurumsal işletmeler için tam donanımlı premium çözüm",
-      price: 12000,
-      originalPrice: 10500,
-      features: ["10 çalışan hakkı", "Entegrasyonlara tam erişim", "1500 dk konuşma kredisi", "İşletmeye özel telefon numarası", "Plus plandaki tüm özellikler", "Öncelikli destek"],
-      popular: false,
-      plan: "premium"
-    }
-  ];
+  const plans = PRICING_PLANS;
 
   useEffect(() => {
     if (user) {
