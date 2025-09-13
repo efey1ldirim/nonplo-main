@@ -2,18 +2,52 @@ import { Twitter, Linkedin, Instagram, Facebook, Mail, ArrowRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const { toast } = useToast();
+
+  const newsletterMutation = useMutation({
+    mutationFn: async (email: string) => {
+      return apiRequest('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "✅ Başarılı!",
+        description: "Bültene başarıyla abone oldunuz. En kısa sürede size ulaşacağız.",
+      });
+      setEmail("");
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("already subscribed")) {
+        toast({
+          title: "⚠️ Zaten Abone",
+          description: "Bu e-posta adresi zaten bültene abone.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "❌ Hata",
+          description: "Abonelik sırasında bir hata oluştu. Lütfen tekrar deneyin.",
+          variant: "destructive"
+        });
+      }
+    }
+  });
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      // Handle newsletter subscription logic here
-      setIsSubscribed(true);
-      setEmail("");
-      setTimeout(() => setIsSubscribed(false), 3000);
+    if (email && !newsletterMutation.isPending) {
+      newsletterMutation.mutate(email);
     }
   };
 
@@ -175,11 +209,11 @@ const Footer = () => {
               <Button 
                 type="submit"
                 className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 text-white hover:from-blue-700 hover:to-purple-700 dark:hover:from-blue-600 dark:hover:to-purple-600 transition-all duration-200 shadow-sm hover:shadow-md"
-                disabled={isSubscribed}
+                disabled={newsletterMutation.isPending || !email.trim()}
                 data-testid="button-newsletter-subscribe"
               >
-                {isSubscribed ? (
-                  "Abone Oldunuz!"
+                {newsletterMutation.isPending ? (
+                  "Abone Olunuyor..."
                 ) : (
                   <>
                     Abone Ol
