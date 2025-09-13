@@ -203,7 +203,6 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
                   >
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
-                      className="text-sm markdown-content"
                       components={{
                         p: ({children}) => <p className="text-sm mb-2 last:mb-0">{children}</p>,
                         h1: ({children}) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
