@@ -2922,7 +2922,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
           }
           
           // Update agent in database
-          await storage.updateAgent(agent.id, { openaiInstructions: newInstructions });
+          await storage.updateAgent(agent.id, userId, { openaiInstructions: newInstructions });
           updatedCount++;
           
           console.log(`✅ Updated agent ${agent.name} (${agent.id})`);
