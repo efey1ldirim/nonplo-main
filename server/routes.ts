@@ -2924,14 +2924,14 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
           // Update agent in database
           await storage.updateAgent(agent.id, userId, { openaiInstructions: newInstructions });
           
-          // Also update OpenAI Assistant's system instructions if assistantId exists
-          if (agent.assistantId) {
+          // Also update OpenAI Assistant's system instructions if openaiAssistantId exists
+          if (agent.openaiAssistantId) {
             try {
               const OpenAI = await import('openai');
               const openai = new OpenAI.default({ apiKey: process.env.OPENAI_API_KEY });
               
               // Get current assistant
-              const assistant = await openai.beta.assistants.retrieve(agent.assistantId);
+              const assistant = await openai.beta.assistants.retrieve(agent.openaiAssistantId);
               const currentInstructions = assistant.instructions || '';
               
               let updatedAssistantInstructions = currentInstructions;
@@ -2958,7 +2958,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
               
               // Update OpenAI Assistant if instructions changed
               if (updatedAssistantInstructions !== currentInstructions) {
-                await openai.beta.assistants.update(agent.assistantId, {
+                await openai.beta.assistants.update(agent.openaiAssistantId, {
                   instructions: updatedAssistantInstructions
                 });
                 console.log(`🤖 Updated OpenAI Assistant instructions for ${agent.name}`);
