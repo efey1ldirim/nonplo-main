@@ -2993,6 +2993,71 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     }
   });
 
+  // Get forbidden words from yasaklikelimeler.txt
+  app.get('/api/tools/forbidden-words', auth, async (req: Request, res: Response) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const filePath = path.join(process.cwd(), 'yasaklikelimeler.txt');
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return res.json({ words: [] });
+      }
+      
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const lines = fileContent.split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#')); // Remove comments and empty lines
+      
+      res.json({ words: lines });
+      
+    } catch (error: any) {
+      console.error("Failed to read forbidden words:", error);
+      res.status(500).json({ error: "Failed to read forbidden words" });
+    }
+  });
+
+  // Update forbidden words in yasaklikelimeler.txt
+  app.post('/api/tools/forbidden-words', auth, async (req: Request, res: Response) => {
+    try {
+      const { words } = req.body;
+      
+      if (!Array.isArray(words)) {
+        return res.status(400).json({ error: "Words must be an array" });
+      }
+      
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const filePath = path.join(process.cwd(), 'yasaklikelimeler.txt');
+      
+      // Create file content with comments
+      const fileContent = [
+        '# Yasaklı Kelimeler Listesi',
+        '# Bu dosya kullanıcılar tarafından güncellenebilir',
+        '# Her satırda bir kelime olmalıdır',
+        '',
+        ...words.filter(word => word && word.trim()).map(word => word.trim())
+      ].join('\n');
+      
+      fs.writeFileSync(filePath, fileContent, 'utf8');
+      
+      console.log(`📝 Forbidden words updated by user ${req.user?.id}, total words: ${words.length}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Forbidden words updated successfully",
+        totalWords: words.length
+      });
+      
+    } catch (error: any) {
+      console.error("Failed to update forbidden words:", error);
+      res.status(500).json({ error: "Failed to update forbidden words" });
+    }
+  });
+
   // Auto-broadcast dashboard stats every 15 seconds for all connected users
   setInterval(async () => {
     for (const [userId, clients] of connectedClients.entries()) {
