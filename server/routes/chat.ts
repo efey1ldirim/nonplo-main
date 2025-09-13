@@ -256,11 +256,23 @@ export const chatWithAgent = async (req: any, res: Response) => {
       console.log('🛡️ Security instructions added to run');
     }
 
-    // Start OpenAI run with combined instructions
+    // Prepare tool_resources for forbidden words file search
+    const toolResources: any = {};
+    if (agent.forbiddenWordsVectorStoreId) {
+      toolResources.file_search = {
+        vector_store_ids: [agent.forbiddenWordsVectorStoreId]
+      };
+      console.log(`🔍 Using forbidden words vector store: ${agent.forbiddenWordsVectorStoreId}`);
+    } else {
+      console.log('⚠️ No forbidden words vector store ID found for agent');
+    }
+
+    // Start OpenAI run with combined instructions and tool resources
     let run = await openai.beta.threads.runs.create(currentThreadId!, {
       assistant_id: assistantId,
       tools: tools.length > 0 ? tools : undefined,
       instructions: combinedInstructions || undefined,
+      tool_resources: Object.keys(toolResources).length > 0 ? toolResources : undefined,
     });
     console.log(`🏃 OpenAI run started: ${run.id}`);
 

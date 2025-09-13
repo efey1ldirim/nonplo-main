@@ -3036,6 +3036,74 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     }
   });
 
+  // Status endpoint for forbidden words system (for testing and observability)
+  app.get('/api/tools/forbidden-words/status', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const filePath = path.join(process.cwd(), 'yasaklikelimeler.txt');
+      
+      // Check file status
+      const fileExists = fs.existsSync(filePath);
+      let wordCount = 0;
+      let fileLastModified = null;
+      
+      if (fileExists) {
+        const stats = fs.statSync(filePath);
+        fileLastModified = stats.mtime;
+        
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const words = fileContent.split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'));
+        wordCount = words.length;
+      }
+      
+      // Get user's agents and their vector store status
+      const userAgents = await storage.getAgentsByUserId(userId);
+      const agentStatus = userAgents.map(agent => ({
+        id: agent.id,
+        name: agent.name,
+        openaiAssistantId: agent.openaiAssistantId,
+        hasVectorStore: !!agent.forbiddenWordsVectorStoreId,
+        vectorStoreId: agent.forbiddenWordsVectorStoreId,
+        fileSearchEnabled: true // Always enabled now
+      }));
+      
+      const totalAgents = userAgents.length;
+      const agentsWithVectorStore = agentStatus.filter(a => a.hasVectorStore).length;
+      const agentsWithOpenAI = agentStatus.filter(a => a.openaiAssistantId).length;
+      
+      res.json({
+        success: true,
+        system: {
+          fileExists,
+          filePath,
+          fileLastModified,
+          wordCount,
+          fileSearchEnabled: true
+        },
+        agents: {
+          total: totalAgents,
+          withOpenAI: agentsWithOpenAI,
+          withVectorStore: agentsWithVectorStore,
+          details: agentStatus
+        },
+        recommendations: [
+          ...(wordCount === 0 ? ["Add forbidden words to the list"] : []),
+          ...(agentsWithVectorStore < agentsWithOpenAI ? ["Upload forbidden words to sync with OpenAI"] : []),
+          ...(totalAgents === 0 ? ["Create agents to use forbidden words system"] : [])
+        ]
+      });
+      
+    } catch (error: any) {
+      console.error("Failed to get forbidden words status:", error);
+      res.status(500).json({ error: "Failed to get forbidden words status" });
+    }
+  });
+
   // Upload file to OpenAI and update vector store
   const uploadForbiddenWordsToOpenAI = async (fileContent: string, userId: string) => {
     try {
@@ -3100,8 +3168,14 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
                 ...WEB_SEARCH_TOOLS
               ]
             });
+            
+            // CRITICAL: Persist vector store ID in database
+            await storage.updateAgent(agent.id, userId, {
+              forbiddenWordsVectorStoreId: vectorStore.id
+            });
+            
             updatedAgents++;
-            console.log(`✅ Updated agent ${agent.name} with forbidden words file`);
+            console.log(`✅ Updated agent ${agent.name} with forbidden words file and stored vector store ID: ${vectorStore.id}`);
           } catch (agentError: any) {
             console.error(`❌ Failed to update agent ${agent.id}:`, agentError);
           }
