@@ -103,7 +103,7 @@ const DashboardLayout = () => {
           <div className="space-y-1">
             <Button
               variant={location.pathname.startsWith("/dashboard/agents") ? "secondary" : "ghost"}
-              className="w-full justify-between"
+              className="w-full justify-start"
               onClick={() => {
                 setAgentsExpanded(!agentsExpanded);
                 if (!agentsExpanded) {
@@ -111,14 +111,12 @@ const DashboardLayout = () => {
                 }
               }}
             >
-              <div className="flex items-center">
-                <Bot className="mr-3 h-4 w-4" />
-                Dijital Çalışanlarım
-              </div>
+              <Bot className="mr-3 h-4 w-4" />
+              Dijital Çalışanlarım
               {agentsExpanded ? (
-                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 ml-auto" />
               ) : (
-                <ChevronRight className="h-4 w-4 transition-transform duration-200" />
+                <ChevronRight className="h-4 w-4 transition-transform duration-200 ml-auto" />
               )}
             </Button>
             
