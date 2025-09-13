@@ -53,10 +53,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     }) => {
       return await apiRequest('/api/chat', {
         method: 'POST',
-        body: JSON.stringify(messageData),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: messageData
       });
     },
     onSuccess: (data) => {
