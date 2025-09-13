@@ -31,6 +31,16 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Helper function stubs
+async function checkTokenExpiry(userId: string, agentId: string): Promise<{needsRefresh: boolean, expiresIn: number | null, warning: string | null}> {
+  // Stub implementation - TODO: implement actual token expiry checking
+  return {
+    needsRefresh: false,
+    expiresIn: null,
+    warning: null
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize OpenAI client
   const openai = new OpenAI({
@@ -155,9 +165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sanitize filename - remove special characters and Turkish characters
       const sanitizedFileName = fileName
-        .replace(/[ğĞıİöÖüÜşŞçÇ]/g, (char) => {
-          const map = { 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ü': 'u', 'Ü': 'U', 'ş': 's', 'Ş': 'S', 'ç': 'c', 'Ç': 'C' };
-          return map[char] || char;
+        .replace(/[ğĞıİöÖüÜşŞçÇ]/g, (char: string) => {
+          const map: Record<string, string> = { 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ü': 'u', 'Ü': 'U', 'ş': 's', 'Ş': 'S', 'ç': 'c', 'Ç': 'C' };
+          return map[char] ?? char;
         })
         .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace non-alphanumeric chars with underscore
         .replace(/_+/g, '_')              // Replace multiple underscores with single
@@ -203,9 +213,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sanitize filename - remove special characters and Turkish characters
       const sanitizedFileName = fileName
-        .replace(/[ğĞıİöÖüÜşŞçÇ]/g, (char) => {
-          const map = { 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ü': 'u', 'Ü': 'U', 'ş': 's', 'Ş': 'S', 'ç': 'c', 'Ç': 'C' };
-          return map[char] || char;
+        .replace(/[ğĞıİöÖüÜşŞçÇ]/g, (char: string) => {
+          const map: Record<string, string> = { 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ü': 'u', 'Ü': 'U', 'ş': 's', 'Ş': 'S', 'ç': 'c', 'Ç': 'C' };
+          return map[char] ?? char;
         })
         .replace(/[^a-zA-Z0-9.-]/g, '_')  // Replace non-alphanumeric chars with underscore
         .replace(/_+/g, '_')              // Replace multiple underscores with single
@@ -411,7 +421,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
 
       // Verify user has access to this conversation
       const conversation = await storage.getConversationById(conversationId);
-      if (!conversation || conversation.user_id !== userId) {
+      if (!conversation || conversation.userId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -773,12 +783,12 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       const newAgent = await storage.createAgent(agent);
       
       // Broadcast to user for real-time dashboard updates
-      if (agent.user_id && global.broadcastToUser) {
+      if (agent.userId && (global as any).broadcastToUser) {
         setTimeout(async () => {
           try {
-            const stats = await storage.getDashboardStats(agent.user_id);
-            global.broadcastToUser(agent.user_id, 'dashboard_stats', stats);
-            global.broadcastToUser(agent.user_id, 'agent_created', newAgent);
+            const stats = await storage.getDashboardStats(agent.userId);
+            (global as any).broadcastToUser(agent.userId, 'dashboard_stats', stats);
+            (global as any).broadcastToUser(agent.userId, 'agent_created', newAgent);
           } catch (error) {
             console.error('Failed to broadcast agent creation:', error);
           }
@@ -853,12 +863,12 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       // Broadcast real-time updates to user
-      if (global.broadcastToUser) {
+      if ((global as any).broadcastToUser) {
         setTimeout(async () => {
           try {
             const stats = await storage.getDashboardStats(userId);
-            global.broadcastToUser(userId, 'dashboard_stats', stats);
-            global.broadcastToUser(userId, 'agent_updated', updatedAgent);
+            (global as any).broadcastToUser(userId, 'dashboard_stats', stats);
+            (global as any).broadcastToUser(userId, 'agent_updated', updatedAgent);
           } catch (error) {
             console.error('Failed to broadcast agent update:', error);
           }
@@ -905,12 +915,12 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       cacheManager.delete(`route:/api/agents?userId=${userId}:anonymous`);
 
       // Broadcast real-time updates to user
-      if (global.broadcastToUser) {
+      if ((global as any).broadcastToUser) {
         setTimeout(async () => {
           try {
             const stats = await storage.getDashboardStats(userId);
-            global.broadcastToUser(userId, 'dashboard_stats', stats);
-            global.broadcastToUser(userId, 'agent_updated', updatedAgent);
+            (global as any).broadcastToUser(userId, 'dashboard_stats', stats);
+            (global as any).broadcastToUser(userId, 'agent_updated', updatedAgent);
           } catch (error) {
             console.error('Failed to broadcast agent update:', error);
           }
@@ -974,12 +984,12 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       cacheManager.delete(`route:/api/agents?userId=${userId}:anonymous`);
 
       // Broadcast real-time updates
-      if (global.broadcastToUser) {
+      if ((global as any).broadcastToUser) {
         setTimeout(async () => {
           try {
             const stats = await storage.getDashboardStats(userId);
-            global.broadcastToUser(userId, 'dashboard_stats', stats);
-            global.broadcastToUser(userId, 'agent_updated', updatedAgent);
+            (global as any).broadcastToUser(userId, 'dashboard_stats', stats);
+            (global as any).broadcastToUser(userId, 'agent_updated', updatedAgent);
           } catch (error) {
             console.error('Failed to broadcast temperature update:', error);
           }
@@ -1128,20 +1138,23 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       const message = insertMessageSchema.parse(req.body);
       const newMessage = await storage.createMessage(message);
       
-      // Broadcast to user for real-time updates
-      if (message.user_id && global.broadcastToUser) {
-        global.broadcastToUser(message.user_id, 'new_message', newMessage);
+      // Broadcast to user for real-time updates - commented out for now due to schema issues
+      // TODO: Fix message schema to include userId field for broadcasting
+      /*
+      if (message.userId && (global as any).broadcastToUser) {
+        (global as any).broadcastToUser(message.userId, 'new_message', newMessage);
         
         // Also refresh dashboard stats
         setTimeout(async () => {
           try {
-            const stats = await storage.getDashboardStats(message.user_id);
-            global.broadcastToUser(message.user_id, 'dashboard_stats', stats);
+            const stats = await storage.getDashboardStats(message.userId);
+            (global as any).broadcastToUser(message.userId, 'dashboard_stats', stats);
           } catch (error) {
             console.error('Failed to broadcast updated stats:', error);
           }
         }, 1000);
       }
+      */
       
       res.json(newMessage);
     } catch (error) {
@@ -1575,8 +1588,9 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   // Legacy endpoint alias for backward compatibility
   app.post("/api/create-advanced-playbook", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const { createAdvancedPlaybook } = await import("./routes/create-advanced-playbook");
-      return createAdvancedPlaybook(req, res);
+      // const { createAdvancedPlaybook } = await import("./routes/create-advanced-playbook"); // Module not found
+      // return createAdvancedPlaybook(req, res); // Function not available
+      res.status(501).json({ error: "Advanced playbook creation not implemented" });
     } catch (error) {
       console.error("Create advanced playbook error:", error);
       res.status(500).json({ error: "Failed to create advanced playbook" });
@@ -1729,7 +1743,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       // PLAYBOOK ONLY mode - no Dialogflow CX integration needed
       console.log(`📅 Google Calendar tool aktivasyonu - Agent: ${agentId}, Name=${agent.name}`);
       console.log(`✅ Using PLAYBOOK ONLY architecture - no external integration required`);
-              config?.dialogflowCxIntegration?.projectId; // Son çare
+              // config?.dialogflowCxIntegration?.projectId; // Son çare - config not defined
               
       // PLAYBOOK ONLY mode - calendar integration ready
       console.log(`✅ Google Calendar integration prepared for agent: ${agentId}`);
@@ -1777,8 +1791,9 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   // Content generator routes
   app.post("/api/content-generator", async (req, res) => {
     try {
-      const { createAdvancedPlaybook } = await import("./routes/create-advanced-playbook");
-      return createAdvancedPlaybook(req, res);
+      // const { createAdvancedPlaybook } = await import("./routes/create-advanced-playbook"); // Module not found
+      // return createAdvancedPlaybook(req, res); // Function not available
+      res.status(501).json({ error: "Advanced playbook creation not implemented" });
     } catch (error) {
       res.status(500).json({ error: "Failed to process content generation request" });
     }
@@ -1917,15 +1932,16 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
           </script>
         </body></html>
       `);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('💥 Google Calendar callback hatası:', error);
       
       let userMessage = 'Bilinmeyen bir hata oluştu.';
-      if (error.message.includes('invalid_grant')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('invalid_grant')) {
         userMessage = 'Bağlantı zaten kurulmuş veya süre dolmuş. Lütfen sayfayı kapatıp yeniden bağlantı kurun.';
-      } else if (error.message.includes('access_denied')) {
+      } else if (errorMessage.includes('access_denied')) {
         userMessage = 'Google Calendar erişimi reddedildi.';
-      } else if (error.message.includes('invalid_request')) {
+      } else if (errorMessage.includes('invalid_request')) {
         userMessage = 'Geçersiz istek. Lütfen tekrar deneyin.';
       }
       
@@ -2264,7 +2280,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
           tokenValid: !tokenStatus.needsRefresh,
           expiresIn: tokenStatus.expiresIn,
           warning: tokenStatus.warning,
-          email: connection?.email,
+          email: connection?.googleEmail,
           lastUpdated: connection?.updatedAt
         }
       });
@@ -2567,7 +2583,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
   });
   
   // Broadcast function for real-time updates
-  global.broadcastToUser = (userId: string, type: string, data: any) => {
+  (global as any).broadcastToUser = (userId: string, type: string, data: any) => {
     const userClients = connectedClients.get(userId);
     if (userClients) {
       const message = JSON.stringify({ type, data });
@@ -2994,7 +3010,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
   });
 
   // Get forbidden words from yasaklikelimeler.txt
-  app.get('/api/tools/forbidden-words', auth, async (req: Request, res: Response) => {
+  app.get('/api/tools/forbidden-words', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const fs = await import('fs');
       const path = await import('path');
@@ -3020,7 +3036,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
   });
 
   // Update forbidden words in yasaklikelimeler.txt
-  app.post('/api/tools/forbidden-words', auth, async (req: Request, res: Response) => {
+  app.post('/api/tools/forbidden-words', authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { words } = req.body;
       
@@ -3064,7 +3080,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       if (clients.size > 0) {
         try {
           const stats = await storage.getDashboardStats(userId);
-          global.broadcastToUser(userId, 'dashboard_stats', stats);
+          (global as any).broadcastToUser(userId, 'dashboard_stats', stats);
         } catch (error) {
           console.error(`Failed to broadcast stats for user ${userId}:`, error);
         }

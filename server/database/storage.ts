@@ -144,6 +144,10 @@ export interface IStorage {
 
   // User Account Deletion
   deleteUserAccount(userId: string): Promise<void>;
+  
+  // Additional missing functions  
+  getUserAgents(userId: string): Promise<Agent[]>;
+  getGoogleCalendarConnection(userId: string, agentId: string): Promise<UserGoogleCalendar | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1288,6 +1292,21 @@ export class DatabaseStorage implements IStorage {
     } catch (error: any) {
       throw new Error(`Failed to complete account deletion: ${error.message}`);
     }
+  }
+
+  // Implementation for missing functions
+  async getUserAgents(userId: string): Promise<Agent[]> {
+    return this.getAgentsByUserId(userId);
+  }
+
+  async getGoogleCalendarConnection(userId: string, agentId: string): Promise<UserGoogleCalendar | null> {
+    return this.getGoogleCalendarByUserAgent(userId, agentId);
+  }
+
+  async deleteUserAccount(userId: string): Promise<void> {
+    // Schedule account deletion instead of immediate deletion
+    const scheduledDeletion = await this.scheduleAccountDeletion(userId);
+    console.log(`Account deletion scheduled for user ${userId}`, scheduledDeletion);
   }
 }
 

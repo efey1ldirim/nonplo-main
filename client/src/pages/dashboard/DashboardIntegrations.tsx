@@ -74,6 +74,12 @@ const DashboardIntegrations: React.FC = () => {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   const [loadingAgents, setLoadingAgents] = useState<boolean>(false);
 
+  // Forbidden words state
+  const [forbiddenWords, setForbiddenWords] = useState<string[]>([]);
+  const [newWord, setNewWord] = useState<string>('');
+  const [loadingWords, setLoadingWords] = useState<boolean>(true);
+  const [savingWords, setSavingWords] = useState<boolean>(false);
+
   // Special requests form
   const form = useForm<RequestValues>({ resolver: zodResolver(requestSchema) });
   const isSubmitting = form.formState.isSubmitting;
@@ -143,6 +149,90 @@ const DashboardIntegrations: React.FC = () => {
     } finally {
       setLoadingAgents(false);
     }
+  };
+
+  // Load forbidden words
+  const loadForbiddenWords = async () => {
+    if (!token) return;
+    setLoadingWords(true);
+    try {
+      const response = await fetch('/api/tools/forbidden-words', {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch forbidden words');
+      }
+
+      const data = await response.json();
+      setForbiddenWords(data.words || []);
+    } catch (error) {
+      console.error('Error loading forbidden words:', error);
+      toast({ 
+        title: "Hata", 
+        description: "Yasaklı kelimeler yüklenirken hata oluştu",
+        variant: "destructive" 
+      });
+    } finally {
+      setLoadingWords(false);
+    }
+  };
+
+  // Save forbidden words
+  const saveForbiddenWords = async (words: string[]) => {
+    if (!token) return;
+    setSavingWords(true);
+    try {
+      const response = await fetch('/api/tools/forbidden-words', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ words })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save forbidden words');
+      }
+
+      toast({ 
+        title: "Başarılı", 
+        description: "Yasaklı kelimeler güncellendi",
+        variant: "default" 
+      });
+    } catch (error) {
+      console.error('Error saving forbidden words:', error);
+      toast({ 
+        title: "Hata", 
+        description: "Yasaklı kelimeler kaydedilirken hata oluştu",
+        variant: "destructive" 
+      });
+    } finally {
+      setSavingWords(false);
+    }
+  };
+
+  // Add new forbidden word
+  const addForbiddenWord = () => {
+    if (!newWord.trim()) return;
+    const word = newWord.trim().toLowerCase();
+    if (!forbiddenWords.includes(word)) {
+      const updatedWords = [...forbiddenWords, word];
+      setForbiddenWords(updatedWords);
+      saveForbiddenWords(updatedWords);
+    }
+    setNewWord('');
+  };
+
+  // Remove forbidden word
+  const removeForbiddenWord = (wordToRemove: string) => {
+    const updatedWords = forbiddenWords.filter(word => word !== wordToRemove);
+    setForbiddenWords(updatedWords);
+    saveForbiddenWords(updatedWords);
   };
 
   const onToggleToolIntent = (key: ToolKey, next: boolean) => {
