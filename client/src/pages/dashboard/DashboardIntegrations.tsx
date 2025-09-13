@@ -120,6 +120,12 @@ const DashboardIntegrations: React.FC = () => {
       }
 
       setLoadingTools(false);
+      
+      // CRITICAL FIX: Load forbidden words on page load
+      if (session?.session?.access_token) {
+        setToken(session.session.access_token);
+        await loadForbiddenWords();
+      }
     };
     init();
   }, [toast]);
@@ -153,22 +159,30 @@ const DashboardIntegrations: React.FC = () => {
 
   // Load forbidden words
   const loadForbiddenWords = async () => {
-    if (!token) return;
+    const currentToken = token || (await supabase.auth.getSession()).data.session?.access_token;
+    if (!currentToken) {
+      console.log('No token available for loading forbidden words');
+      setLoadingWords(false);
+      return;
+    }
+    
     setLoadingWords(true);
     try {
       const response = await fetch('/api/tools/forbidden-words', {
         headers: { 
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentToken}`,
           'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch forbidden words');
+        throw new Error(`Failed to fetch forbidden words: ${response.status}`);
       }
 
       const data = await response.json();
-      setForbiddenWords(data.words || []);
+      const words = data.words || [];
+      setForbiddenWords(words);
+      console.log(`📝 Loaded ${words.length} forbidden words from server`);
     } catch (error) {
       console.error('Error loading forbidden words:', error);
       toast({ 
@@ -183,7 +197,15 @@ const DashboardIntegrations: React.FC = () => {
 
   // Save forbidden words
   const saveForbiddenWords = async (words: string[]) => {
-    if (!token) return;
+    if (!token) {
+      toast({ 
+        title: "Hata", 
+        description: "Oturum bilgileri eksik. Lütfen sayfayı yenileyip tekrar deneyin.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setSavingWords(true);
     try {
       const response = await fetch('/api/tools/forbidden-words', {
@@ -196,19 +218,23 @@ const DashboardIntegrations: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save forbidden words');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save forbidden words');
       }
 
+      const result = await response.json();
+      console.log(`📝 Forbidden words saved successfully:`, result);
+      
       toast({ 
         title: "Başarılı", 
-        description: "Yasaklı kelimeler güncellendi",
+        description: `Yasaklı kelimeler güncellendi (${result.totalWords}/${result.originalCount} kelime kaydedildi)${result.cacheRefreshed ? ' ve önbellek yenilendi' : ''}`,
         variant: "default" 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving forbidden words:', error);
       toast({ 
         title: "Hata", 
-        description: "Yasaklı kelimeler kaydedilirken hata oluştu",
+        description: error.message || "Yasaklı kelimeler kaydedilirken hata oluştu",
         variant: "destructive" 
       });
     } finally {

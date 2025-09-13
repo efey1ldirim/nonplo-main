@@ -3036,13 +3036,27 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
   });
 
   // Update forbidden words in yasaklikelimeler.txt
-  app.post('/api/tools/forbidden-words', authenticate, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/tools/forbidden-words', rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { words } = req.body;
       
+      // Enhanced input validation
       if (!Array.isArray(words)) {
         return res.status(400).json({ error: "Words must be an array" });
       }
+      
+      if (words.length > 1000) {
+        return res.status(400).json({ error: "Too many words. Maximum 1000 words allowed." });
+      }
+      
+      // Validate individual words
+      const validWords = words.filter(word => {
+        if (!word || typeof word !== 'string') return false;
+        const trimmed = word.trim();
+        if (trimmed.length === 0 || trimmed.length > 50) return false;
+        // Allow Turkish and English characters, no special characters except spaces
+        return /^[a-zA-ZğĞıİöÖüÜşŞçÇ\s]+$/.test(trimmed);
+      }).map(word => word.trim().toLowerCase());
       
       const fs = await import('fs');
       const path = await import('path');
@@ -3055,17 +3069,27 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
         '# Bu dosya kullanıcılar tarafından güncellenebilir',
         '# Her satırda bir kelime olmalıdır',
         '',
-        ...words.filter(word => word && word.trim()).map(word => word.trim())
+        '# Türkçe Yasaklı Kelimeler',
+        ...validWords.filter(word => /[ğĞıİöÖüÜşŞçÇ]/.test(word)),
+        '',
+        '# İngilizce Yasaklı Kelimeler',
+        ...validWords.filter(word => !/[ğĞıİöÖüÜşŞçÇ]/.test(word))
       ].join('\n');
       
       fs.writeFileSync(filePath, fileContent, 'utf8');
       
-      console.log(`📝 Forbidden words updated by user ${req.user?.id}, total words: ${words.length}`);
+      // CRITICAL FIX: Refresh the cache after updating the file
+      const { refreshBannedWords } = await import('./utils/profanity-filter');
+      refreshBannedWords();
+      
+      console.log(`📝 Forbidden words updated by user ${req.user?.id}, total words: ${validWords.length}, cache refreshed`);
       
       res.json({ 
         success: true, 
         message: "Forbidden words updated successfully",
-        totalWords: words.length
+        totalWords: validWords.length,
+        originalCount: words.length,
+        cacheRefreshed: true
       });
       
     } catch (error: any) {

@@ -1,10 +1,49 @@
-// Profanity filter for Turkish content
-const bannedWords = [
+// Profanity filter for Turkish content - now reads from yasaklikelimeler.txt
+let cachedBannedWords: string[] | null = null;
+
+const loadBannedWordsFromFile = (): string[] => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const filePath = path.join(process.cwd(), 'yasaklikelimeler.txt');
+    
+    if (!fs.existsSync(filePath)) {
+      console.warn('yasaklikelimeler.txt not found, using default words');
+      return getDefaultBannedWords();
+    }
+    
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const words = fileContent.split('\n')
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'))
+      .map(word => word.toLowerCase());
+    
+    return words.length > 0 ? words : getDefaultBannedWords();
+  } catch (error) {
+    console.error('Error reading yasaklikelimeler.txt:', error);
+    return getDefaultBannedWords();
+  }
+};
+
+const getDefaultBannedWords = (): string[] => [
   // Common Turkish profanity and inappropriate words
   'amk', 'amına', 'amınakoyayım', 'amq', 'aq', 'anasını', 'orospu', 'oç', 'götüne', 'götüm', 'sik', 'sikmek', 'sikeyim', 'sikimi', 'amcık', 'piç', 'ibne', 'göt', 'bok', 'yarrak', 'dalyarak', 'gerizekalı', 'salak', 'aptal', 'gerzek', 'döl', 'fahişe', 'pezevenk', 'sürtük', 'kahpe', 'kevaşe', 'şerefsiz', 'namussuz', 'yavşak', 'puşt', 'amcığa', 'sikerim', 'siktirgit', 'siktir', 'siktimin', 'allahını', 'annesini', 'babasını', 'avradını', 'am', 'amlar', 'amları',
   // Common English profanity
   'fuck', 'shit', 'bitch', 'asshole', 'damn', 'hell', 'bastard', 'crap', 'piss', 'whore', 'slut', 'cunt', 'dick', 'cock', 'pussy', 'fag', 'nigger', 'motherfucker', 'bullshit'
 ];
+
+const getBannedWords = (): string[] => {
+  if (cachedBannedWords === null) {
+    cachedBannedWords = loadBannedWordsFromFile();
+  }
+  return cachedBannedWords;
+};
+
+// Function to refresh banned words cache (call when file is updated)
+export const refreshBannedWords = (): void => {
+  cachedBannedWords = null;
+};
 
 // Words that might contain banned words but are legitimate
 const whitelist = [
@@ -24,6 +63,7 @@ export const containsProfanity = (text: string): boolean => {
   if (isWhitelisted) return false;
 
   // Check for banned words
+  const bannedWords = getBannedWords();
   return bannedWords.some(bannedWord => {
     const lowerBanned = bannedWord.toLowerCase();
     
