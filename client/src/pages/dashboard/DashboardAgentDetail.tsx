@@ -1733,7 +1733,7 @@ export default function DashboardAgentDetail() {
 
         {/* 5) Chat */}
         <TabsContent value="chat" className="space-y-6">
-          <div className="max-w-4xl">
+          <div className="w-full flex justify-center">
             <AgentChat
               agentId={agent.id}
               agentName={agent.name}

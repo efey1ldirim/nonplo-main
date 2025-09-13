@@ -52,7 +52,10 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     }) => {
       return await apiRequest('/api/chat', {
         method: 'POST',
-        body: messageData
+        body: JSON.stringify(messageData),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: (data) => {
@@ -130,7 +133,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
   };
 
   return (
-    <Card className="h-[600px] flex flex-col" data-testid="agent-chat">
+    <Card className="h-[calc(100vh-40px)] w-[calc(100vw-40px)] max-h-[800px] max-w-[1200px] flex flex-col mx-auto" data-testid="agent-chat">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
