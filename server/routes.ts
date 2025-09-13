@@ -2904,10 +2904,11 @@ Bu durumlarda kibar ama kararlı şekilde reddet ve uygun alternatifleri öner.
 
 YASAKLI KELIMELER KURALI:
 Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre hareket etmeli:
-- Mesajda yasaklikelimeler.txt dosyasında belirtilen "yasaklı kelimeler" listesinde herhangi bir kelime geçiyorsa, bu kelimeyi yanıtında asla tekrarlamamalı
+- ÖNCE file search tool kullanarak yasaklikelimeler.txt dosyasını oku ve güncel yasaklı kelimeler listesini al
+- Mesajda yasaklı kelimeler listesinde herhangi bir kelime geçiyorsa, bu kelimeyi yanıtında asla tekrarlamamalı
 - Kullanıcıya agent'a önceden atanmış ton ile uyumlu şekilde uyarı mesajı göndermeli
 - Mesajın geri kalanına normal şekilde cevap vermeye devam edebilir, ancak yasaklı kelimenin etkisi hiçbir yanıt parçasında görünmemeli
-- Yasaklı kelimeler listesi için yasaklikelimeler.txt dosyasında belirtilen kelimeleri referans al
+- Yasaklı kelimeler listesi her zaman file search ile yasaklikelimeler.txt dosyasından dinamik olarak alınmalı
 [/GÜVENLIK TALİMATI]`;
       
       let updatedCount = 0;
