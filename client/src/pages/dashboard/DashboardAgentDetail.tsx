@@ -1738,6 +1738,7 @@ export default function DashboardAgentDetail() {
               agentId={agent.id}
               agentName={agent.name}
               assistantId={agent.openaiAssistantId || undefined}
+              isActive={agent.is_active}
             />
           </div>
         </TabsContent>

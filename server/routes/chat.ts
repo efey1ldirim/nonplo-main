@@ -160,6 +160,16 @@ export const chatWithAgent = async (req: any, res: Response) => {
       });
     }
 
+    // Security check: Prevent messages to inactive/passive agents
+    if (!agent.is_active) {
+      console.log(`🚫 Message blocked - Agent ${agentId} is inactive/passive`);
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Bu çalışan şu anda pasif durumda. Pasif çalışanlara mesaj gönderilemez.',
+        errorCode: 'AGENT_INACTIVE'
+      });
+    }
+
     // Language detection
     const detectedLanguage = detectLanguage(message);
     console.log(`🌍 Detected language: ${detectedLanguage}`);

@@ -22,10 +22,11 @@ interface AgentChatProps {
   agentId: string;
   agentName: string;
   assistantId?: string;
+  isActive?: boolean;
   onClose?: () => void;
 }
 
-export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentChatProps) {
+export function AgentChat({ agentId, agentName, assistantId, isActive = true, onClose }: AgentChatProps) {
   const [message, setMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,11 +83,21 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
     },
     onError: (error: any) => {
       console.error('❌ Failed to send message:', error);
-      toast({
-        title: "Hata",
-        description: error.message || "Mesaj gönderilemedi",
-        variant: "destructive",
-      });
+      
+      // Check if this is an inactive agent error
+      if (error.errorCode === 'AGENT_INACTIVE') {
+        toast({
+          title: "Çalışan Pasif Durumda",
+          description: "Bu çalışan şu anda pasif durumda. Pasif çalışanlara mesaj gönderilemez.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Hata",
+          description: error.message || "Mesaj gönderilemedi",
+          variant: "destructive",
+        });
+      }
       setIsLoading(false);
     }
   });
@@ -256,20 +267,29 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
           </div>
         </ScrollArea>
 
+        {/* Agent Status Warning */}
+        {!isActive && (
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-3">
+            <p className="text-sm text-orange-800 dark:text-orange-200 font-medium text-center">
+              🚫 Bu çalışan şu anda pasif durumda. Mesaj gönderilemez.
+            </p>
+          </div>
+        )}
+
         {/* Message Input */}
         <div className="flex gap-2">
           <Input
-            placeholder="Mesajınızı yazın..."
+            placeholder={isActive ? "Mesajınızı yazın..." : "Çalışan pasif durumda..."}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={isLoading}
+            disabled={isLoading || !isActive}
             className="flex-1"
             data-testid="input-message"
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!message.trim() || isLoading || !assistantId}
+            disabled={!message.trim() || isLoading || !assistantId || !isActive}
             size="sm"
             data-testid="button-send-message"
           >
@@ -277,7 +297,7 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
           </Button>
         </div>
 
-        {!assistantId && (
+        {!assistantId && isActive && (
           <p className="text-xs text-muted-foreground text-center">
             Bu agent için OpenAI Assistant henüz oluşturulmamış
           </p>
