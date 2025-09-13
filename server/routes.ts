@@ -2863,8 +2863,8 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         agents = [];
         for (const agentId of agentIds) {
           try {
-            const agent = await storage.getAgentById(agentId);
-            if (agent && agent.userId === userId) {
+            const agent = await storage.getAgentById(agentId, userId);
+            if (agent) {
               agents.push(agent);
             }
           } catch (error) {
