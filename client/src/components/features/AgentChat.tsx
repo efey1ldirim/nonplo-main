@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -199,7 +201,27 @@ export function AgentChat({ agentId, agentName, assistantId, onClose }: AgentCha
                         : 'bg-muted'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      className="text-sm markdown-content"
+                      components={{
+                        p: ({children}) => <p className="text-sm mb-2 last:mb-0">{children}</p>,
+                        h1: ({children}) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                        strong: ({children}) => <strong className="font-bold">{children}</strong>,
+                        em: ({children}) => <em className="italic">{children}</em>,
+                        code: ({children}) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                        pre: ({children}) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto">{children}</pre>,
+                        blockquote: ({children}) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 py-1 my-2 italic">{children}</blockquote>,
+                        ul: ({children}) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                        li: ({children}) => <li className="mb-1">{children}</li>,
+                        a: ({children, href}) => <a href={href} className="text-blue-500 dark:text-blue-400 underline" target="_blank" rel="noopener noreferrer">{children}</a>
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                     <p className="text-xs opacity-70 mt-1">
                       {new Date(msg.timestamp).toLocaleTimeString('tr-TR', {
                         hour: '2-digit',
