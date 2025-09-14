@@ -505,7 +505,8 @@ const DashboardAgents = () => {
         onClose={() => {
           setShowWizard(false);
           fetchAgents(); // Refresh agents list after wizard closes
-        }} 
+        }}
+        fromDashboard={true} // Enable auto-refresh for dashboard users
       />
 
       {/* Delete Confirmation Dialog */}

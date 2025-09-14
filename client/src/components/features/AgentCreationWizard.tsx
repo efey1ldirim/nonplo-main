@@ -57,9 +57,10 @@ interface AgentCreationWizardProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (agentId: string) => void;
+  fromDashboard?: boolean; // Track if opened from dashboard for auto-refresh
 }
 
-const AgentCreationWizard = ({ open, onClose, onSuccess }: AgentCreationWizardProps) => {
+const AgentCreationWizard = ({ open, onClose, onSuccess, fromDashboard = false }: AgentCreationWizardProps) => {
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -697,6 +698,13 @@ const AgentCreationWizard = ({ open, onClose, onSuccess }: AgentCreationWizardPr
         setCurrentSubStep(1);
         resetWizardData();
         navigate('/dashboard/agents');
+        
+        // Auto-refresh page if agent creation started from dashboard
+        if (fromDashboard) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 500); // Small delay to ensure navigation completes
+        }
       }, 3000);
 
     } catch (error: any) {
