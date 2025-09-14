@@ -161,8 +161,8 @@ const MultiSelect = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-center w-full min-w-0 whitespace-nowrap">
-          <span className="text-center">{label}</span>
+        <Button variant="outline" className="justify-center w-full min-w-0 whitespace-nowrap h-10">
+          <span className="text-center text-sm">{label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="start">
@@ -187,18 +187,18 @@ const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (r: 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full min-w-0 justify-center whitespace-nowrap">
-          <CalendarIcon className="mr-2 h-4 w-4" />
+        <Button variant="outline" className="w-full min-w-0 justify-center whitespace-nowrap h-10">
+          <CalendarIcon className="mr-1 h-3 w-3" />
           {value.from ? (
             value.to ? (
-              <span>
+              <span className="text-xs">
                 {formatDate(value.from)} – {formatDate(value.to)}
               </span>
             ) : (
-              <span>{formatDate(value.from)}</span>
+              <span className="text-xs">{formatDate(value.from)}</span>
             )
           ) : (
-            <span>Tarih aralığı</span>
+            <span className="text-sm">Tarih aralığı</span>
           )}
         </Button>
       </PopoverTrigger>
@@ -677,50 +677,61 @@ export default function DashboardMessages() {
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          {/* Mobile Layout */}
-          <div className="block lg:hidden space-y-3">
-            {/* Message Search - Full Width */}
+          {/* Mobile Layout - Improved Design */}
+          <div className="block lg:hidden space-y-4">
+            {/* Message Search - Full Width with Better Styling */}
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Mesaj içeriğinde ara..."
                 value={filters.query}
                 onChange={(e) => setFilters({ query: e.target.value })}
-                className="pl-10 w-full"
+                className="pl-10 w-full h-12 text-base rounded-lg border-2 focus:border-primary"
                 data-testid="input-search"
               />
             </div>
 
-            {/* Agents - Full Width */}
-            <MultiSelect
-              label="Ajanlar"
-              options={agents.map((a) => ({ key: a.id, label: a.name }))}
-              selected={filters.agents}
-              onChange={(agents) => setFilters({ agents })}
-            />
+            {/* Filter Buttons - 2x2 Grid Layout */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Agents - Top Left */}
+              <div className="col-span-1">
+                <MultiSelect
+                  label="Ajanlar"
+                  options={agents.map((a) => ({ key: a.id, label: a.name }))}
+                  selected={filters.agents}
+                  onChange={(agents) => setFilters({ agents })}
+                />
+              </div>
 
-            {/* Channels - Full Width */}
-            <MultiSelect
-              label="Kanallar"
-              options={CHANNELS}
-              selected={filters.channels}
-              onChange={(channels) => setFilters({ channels })}
-            />
+              {/* Channels - Top Right */}
+              <div className="col-span-1">
+                <MultiSelect
+                  label="Kanallar"
+                  options={CHANNELS}
+                  selected={filters.channels}
+                  onChange={(channels) => setFilters({ channels })}
+                />
+              </div>
 
-            {/* Date Range - Full Width */}
-            <DateRangePicker value={uiDateRange} onChange={handleDateRangeChange} />
+              {/* Date Range - Bottom Left */}
+              <div className="col-span-1">
+                <DateRangePicker value={uiDateRange} onChange={handleDateRangeChange} />
+              </div>
 
-            {/* Clear Button - Full Width */}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={resetFilters} 
-              data-testid="button-reset"
-              className="w-full justify-start"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Temizle
-            </Button>
+              {/* Clear Button - Bottom Right */}
+              <div className="col-span-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={resetFilters} 
+                  data-testid="button-reset"
+                  className="w-full h-10 justify-center bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-red-200 text-red-700 hover:text-red-800"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Temizle
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Desktop/Tablet Layout */}
