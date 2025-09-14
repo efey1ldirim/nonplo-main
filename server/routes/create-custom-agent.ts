@@ -5,6 +5,7 @@ import { db } from '../database/storage';
 import { agents } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
+import { cacheManager } from '../performance/cacheManager';
 
 // Supabase connection configuration
 const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
@@ -348,6 +349,12 @@ Kriterler:
             addWebLog(`Web: Gmail Tool: ✅ Aktif`);
             addWebLog(`Web: Code Interpreter: ✅ Aktif`);
             addWebLog(`Web: File Search: ✅ Aktif`);
+            
+            // Clear cache for this user's agents - CRITICAL FIX
+            cacheManager.invalidateUserData(formData.userId);
+            cacheManager.delete(`route:/api/agents?userId=${formData.userId}:anonymous`);
+            addConsoleLog(`🧹 Cache cleared for user: ${formData.userId}`);
+            addWebLog("Web: 🔄 Agent cache temizlendi - frontend güncellenecek");
             
         } catch (dbError: any) {
             addWebLog(`Web: ⚠ Database kayıt hatası: ${dbError.message}`);
