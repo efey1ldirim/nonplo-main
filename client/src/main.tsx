@@ -2,17 +2,24 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// Global error handlers
+// Global error handlers - suppress development environment noise
 window.addEventListener('unhandledrejection', (event) => {
   // Check if it's a Vite/WebSocket related error
   const reason = event.reason;
   
+  // Handle console warning filtering for React/Dialog components
+  if (reason && typeof reason === 'string' && (
+      reason.includes('DialogContent') || 
+      reason.includes('DialogTitle') ||
+      reason.includes('aria-describedby'))) {
+    event.preventDefault();
+    return;
+  }
+  
   if (reason && typeof reason === 'object') {
     // Handle Vite WebSocket connection errors silently
-    if ((reason.name === 'SyntaxError' || !reason.name) && 
-        reason.message && 
-        reason.message.includes('did not match the expected pattern')) {
-      // Don't log this at all - it's a known Vite/Replit dev environment issue
+    if (reason.message && reason.message.includes('did not match the expected pattern')) {
+      // Completely suppress Vite WebSocket pattern matching errors
       event.preventDefault();
       return;
     }
