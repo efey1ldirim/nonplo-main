@@ -29,11 +29,13 @@ export function useRealTimeData() {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      // Connection timeout after 5 seconds
+      // Connection timeout after 5 seconds - store reference for cleanup
       const connectionTimeout = setTimeout(() => {
         console.log('📡 Connection timeout, retrying...');
         setIsConnecting(false);
-        ws.close();
+        if (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
       }, 5000);
 
       ws.onopen = () => {
@@ -43,11 +45,15 @@ export function useRealTimeData() {
         setIsConnected(true);
         reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful connection
         
-        // Authenticate with user ID immediately
-        ws.send(JSON.stringify({
-          type: 'auth',
-          userId: user.id
-        }));
+        // Authenticate with user ID immediately - wrap in try-catch
+        try {
+          ws.send(JSON.stringify({
+            type: 'auth',
+            userId: user.id
+          }));
+        } catch (sendError) {
+          console.error('📡 Failed to send auth message:', sendError);
+        }
       };
 
       ws.onmessage = (event) => {
@@ -59,11 +65,13 @@ export function useRealTimeData() {
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
+          // Don't throw - handle gracefully to prevent unhandled promise rejection
         }
       };
 
       ws.onclose = (event) => {
         console.log('📡 Real-time data connection closed:', event.code, event.reason);
+        clearTimeout(connectionTimeout); // Clean up connection timeout
         setIsConnected(false);
         setIsConnecting(false);
         
@@ -82,17 +90,24 @@ export function useRealTimeData() {
       };
 
       ws.onerror = (error) => {
-        // Only log if it's not a connection timeout (which is handled elsewhere)
-        if (reconnectAttemptsRef.current === 0) {
-          console.error('📡 Real-time data connection error:', error);
+        // Handle WebSocket errors gracefully to prevent unhandled promise rejections
+        try {
+          // Only log if it's not a connection timeout (which is handled elsewhere)
+          if (reconnectAttemptsRef.current === 0) {
+            console.error('📡 Real-time data connection error:', error);
+          }
+          setIsConnected(false);
+          setIsConnecting(false);
+          clearTimeout(connectionTimeout);
+        } catch (handlerError) {
+          console.error('📡 Error in WebSocket error handler:', handlerError);
         }
-        setIsConnected(false);
-        setIsConnecting(false);
-        clearTimeout(connectionTimeout);
       };
 
     } catch (error) {
       console.error('📡 Failed to establish real-time data connection:', error);
+      setIsConnecting(false);
+      setIsConnected(false);
     }
   };
 
