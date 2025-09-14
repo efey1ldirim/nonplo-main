@@ -9,20 +9,20 @@ window.addEventListener('unhandledrejection', (event) => {
   
   if (reason && typeof reason === 'object') {
     // Handle Vite WebSocket connection errors silently
-    if (reason.name === 'SyntaxError' && 
+    if ((reason.name === 'SyntaxError' || !reason.name) && 
         reason.message && 
         reason.message.includes('did not match the expected pattern')) {
-      console.warn('Vite WebSocket connection issue (non-critical):', reason.message);
+      // Don't log this at all - it's a known Vite/Replit dev environment issue
       event.preventDefault();
       return;
     }
     
-    // Handle WebSocket/HMR related errors
+    // Handle WebSocket/HMR related errors  
     if (reason.stack && 
         (reason.stack.includes('eruda.js') || 
          reason.stack.includes('@vite/client') ||
          reason.stack.includes('setupWebSocket'))) {
-      console.warn('Development tools WebSocket error (non-critical):', reason.message);
+      // Completely suppress these development tool errors
       event.preventDefault();
       return;
     }
