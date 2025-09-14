@@ -780,7 +780,7 @@ export default function DashboardMessages() {
                 size="sm" 
                 onClick={resetFilters} 
                 data-testid="button-reset"
-                className="w-full justify-center whitespace-nowrap"
+                className="w-full justify-center whitespace-nowrap bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-red-200 text-red-700 hover:text-red-800"
               >
                 <X className="h-4 w-4 mr-1" />
                 Temizle
