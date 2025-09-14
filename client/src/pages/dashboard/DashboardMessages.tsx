@@ -161,7 +161,7 @@ const MultiSelect = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between w-full md:w-auto">
+        <Button variant="outline" className="justify-between w-full min-w-0 whitespace-nowrap">
           <span>{label}</span>
         </Button>
       </PopoverTrigger>
@@ -187,7 +187,7 @@ const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (r: 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full md:w-auto justify-start">
+        <Button variant="outline" className="w-full min-w-0 justify-start whitespace-nowrap">
           <CalendarIcon className="mr-2 h-4 w-4" />
           {value.from ? (
             value.to ? (
@@ -724,21 +724,21 @@ export default function DashboardMessages() {
           </div>
 
           {/* Desktop/Tablet Layout */}
-          <div className="hidden lg:flex items-center gap-3">
-            {/* Message Search */}
-            <div className="relative flex-1 min-w-64">
+          <div className="hidden lg:flex items-center gap-2 flex-wrap">
+            {/* Message Search - Flexible width */}
+            <div className="relative flex-1 min-w-[200px] max-w-[400px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Mesaj içeriğinde ara..."
                 value={filters.query}
                 onChange={(e) => setFilters({ query: e.target.value })}
-                className="pl-10"
+                className="pl-10 w-full"
                 data-testid="input-search"
               />
             </div>
 
-            {/* Agents Filter */}
-            <div className="flex-shrink-0">
+            {/* Agents Filter - Flexible width */}
+            <div className="flex-shrink-0 min-w-[120px]">
               <MultiSelect
                 label="Ajanlar"
                 options={agents.map((a) => ({ key: a.id, label: a.name }))}
@@ -747,8 +747,8 @@ export default function DashboardMessages() {
               />
             </div>
 
-            {/* Channels Filter */}
-            <div className="flex-shrink-0">
+            {/* Channels Filter - Flexible width */}
+            <div className="flex-shrink-0 min-w-[120px]">
               <MultiSelect
                 label="Kanallar"
                 options={CHANNELS}
@@ -757,18 +757,18 @@ export default function DashboardMessages() {
               />
             </div>
 
-            {/* Date Range Filter */}
-            <div className="flex-shrink-0">
+            {/* Date Range Filter - Flexible width */}
+            <div className="flex-shrink-0 min-w-[140px]">
               <DateRangePicker value={uiDateRange} onChange={handleDateRangeChange} />
             </div>
 
-            {/* Clear Button */}
+            {/* Clear Button - Fixed width */}
             <Button 
               variant="outline" 
               size="sm" 
               onClick={resetFilters} 
               data-testid="button-reset"
-              className="flex-shrink-0"
+              className="flex-shrink-0 min-w-[100px] whitespace-nowrap"
             >
               <X className="h-4 w-4 mr-1" />
               Temizle
