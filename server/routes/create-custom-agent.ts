@@ -365,7 +365,7 @@ Bu güvenlik kontrolünü her zaman yap!`;
                 description: agentPurpose,
                 openaiAssistantId: assistant.id, // Add OpenAI Assistant ID for chat
                 personality: {
-                    instructions: generatedPrompt,
+                    instructions: finalInstructions,
                     assistantId: assistant.id,
                     style: communicationStyle,
                     temperature: temperature,
@@ -378,7 +378,8 @@ Bu güvenlik kontrolünü her zaman yap!`;
                     gmail: true,
                     codeInterpreter: true,
                     fileSearch: true,
-                    assistantId: assistant.id
+                    assistantId: assistant.id,
+                    vectorStoreId: profanityFileId ? assistantParams.tool_resources?.file_search?.vector_store_ids?.[0] : null
                 }
                 // Removed is_active temporarily to test
             };

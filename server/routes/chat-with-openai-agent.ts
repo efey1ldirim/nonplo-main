@@ -1,10 +1,11 @@
 import type { Request, Response } from "express";
 import { storage } from '../database/storage';
 import { openaiService } from '../services/OpenAIService';
-import { db } from '../database/storage';
+import { db } from '../database/db';
 import { agents, conversations, messages } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { containsProfanity, getProfanityMessage } from '../utils/profanity-filter';
+import OpenAI from 'openai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,7 +90,7 @@ async function getConversationHistory(
       .limit(limit);
 
     // Reverse to get chronological order and format for OpenAI
-    return messageHistory.reverse().map(msg => ({
+    return messageHistory.reverse().map((msg: any) => ({
       role: msg.sender === 'user' ? 'user' : 'assistant',
       content: msg.content || ''
     }));
@@ -159,6 +160,44 @@ async function getOrCreateConversation(
   }
 }
 
+// Get or create OpenAI thread for conversation
+async function getOrCreateThread(
+  conversationId: string,
+  assistantId: string,
+  debugLogs: string[],
+  isDebug: boolean
+): Promise<string> {
+  try {
+    // Check if conversation already has a thread ID in meta
+    const [conversation] = await db.select()
+      .from(conversations)
+      .where(eq(conversations.id, conversationId))
+      .limit(1);
+
+    if (conversation && conversation.meta && (conversation.meta as any).threadId) {
+      addDebugLog(debugLogs, `🔄 Using existing thread: ${(conversation.meta as any).threadId}`, isDebug);
+      return (conversation.meta as any).threadId;
+    }
+
+    // Create new OpenAI thread
+    addDebugLog(debugLogs, '🆕 Creating new OpenAI thread...', isDebug);
+    const thread = await openaiService.openai.beta.threads.create();
+    
+    // Update conversation with thread ID
+    const updatedMeta = { ...(conversation?.meta || {}), threadId: thread.id };
+    await db.update(conversations).set({
+      meta: updatedMeta,
+      updatedAt: new Date()
+    }).where(eq(conversations.id, conversationId));
+
+    addDebugLog(debugLogs, `✅ Created new thread: ${thread.id}`, isDebug);
+    return thread.id;
+  } catch (error) {
+    console.error('Error managing OpenAI thread:', error);
+    throw error;
+  }
+}
+
 export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatResponse>) => {
   const debugLogs: string[] = [];
   const isDebug = req.query.debug === 'true';
@@ -190,10 +229,10 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
       return sendErrorResponse(res, HttpStatus.BadRequest, "userId gerekli", debugLogs, isDebug);
     }
 
-    // Profanity check - critical security feature
-    if (containsProfanity(message)) {
-      return sendErrorResponse(res, HttpStatus.BadRequest, getProfanityMessage(), debugLogs, isDebug);
-    }
+    // Profanity check disabled - now handled by OpenAI Assistant file search
+    // if (containsProfanity(message)) {
+    //   return sendErrorResponse(res, HttpStatus.BadRequest, getProfanityMessage(), debugLogs, isDebug);
+    // }
 
     addDebugLog(debugLogs, `🤖 Starting OpenAI chat for agent: ${agentId}`, isDebug);
 
@@ -206,8 +245,8 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
       return sendErrorResponse(res, HttpStatus.NotFound, ErrorMessage.AgentNotFound, debugLogs, isDebug);
     }
 
-    if (!agentData.openaiInstructions) {
-      return sendErrorResponse(res, HttpStatus.BadRequest, "Agent OpenAI talimatları eksik", debugLogs, isDebug);
+    if (!agentData.openaiAssistantId) {
+      return sendErrorResponse(res, HttpStatus.BadRequest, "Agent OpenAI Assistant ID eksik", debugLogs, isDebug);
     }
 
     addDebugLog(debugLogs, `✅ Agent found: ${agentData.name}`, isDebug);
@@ -227,27 +266,68 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
     // Store user message
     await storeMessage(conversationId, 'user', message);
 
-    // Chat with OpenAI
+    // Chat with OpenAI Assistant API (uses file search for profanity filtering)
     let openaiResponse = '';
     let responseMetadata: any = {};
 
     try {
-      addDebugLog(debugLogs, '🔄 Sending request to OpenAI...', isDebug);
+      addDebugLog(debugLogs, '🔄 Using OpenAI Assistant API with file search...', isDebug);
       
-      openaiResponse = await openaiService.chatWithAgent(
-        agentData.openaiInstructions,
-        message,
-        conversationHistory
-      );
+      // Create or get existing thread for this conversation
+      const threadId = await getOrCreateThread(conversationId, agentData.openaiAssistantId, debugLogs, isDebug);
+      addDebugLog(debugLogs, `🧵 Thread ID: ${threadId}`, isDebug);
+
+      // Add user message to thread
+      await openaiService.openai.beta.threads.messages.create(threadId, {
+        role: "user",
+        content: message,
+      });
+      addDebugLog(debugLogs, '📝 User message added to thread', isDebug);
+
+      // Run the assistant
+      const run = await openaiService.openai.beta.threads.runs.create(threadId, {
+        assistant_id: agentData.openaiAssistantId
+      });
+      addDebugLog(debugLogs, `🏃 Run started: ${run.id}`, isDebug);
+
+      // Wait for completion
+      let currentRun = run;
+      let attempts = 0;
+      const maxAttempts = 30;
+
+      while (["queued", "in_progress"].includes(currentRun.status) && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+
+        currentRun = await openaiService.openai.beta.threads.runs.retrieve(threadId, run.id);
+        addDebugLog(debugLogs, `⏳ Run status (${attempts}/${maxAttempts}): ${currentRun.status}`, isDebug);
+      }
+
+      if (currentRun.status !== "completed") {
+        throw new Error(`Assistant run failed with status: ${currentRun.status}`);
+      }
+
+      // Get the assistant's response
+      const messagesResponse = await openaiService.openai.beta.threads.messages.list(threadId, {
+        order: 'desc',
+        limit: 1
+      });
+
+      const lastMessage = messagesResponse.data[0];
+      if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content[0].type === 'text') {
+        openaiResponse = lastMessage.content[0].text.value;
+      } else {
+        throw new Error('No valid assistant response found');
+      }
 
       responseMetadata = {
-        model: agentData.openaiModel || 'gpt-4o-mini',
-        usage: { /* OpenAI usage info could be added here */ }
+        model: 'gpt-4o-mini',
+        usage: currentRun.usage || {}
       };
 
-      addDebugLog(debugLogs, `✅ OpenAI response received: ${openaiResponse.length} characters`, isDebug);
+      addDebugLog(debugLogs, `✅ Assistant response received: ${openaiResponse.length} characters`, isDebug);
     } catch (openaiError: any) {
-      addDebugLog(debugLogs, `❌ OpenAI error: ${openaiError.message}`, isDebug);
+      addDebugLog(debugLogs, `❌ OpenAI Assistant error: ${openaiError.message}`, isDebug);
       return sendErrorResponse(res, HttpStatus.InternalServerError, `${ErrorMessage.NoResponse}: ${openaiError.message}`, debugLogs, isDebug);
     }
 

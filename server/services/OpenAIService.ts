@@ -319,7 +319,7 @@ Bu işletme için kapsamlı bir AI asistan talimatı oluştur. Asistan:
 5. Ürün/hizmet bilgilerini paylaşsın
 6. Dostane ve yardımsever olsun
 7. Türkçe konuşsun
-${agentData.tools?.webSearch || agentData.tools?.web_search ? `8. Web Arama Özelliği: Güncel bilgiler, fiyatlar, haberler veya genel bilgiler gerektiğinde web'de arama yapabilir. Bu özelliği şu durumlarda kullan:
+${agentData.tools?.webSearchEnabled ? `8. Web Arama Özelliği: Güncel bilgiler, fiyatlar, haberler veya genel bilgiler gerektiğinde web'de arama yapabilir. Bu özelliği şu durumlarda kullan:
    - Güncel fiyat bilgileri sorulduğunda
    - Son dakika haberleri istendiğinde  
    - Genel bilgiler veya açıklamalar gerektiğinde
@@ -431,10 +431,9 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
         return null;
       }
       
-      const fileContent = fs.readFileSync(filePath);
-      
+      // Use createReadStream with filename for better upload
       const file = await this.openai.files.create({
-        file: fileContent,
+        file: fs.createReadStream(filePath),
         purpose: 'assistants'
       });
       
