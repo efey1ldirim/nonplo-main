@@ -429,28 +429,26 @@ const DashboardAgents = () => {
               Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
             </p>
           </div>
-          {agents.length > 0 && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setShowWizard(true)}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Eski Wizard
-              </Button>
-              <Button 
-                onClick={() => setShowNewWizard(true)}
-                size="sm"
-                className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-                data-testid="button-open-new-wizard"
-              >
-                <Sparkles className="w-4 h-4" />
-                Yeni Wizard (Beta)
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowWizard(true)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Eski Wizard
+            </Button>
+            <Button 
+              onClick={() => setShowNewWizard(true)}
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              data-testid="button-open-new-wizard"
+            >
+              <Sparkles className="w-4 h-4" />
+              Yeni Wizard (Beta) [{agents.length}]
+            </Button>
+          </div>
         </div>
       </div>
 
