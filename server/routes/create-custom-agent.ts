@@ -311,12 +311,18 @@ Kriterler:
         
         // Check user's actual safe reply guard setting from tools_settings
         let safeGuardEnabled = false;
+        let dbQuerySuccessful = false;
         try {
-            // Use existing storage connection to query tools_settings
-            const toolsSettings = await storage.getToolsSettingsByUserId(authenticatedUserId);
-            const safeReplyGuardSetting = toolsSettings.find(setting => setting.toolKey === 'safe_reply_guard');
-            safeGuardEnabled = safeReplyGuardSetting?.enabled === true;
+            // Use postgres client directly to query tools_settings table
+            const pg = postgres(connectionString);
+            const result = await pg`
+                SELECT enabled FROM tools_settings 
+                WHERE user_id = ${authenticatedUserId} AND tool_key = 'safe_reply_guard'
+            `;
+            safeGuardEnabled = result.length > 0 && result[0].enabled === true;
+            dbQuerySuccessful = true;
             addConsoleLog(`🔍 Safe reply guard check: ${safeGuardEnabled ? 'ENABLED' : 'DISABLED'} for user ${authenticatedUserId}`);
+            await pg.end();
         } catch (dbError: any) {
             addConsoleLog(`🚨 CRITICAL: Failed to check safe_reply_guard setting: ${dbError.message}`);
             addConsoleLog(`🛡️ FAILING CLOSED - cannot determine security setting`);
