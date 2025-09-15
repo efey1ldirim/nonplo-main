@@ -27,7 +27,8 @@ import {
   insertUserNotificationSettingsSchema,
   updateUserNotificationSettingsSchema,
   insertAccountDeletionSchema,
-  insertUserStatusSchema
+  insertUserStatusSchema,
+  insertAgentWizardSessionSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -3266,6 +3267,308 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     } catch (error: any) {
       console.error("Failed to update forbidden words:", error);
       res.status(500).json({ error: "Failed to update forbidden words" });
+    }
+  });
+
+  // ==========================================
+  // WIZARD API ENDPOINTS
+  // ==========================================
+
+  // Create new wizard session
+  app.post('/api/wizard/sessions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Validate input - only allow currentStep for creation
+      const validatedData = z.object({
+        currentStep: z.number().min(1).max(11).optional().default(1)
+      }).parse(req.body);
+
+      const session = await storage.createWizardSession({
+        userId,
+        currentStep: validatedData.currentStep,
+        status: 'draft'
+      });
+
+      res.json({ success: true, data: session });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      }
+      console.error('Failed to create wizard session:', error);
+      res.status(500).json({ error: 'Failed to create wizard session' });
+    }
+  });
+
+  // Get wizard session by ID
+  app.get('/api/wizard/sessions/:sessionId', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      const session = await storage.getWizardSession(sessionId, userId);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      res.json({ success: true, data: session });
+    } catch (error: any) {
+      console.error('Failed to get wizard session:', error);
+      res.status(500).json({ error: 'Failed to get wizard session' });
+    }
+  });
+
+  // Update wizard session
+  app.patch('/api/wizard/sessions/:sessionId', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      // Validate session ID
+      if (!sessionId || typeof sessionId !== 'string') {
+        return res.status(400).json({ error: 'Valid session ID required' });
+      }
+
+      // Define allowed update fields with validation
+      const updateSchema = z.object({
+        // Basic fields
+        businessName: z.string().max(60).optional(),
+        industry: z.string().max(100).optional(),
+        
+        // Address
+        address: z.string().optional(),
+        addressData: z.record(z.any()).optional(),
+        timezone: z.string().optional(),
+        
+        // Working hours & holidays
+        workingHours: z.record(z.any()).optional(),
+        holidaysConfig: z.record(z.any()).optional(),
+        
+        // Social & web
+        website: z.string().url().optional().or(z.literal("")),
+        socialMedia: z.record(z.string().optional()).optional(),
+        socialDataStatus: z.record(z.any()).optional(),
+        
+        // Content
+        faqRaw: z.string().optional(),
+        faqOptimized: z.string().optional(),
+        productServiceRaw: z.string().optional(),
+        productServiceOptimized: z.string().optional(),
+        
+        // Files
+        trainingFilesCount: z.number().min(0).optional(),
+        filesIndexStatus: z.enum(['pending', 'processing', 'completed', 'error']).optional(),
+        
+        // Employee
+        employeeName: z.string().max(50).optional(),
+        employeeRole: z.string().optional(),
+        employeeRoleOptimized: z.string().optional(),
+        
+        // Personality
+        personality: z.record(z.any()).optional(),
+        
+        // Tools
+        selectedTools: z.record(z.boolean()).optional(),
+        
+        // Session management
+        currentStep: z.number().min(1).max(11).optional(),
+        status: z.enum(['draft', 'building', 'completed', 'error']).optional(),
+        buildProgress: z.record(z.any()).optional(),
+        
+        // Results
+        createdAgentId: z.string().optional(),
+        openaiAssistantId: z.string().optional(),
+      });
+
+      const updates = updateSchema.parse(req.body);
+
+      const session = await storage.updateWizardSession(sessionId, userId, updates);
+
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      res.json({ success: true, data: session });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid input data', details: error.errors });
+      }
+      console.error('Failed to update wizard session:', error);
+      res.status(500).json({ error: 'Failed to update wizard session' });
+    }
+  });
+
+  // Delete wizard session
+  app.delete('/api/wizard/sessions/:sessionId', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      await storage.deleteWizardSession(sessionId, userId);
+      res.json({ success: true, message: 'Session deleted' });
+    } catch (error: any) {
+      console.error('Failed to delete wizard session:', error);
+      res.status(500).json({ error: 'Failed to delete wizard session' });
+    }
+  });
+
+  // Get user's wizard sessions
+  app.get('/api/wizard/sessions', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const sessions = await storage.getUserWizardSessions(userId);
+      res.json({ success: true, data: sessions });
+    } catch (error: any) {
+      console.error('Failed to get wizard sessions:', error);
+      res.status(500).json({ error: 'Failed to get wizard sessions' });
+    }
+  });
+
+  // Build agent from wizard session
+  app.post('/api/wizard/sessions/:sessionId/build', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      const session = await storage.getWizardSession(sessionId, userId);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      if (session.status !== 'draft') {
+        return res.status(400).json({ error: 'Session is not in draft state' });
+      }
+
+      // Update session status to building
+      await storage.updateWizardSession(sessionId, userId, { 
+        status: 'building',
+        buildProgress: { step: 1, message: 'Starting agent creation' }
+      });
+
+      // Log event
+      await storage.logWizardEvent({
+        wizardSessionId: sessionId,
+        eventType: 'agent_creation_started',
+        success: true,
+        eventData: {}
+      });
+
+      // Create the agent using existing method
+      const createdAgent = await storage.createAgentFromWizard(userId, session);
+
+      // Update session with success
+      await storage.updateWizardSession(sessionId, userId, { 
+        status: 'completed',
+        createdAgentId: createdAgent.id,
+        buildProgress: { step: 8, message: 'Agent created successfully' }
+      });
+
+      // Log success event
+      await storage.logWizardEvent({
+        wizardSessionId: sessionId,
+        eventType: 'agent_created',
+        success: true,
+        eventData: { agentId: createdAgent.id, agentName: createdAgent.name }
+      });
+
+      res.json({ 
+        success: true, 
+        data: { 
+          agentId: createdAgent.id,
+          agent: createdAgent,
+          session: await storage.getWizardSession(sessionId, userId)
+        }
+      });
+    } catch (error: any) {
+      console.error('Failed to build agent from wizard:', error);
+      
+      // Update session with error
+      try {
+        await storage.updateWizardSession(req.params.sessionId, getUserId(req), { 
+          status: 'error',
+          buildProgress: { step: -1, message: `Error: ${error.message}` }
+        });
+        
+        // Log error event
+        await storage.logWizardEvent({
+          wizardSessionId: req.params.sessionId,
+          eventType: 'agent_creation_error',
+          success: false,
+          errorMessage: error.message,
+          eventData: {}
+        });
+      } catch (updateError) {
+        console.error('Failed to update session with error:', updateError);
+      }
+
+      res.status(500).json({ error: `Failed to build agent: ${error.message}` });
+    }
+  });
+
+  // File management endpoints
+  app.post('/api/wizard/sessions/:sessionId/files', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+      
+      // Check if session exists
+      const session = await storage.getWizardSession(sessionId, userId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // TODO: Implement file upload logic here
+      // For now, return mock response
+      res.json({ 
+        success: true, 
+        message: 'File upload endpoint - implementation needed',
+        data: { sessionId }
+      });
+    } catch (error: any) {
+      console.error('Failed to upload wizard file:', error);
+      res.status(500).json({ error: 'Failed to upload file' });
+    }
+  });
+
+  // Get wizard session files
+  app.get('/api/wizard/sessions/:sessionId/files', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      // Check if session exists
+      const session = await storage.getWizardSession(sessionId, userId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      const files = await storage.getWizardFiles(sessionId);
+      res.json({ success: true, data: files });
+    } catch (error: any) {
+      console.error('Failed to get wizard files:', error);
+      res.status(500).json({ error: 'Failed to get files' });
+    }
+  });
+
+  // Get wizard session events/logs
+  app.get('/api/wizard/sessions/:sessionId/events', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId } = req.params;
+
+      // Check if session exists
+      const session = await storage.getWizardSession(sessionId, userId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      const events = await storage.getWizardEvents(sessionId);
+      res.json({ success: true, data: events });
+    } catch (error: any) {
+      console.error('Failed to get wizard events:', error);
+      res.status(500).json({ error: 'Failed to get events' });
     }
   });
 

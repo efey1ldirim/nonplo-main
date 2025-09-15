@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, uuid, timestamp, jsonb, varchar, json, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, uuid, timestamp, jsonb, varchar, json, unique, decimal } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -525,3 +525,273 @@ export type InsertUserGoogleCalendar = z.infer<typeof insertUserGoogleCalendarSc
 export type UserGoogleCalendar = typeof userGoogleCalendars.$inferSelect;
 export type InsertCalendarOperation = z.infer<typeof insertCalendarOperationSchema>;
 export type CalendarOperation = typeof calendarOperations.$inferSelect;
+
+// ==========================================
+// AGENT WIZARD TABLES (NEW SYSTEM)
+// ==========================================
+
+// Agent wizard sessions - tracks the 10-step wizard progress
+export const agentWizardSessions = pgTable("agent_wizard_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  
+  // Step 1: Business Name & Industry (Required)
+  businessName: text("business_name"),
+  industry: text("industry"),
+  
+  // Step 2: Address Info
+  address: text("address"),
+  addressData: jsonb("address_data").default({}), // Google Places data
+  timezone: text("timezone"),
+  
+  // Step 3: Working Hours & Holidays (Required)
+  workingHours: jsonb("working_hours").default({}),
+  holidaysConfig: jsonb("holidays_config").default({}),
+  
+  // Step 4: Social Media & Website
+  website: text("website"),
+  socialMedia: jsonb("social_media").default({}), // {instagram, facebook, twitter, etc}
+  socialDataStatus: jsonb("social_data_status").default({}), // scraping status
+  
+  // Step 5: FAQ
+  faqRaw: text("faq_raw"), // User input
+  faqOptimized: text("faq_optimized"), // AI optimized
+  
+  // Step 6: Product/Service Description (Required)
+  productServiceRaw: text("product_service_raw"), // User input
+  productServiceOptimized: text("product_service_optimized"), // AI optimized
+  
+  // Step 7: Extra Training Files
+  trainingFilesCount: integer("training_files_count").default(0),
+  filesIndexStatus: text("files_index_status").default("pending"), // pending, processing, completed, error
+  
+  // Step 8: Employee Name & Role (Required)
+  employeeName: text("employee_name"),
+  employeeRole: text("employee_role"),
+  employeeRoleOptimized: text("employee_role_optimized"), // AI optimized
+  
+  // Step 9: Personality & Tone (Required)
+  personality: jsonb("personality").default({}), // tone, verbosity, temperature, etc
+  
+  // Step 10: Tools
+  selectedTools: jsonb("selected_tools").default({}),
+  
+  // Session management
+  currentStep: integer("current_step").default(1), // 1-10, 11 for approval
+  status: text("status").default("draft"), // draft, building, completed, error
+  buildProgress: jsonb("build_progress").default({}), // progress tracking during creation
+  
+  // Final result
+  createdAgentId: uuid("created_agent_id"), // Links to agents table when complete
+  openaiAssistantId: text("openai_assistant_id"), // OpenAI Assistant ID
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Agent wizard files - manages uploaded training files
+export const agentWizardFiles = pgTable("agent_wizard_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  wizardSessionId: uuid("wizard_session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
+  
+  fileName: text("file_name").notNull(),
+  originalName: text("original_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: text("file_type").notNull(), // pdf, docx, txt, etc
+  filePath: text("file_path").notNull(), // storage path
+  
+  // Processing status
+  status: text("status").default("uploaded"), // uploaded, processing, indexed, error
+  indexingProgress: decimal("indexing_progress", { precision: 5, scale: 2 }).default("0"), // 0.00 to 100.00
+  errorMessage: text("error_message"),
+  
+  // Embedding/search data
+  chunkCount: integer("chunk_count"),
+  embeddingStatus: text("embedding_status").default("pending"), // pending, processing, completed, error
+  vectorStoreId: text("vector_store_id"), // OpenAI vector store ID
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Agent wizard events - tracks progress and actions
+export const agentWizardEvents = pgTable("agent_wizard_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  wizardSessionId: uuid("wizard_session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
+  
+  eventType: text("event_type").notNull(), // step_completed, file_uploaded, social_scraped, agent_created, error
+  stepNumber: integer("step_number"), // 1-10 for step events
+  eventData: jsonb("event_data").default({}), // additional data for the event
+  
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Insert schemas for the new wizard tables
+export const insertAgentWizardSessionSchema = createInsertSchema(agentWizardSessions).pick({
+  userId: true,
+  businessName: true,
+  industry: true,
+  address: true,
+  addressData: true,
+  timezone: true,
+  workingHours: true,
+  holidaysConfig: true,
+  website: true,
+  socialMedia: true,
+  socialDataStatus: true,
+  faqRaw: true,
+  faqOptimized: true,
+  productServiceRaw: true,
+  productServiceOptimized: true,
+  trainingFilesCount: true,
+  filesIndexStatus: true,
+  employeeName: true,
+  employeeRole: true,
+  employeeRoleOptimized: true,
+  personality: true,
+  selectedTools: true,
+  currentStep: true,
+  status: true,
+  buildProgress: true,
+  createdAgentId: true,
+  openaiAssistantId: true,
+});
+
+export const insertAgentWizardFileSchema = createInsertSchema(agentWizardFiles).pick({
+  wizardSessionId: true,
+  fileName: true,
+  originalName: true,
+  fileSize: true,
+  fileType: true,
+  filePath: true,
+  status: true,
+  indexingProgress: true,
+  errorMessage: true,
+  chunkCount: true,
+  embeddingStatus: true,
+  vectorStoreId: true,
+});
+
+export const insertAgentWizardEventSchema = createInsertSchema(agentWizardEvents).pick({
+  wizardSessionId: true,
+  eventType: true,
+  stepNumber: true,
+  eventData: true,
+  success: true,
+  errorMessage: true,
+});
+
+// New wizard validation schemas (step by step)
+export const wizardStep1Schema = z.object({
+  businessName: z.string().min(1, "İşletme adı gerekli").max(60, "İşletme adı çok uzun"),
+  industry: z.string().min(1, "Sektör seçimi gerekli"),
+});
+
+export const wizardStep2Schema = z.object({
+  address: z.string().optional(),
+  addressData: z.object({
+    placeId: z.string(),
+    formattedAddress: z.string(),
+    latitude: z.number(),
+    longitude: z.number(),
+    components: z.record(z.string()),
+  }).optional(),
+  timezone: z.string().optional(),
+});
+
+export const wizardStep3Schema = z.object({
+  workingHours: z.object({
+    monday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    tuesday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    wednesday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    thursday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    friday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    saturday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+    sunday: z.object({ open: z.string(), close: z.string(), closed: z.boolean() }),
+  }),
+  holidaysConfig: z.object({
+    nationalHolidays: z.boolean().default(true),
+    religiousHolidays: z.boolean().default(true),
+    customHolidays: z.array(z.object({
+      name: z.string(),
+      date: z.string(), // ISO date format
+      recurring: z.boolean().default(false),
+    })).default([]),
+  }),
+});
+
+export const wizardStep4Schema = z.object({
+  website: z.string().url().optional().or(z.literal("")),
+  socialMedia: z.object({
+    instagram: z.string().optional(),
+    facebook: z.string().optional(), 
+    twitter: z.string().optional(),
+    tiktok: z.string().optional(),
+    youtube: z.string().optional(),
+    linkedin: z.string().optional(),
+  }),
+});
+
+export const wizardStep5Schema = z.object({
+  faqRaw: z.string().optional(),
+});
+
+export const wizardStep6Schema = z.object({
+  productServiceRaw: z.string().min(1, "Ürün/hizmet açıklaması gerekli"),
+});
+
+export const wizardStep7Schema = z.object({
+  // File uploads handled separately via API
+  trainingFilesCount: z.number().min(0),
+});
+
+export const wizardStep8Schema = z.object({
+  employeeName: z.string().min(1, "Çalışan adı gerekli").max(50, "Çalışan adı çok uzun"),
+  employeeRole: z.string().min(1, "Görev tanımı gerekli"),
+});
+
+export const wizardStep9Schema = z.object({
+  personality: z.object({
+    tone: z.enum(["sevecen", "profesyonel", "arkadas_canlisi", "konuskan", "ozel"]),
+    formality: z.number().min(1).max(5), // 1: Very casual, 5: Very formal
+    creativity: z.number().min(0.1).max(2.0), // OpenAI temperature
+    responseLength: z.enum(["kisa", "orta", "uzun"]),
+    useEmojis: z.boolean().default(false),
+    customInstructions: z.string().optional(),
+  }),
+});
+
+export const wizardStep10Schema = z.object({
+  selectedTools: z.object({
+    googleCalendar: z.boolean().default(false),
+    gmail: z.boolean().default(false),
+    webSearch: z.boolean().default(false),
+    fileSearch: z.boolean().default(false),
+    productCatalog: z.boolean().default(false),
+    paymentLinks: z.boolean().default(false),
+    humanHandoff: z.boolean().default(false),
+  }),
+});
+
+// Type exports for wizard tables
+export type AgentWizardSession = typeof agentWizardSessions.$inferSelect;
+export type InsertAgentWizardSession = z.infer<typeof insertAgentWizardSessionSchema>;
+export type AgentWizardFile = typeof agentWizardFiles.$inferSelect;
+export type InsertAgentWizardFile = z.infer<typeof insertAgentWizardFileSchema>;
+export type AgentWizardEvent = typeof agentWizardEvents.$inferSelect;
+export type InsertAgentWizardEvent = z.infer<typeof insertAgentWizardEventSchema>;
+
+// Step validation types
+export type WizardStep1Data = z.infer<typeof wizardStep1Schema>;
+export type WizardStep2Data = z.infer<typeof wizardStep2Schema>;
+export type WizardStep3Data = z.infer<typeof wizardStep3Schema>;
+export type WizardStep4Data = z.infer<typeof wizardStep4Schema>;
+export type WizardStep5Data = z.infer<typeof wizardStep5Schema>;
+export type WizardStep6Data = z.infer<typeof wizardStep6Schema>;
+export type WizardStep7Data = z.infer<typeof wizardStep7Schema>;
+export type WizardStep8Data = z.infer<typeof wizardStep8Schema>;
+export type WizardStep9Data = z.infer<typeof wizardStep9Schema>;
+export type WizardStep10Data = z.infer<typeof wizardStep10Schema>;

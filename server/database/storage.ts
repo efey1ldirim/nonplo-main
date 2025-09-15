@@ -53,6 +53,16 @@ import {
   type InsertAccountDeletion,
   type UserStatus,
   type InsertUserStatus,
+  // Wizard types
+  agentWizardSessions,
+  agentWizardFiles,
+  agentWizardEvents,
+  type AgentWizardSession,
+  type InsertAgentWizardSession,
+  type AgentWizardFile,
+  type InsertAgentWizardFile,
+  type AgentWizardEvent,
+  type InsertAgentWizardEvent,
 } from "@shared/schema";
 import { db } from './db';
 
@@ -148,6 +158,23 @@ export interface IStorage {
   // Additional missing functions  
   getUserAgents(userId: string): Promise<Agent[]>;
   getGoogleCalendarConnection(userId: string, agentId: string): Promise<UserGoogleCalendar | null>;
+
+  // Wizard functionality
+  createWizardSession(session: InsertAgentWizardSession): Promise<AgentWizardSession>;
+  getWizardSession(id: string, userId: string): Promise<AgentWizardSession | undefined>;
+  updateWizardSession(id: string, userId: string, updates: Partial<InsertAgentWizardSession>): Promise<AgentWizardSession | undefined>;
+  deleteWizardSession(id: string, userId: string): Promise<void>;
+  getUserWizardSessions(userId: string): Promise<AgentWizardSession[]>;
+  
+  // Wizard files
+  addWizardFile(file: InsertAgentWizardFile): Promise<AgentWizardFile>;
+  getWizardFiles(sessionId: string): Promise<AgentWizardFile[]>;
+  updateWizardFile(id: string, updates: Partial<InsertAgentWizardFile>): Promise<AgentWizardFile | undefined>;
+  deleteWizardFile(id: string): Promise<void>;
+  
+  // Wizard events
+  logWizardEvent(event: InsertAgentWizardEvent): Promise<AgentWizardEvent>;
+  getWizardEvents(sessionId: string): Promise<AgentWizardEvent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1307,6 +1334,96 @@ export class DatabaseStorage implements IStorage {
     // Schedule account deletion instead of immediate deletion
     const scheduledDeletion = await this.scheduleAccountDeletion(userId);
     console.log(`Account deletion scheduled for user ${userId}`, scheduledDeletion);
+  }
+
+  // ==========================================
+  // WIZARD METHODS
+  // ==========================================
+
+  async createWizardSession(session: InsertAgentWizardSession): Promise<AgentWizardSession> {
+    const result = await db.insert(agentWizardSessions).values({
+      ...session,
+      id: sql`gen_random_uuid()`,
+    }).returning();
+    return result[0];
+  }
+
+  async getWizardSession(id: string, userId: string): Promise<AgentWizardSession | undefined> {
+    const result = await db.select()
+      .from(agentWizardSessions)
+      .where(and(eq(agentWizardSessions.id, id), eq(agentWizardSessions.userId, userId)));
+    return result[0];
+  }
+
+  async updateWizardSession(id: string, userId: string, updates: Partial<InsertAgentWizardSession>): Promise<AgentWizardSession | undefined> {
+    const result = await db.update(agentWizardSessions)
+      .set({
+        ...updates,
+        updatedAt: sql`now()`,
+      })
+      .where(and(eq(agentWizardSessions.id, id), eq(agentWizardSessions.userId, userId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteWizardSession(id: string, userId: string): Promise<void> {
+    await db.delete(agentWizardSessions)
+      .where(and(eq(agentWizardSessions.id, id), eq(agentWizardSessions.userId, userId)));
+  }
+
+  async getUserWizardSessions(userId: string): Promise<AgentWizardSession[]> {
+    return await db.select()
+      .from(agentWizardSessions)
+      .where(eq(agentWizardSessions.userId, userId))
+      .orderBy(desc(agentWizardSessions.updatedAt));
+  }
+
+  // Wizard files
+  async addWizardFile(file: InsertAgentWizardFile): Promise<AgentWizardFile> {
+    const result = await db.insert(agentWizardFiles).values({
+      ...file,
+      id: sql`gen_random_uuid()`,
+    }).returning();
+    return result[0];
+  }
+
+  async getWizardFiles(sessionId: string): Promise<AgentWizardFile[]> {
+    return await db.select()
+      .from(agentWizardFiles)
+      .where(eq(agentWizardFiles.wizardSessionId, sessionId))
+      .orderBy(desc(agentWizardFiles.createdAt));
+  }
+
+  async updateWizardFile(id: string, updates: Partial<InsertAgentWizardFile>): Promise<AgentWizardFile | undefined> {
+    const result = await db.update(agentWizardFiles)
+      .set({
+        ...updates,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(agentWizardFiles.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteWizardFile(id: string): Promise<void> {
+    await db.delete(agentWizardFiles)
+      .where(eq(agentWizardFiles.id, id));
+  }
+
+  // Wizard events
+  async logWizardEvent(event: InsertAgentWizardEvent): Promise<AgentWizardEvent> {
+    const result = await db.insert(agentWizardEvents).values({
+      ...event,
+      id: sql`gen_random_uuid()`,
+    }).returning();
+    return result[0];
+  }
+
+  async getWizardEvents(sessionId: string): Promise<AgentWizardEvent[]> {
+    return await db.select()
+      .from(agentWizardEvents)
+      .where(eq(agentWizardEvents.wizardSessionId, sessionId))
+      .orderBy(desc(agentWizardEvents.createdAt));
   }
 }
 
