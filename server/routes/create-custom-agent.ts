@@ -6,6 +6,7 @@ import { agents } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { cacheManager } from '../performance/cacheManager';
+import { getUserId, AuthenticatedRequest } from '../middleware/auth';
 
 // Supabase connection configuration
 const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
@@ -372,7 +373,7 @@ MUTLAKA YAPILMASI GEREKENLER:
         try {
             // Use only core columns that definitely exist
             const agentData = {
-                userId: formData.userId,
+                userId: getUserId(req) || formData.userId, // SECURITY: Use authenticated user ID
                 name: agentName,
                 role: 'OpenAI Assistant',
                 description: agentPurpose,
@@ -409,9 +410,10 @@ MUTLAKA YAPILMASI GEREKENLER:
             addWebLog(`Web: File Search: ✅ Aktif`);
             
             // Clear cache for this user's agents - CRITICAL FIX
-            cacheManager.invalidateUserData(formData.userId);
-            cacheManager.delete(`route:/api/agents?userId=${formData.userId}:anonymous`);
-            addConsoleLog(`🧹 Cache cleared for user: ${formData.userId}`);
+            const authenticatedUserId = getUserId(req) || formData.userId;
+            cacheManager.invalidateUserData(authenticatedUserId);
+            cacheManager.delete(`route:/api/agents?userId=${authenticatedUserId}:anonymous`);
+            addConsoleLog(`🧹 Cache cleared for user: ${authenticatedUserId}`);
             addWebLog("Web: 🔄 Agent cache temizlendi - frontend güncellenecek");
             
         } catch (dbError: any) {
