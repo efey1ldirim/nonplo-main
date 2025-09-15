@@ -4,21 +4,24 @@ import { supabase } from "@/lib/supabase";
 
 export type StartAgentCreationOptions = {
   afterSuccessRedirect?: string; // default: "/dashboard/agents"
+  useNewWizard?: boolean; // default: true (use new wizard)
 };
 
 export function useStartAgentCreation() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
-  // Detect existing wizard route: prefer homepage modal with auto-open flag
-  const wizardPath = useMemo(() => {
-    return "/?openWizard=1";
+  // Detect wizard route: new wizard by default, fallback to old wizard
+  const getWizardPath = useCallback((useNewWizard: boolean = true) => {
+    return useNewWizard ? "/?openNewWizard=1" : "/?openWizard=1";
   }, []);
 
   const start = useCallback(async (opts: StartAgentCreationOptions = {}) => {
     if (busy) return;
     setBusy(true);
     const afterSuccessRedirect = opts.afterSuccessRedirect ?? "/dashboard/agents";
+    const useNewWizard = opts.useNewWizard ?? true; // Default to new wizard
+    const wizardPath = getWizardPath(useNewWizard);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -30,7 +33,7 @@ export function useStartAgentCreation() {
         return;
       }
 
-      // User is authenticated → open the existing wizard route
+      // User is authenticated → open the wizard route
       navigate(wizardPath);
 
       // Listen for wizard success once, then redirect
@@ -42,7 +45,7 @@ export function useStartAgentCreation() {
     } finally {
       setBusy(false);
     }
-  }, [busy, navigate, wizardPath]);
+  }, [busy, navigate, getWizardPath]);
 
   return { start, busy };
 }
