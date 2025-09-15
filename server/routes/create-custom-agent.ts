@@ -306,7 +306,6 @@ Kriterler:
             ...GCAL_TOOLS, 
             ...GMAIL_TOOLS, 
             ...WEB_SEARCH_TOOLS,
-            { type: "code_interpreter" } as OpenAI.Beta.Assistants.CodeInterpreterTool,
             { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
         ];
 
@@ -413,7 +412,7 @@ MUTLAKA YAPILMASI GEREKENLER:
                     openaiAssistant: true,
                     googleCalendar: true,
                     gmail: true,
-                    codeInterpreter: true,
+                    codeInterpreter: false,
                     fileSearch: true,
                     assistantId: assistant.id,
                     vectorStoreId: profanityFileId ? assistantParams.tool_resources?.file_search?.vector_store_ids?.[0] : null
@@ -429,7 +428,7 @@ MUTLAKA YAPILMASI GEREKENLER:
             addWebLog(`Web: Database Agent ID: ${createdAgent.id}`);
             addWebLog(`Web: Google Calendar Tool: ✅ Aktif`);
             addWebLog(`Web: Gmail Tool: ✅ Aktif`);
-            addWebLog(`Web: Code Interpreter: ✅ Aktif`);
+            addWebLog(`Web: Code Interpreter: ❌ Deaktif`);
             addWebLog(`Web: File Search: ✅ Aktif`);
             
             // Clear cache for this user's agents - CRITICAL FIX
@@ -634,7 +633,6 @@ Kriterler:
             ...GCAL_TOOLS, 
             ...GMAIL_TOOLS, 
             ...WEB_SEARCH_TOOLS,
-            { type: "code_interpreter" } as OpenAI.Beta.Assistants.CodeInterpreterTool,
             { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
         ];
         
