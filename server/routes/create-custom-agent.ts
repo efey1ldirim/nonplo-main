@@ -343,7 +343,7 @@ MUTLAKA YAPILMASI GEREKENLER:
             return res.status(500).json({
                 success: false,
                 error: 'Güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
-                debugLogs: consoleDebugLogs
+                debugLogs: consoleLogs
             });
         }
         
@@ -354,7 +354,7 @@ MUTLAKA YAPILMASI GEREKENLER:
         };
         
         // Vector store oluşturup dosyayı ekle - ZORUNLU
-        const vectorStore = await openai.beta.vectorStores.create({
+        const vectorStore = await openaiService.openai.beta.vectorStores.create({
             name: `banned-words-${agentName}`,
             file_ids: [profanityFileId]
         });
