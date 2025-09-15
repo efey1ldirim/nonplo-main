@@ -296,22 +296,41 @@ Kriterler:
             generatedPrompt = generateFallbackPrompt(agentName, agentPurpose, personality, preferredLanguage);
         }
 
-        // Güvenli yanıt koruması kontrolü - sadece açık olduğunda dosya yükle
+        // CRITICAL SECURITY: Strict authentication - no fallback to formData.userId
         const authenticatedUserId = getUserId(req);
+        if (!authenticatedUserId) {
+            addConsoleLog('🚨 CRITICAL: No authenticated user ID - rejecting request');
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required. User must be logged in.',
+                debugLogs: consoleLogs
+            });
+        }
+        
         let profanityFileId: string | null = null;
         
-        // Check if safe reply guard is enabled for this user - query tools_settings table
+        // Check user's actual safe reply guard setting from tools_settings
         let safeGuardEnabled = false;
+        let dbQuerySuccessful = false;
         try {
-            const toolSettingRows = await db.select()
-                .from(toolsSettings)
-                .where(eq(toolsSettings.userId, authenticatedUserId));
-            
-            const safeTool = toolSettingRows.find(t => t.toolKey === 'safe_reply_guard');
-            safeGuardEnabled = safeTool?.enabled === true;
+            // Use postgres client directly to query tools_settings table
+            const pg = postgres(connectionString);
+            const result = await pg`
+                SELECT enabled FROM tools_settings 
+                WHERE user_id = ${authenticatedUserId} AND tool_key = 'safe_reply_guard'
+            `;
+            safeGuardEnabled = result.length > 0 && result[0].enabled === true;
+            dbQuerySuccessful = true;
             addConsoleLog(`🔍 Safe reply guard check: ${safeGuardEnabled ? 'ENABLED' : 'DISABLED'} for user ${authenticatedUserId}`);
+            await pg.end();
         } catch (dbError: any) {
-            addConsoleLog(`⚠️ Tool settings query failed, defaulting to safe_reply_guard OFF: ${dbError.message}`);
+            addConsoleLog(`🚨 CRITICAL: Failed to check safe_reply_guard setting: ${dbError.message}`);
+            addConsoleLog(`🛡️ FAILING CLOSED - cannot determine security setting`);
+            return res.status(500).json({
+                success: false,
+                error: 'Security check failed. Cannot create agent without verifying safety settings.',
+                debugLogs: consoleLogs
+            });
         }
         
         if (safeGuardEnabled) {
@@ -393,38 +412,69 @@ MUTLAKA YAPILMASI GEREKENLER:
             };
         }
         
-        // Vector store oluşturup dosyayı ekle - ZORUNLU
-        // Vector store oluşturup dosyayı ekle - ZORUNLU  
-        let vectorStore;
-        try {
-            addConsoleLog(`🔄 Creating vector store with file: ${profanityFileId}`);
-            addConsoleLog(`📊 Testing openaiService.openai.beta.vectorStores: ${typeof (openaiService.openai.beta as any)?.vectorStores}`);
-            
-            // Use openaiService instance instead of local openai instance
-            vectorStore = await (openaiService.openai.beta as any).vectorStores.create({
-                name: `banned-words-${agentName}`,
-                file_ids: [profanityFileId]
-            });
-            addConsoleLog(`✅ Vector store created successfully: ${vectorStore.id}`);
-        } catch (vectorError: any) {
-            addConsoleLog(`❌ Vector store creation failed: ${vectorError.message}`);
-            addConsoleLog(`📊 Fallback: Creating without vector store for now`);
-            
-            // FALLBACK: Skip vector store creation for now, just log the warning
-            addConsoleLog(`⚠️ WARNING: Proceeding without vector store - security may be reduced`);
-            vectorStore = { id: 'fallback-no-vector-store' };
+        // Validate and use existing vector store - provided by user
+        const VECTOR_STORE_ID = 'vs_68c82562d42481919590af67cd844810';
+        let vectorStore = { id: VECTOR_STORE_ID };
+        let vectorStoreValid = false;
+        
+        if (safeGuardEnabled && profanityFileId) {
+            try {
+                // First, validate vector store exists and is accessible
+                addConsoleLog(`🔍 Validating vector store: ${VECTOR_STORE_ID}`);
+                const storeInfo = await (openaiService.openai.beta as any).vectorStores.retrieve(VECTOR_STORE_ID);
+                addConsoleLog(`✅ Vector store validated: ${storeInfo.name || 'Unnamed'} (${storeInfo.file_counts?.total || 0} files)`);
+                vectorStoreValid = true;
+                
+                // Check if banned words file already exists in the store - EXACT MATCH ONLY
+                const existingFiles = await (openaiService.openai.beta as any).vectorStores.files.list(VECTOR_STORE_ID);
+                const existingBannedWords = existingFiles.data?.find((file: any) => 
+                    file.id === profanityFileId // Only exact file ID match
+                );
+                
+                if (existingBannedWords) {
+                    addConsoleLog(`📋 Banned words file already exists in vector store: ${existingBannedWords.id}`);
+                } else {
+                    addConsoleLog(`📎 Adding new profanity file ${profanityFileId} to vector store`);
+                    await (openaiService.openai.beta as any).vectorStores.files.create(
+                        VECTOR_STORE_ID,
+                        { file_id: profanityFileId }
+                    );
+                    addConsoleLog(`✅ File added to vector store successfully`);
+                }
+                
+            } catch (vectorError: any) {
+                addConsoleLog(`🚨 CRITICAL: Vector store validation/upload failed: ${vectorError.message}`);
+                addConsoleLog(`🛡️ Safe guard is ENABLED but vector store is unavailable - REJECTING agent creation`);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Güvenli yanıt koruması açık ama güvenlik sistemi kullanılamıyor. Vector store erişim hatası.',
+                    debugLogs: consoleLogs
+                });
+            }
         }
         
-        // Only add vector store if it was created successfully
-        if (vectorStore.id !== 'fallback-no-vector-store') {
-            assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
-        } else {
-            // If no vector store, don't add file_search tool for now
+        // Add the existing vector store to file search resources only if validated
+        if (safeGuardEnabled && profanityFileId && vectorStoreValid && assistantParams.tool_resources) {
+            assistantParams.tool_resources.file_search.vector_store_ids = [VECTOR_STORE_ID];
+            addConsoleLog(`🛡️ Using validated vector store for file search: ${VECTOR_STORE_ID}`);
+        } else if (safeGuardEnabled && !vectorStoreValid) {
+            // Remove file_search tool if vector store is invalid
+            const fileSearchIndex = tools.findIndex(tool => tool.type === 'file_search');
+            if (fileSearchIndex >= 0) {
+                tools.splice(fileSearchIndex, 1);
+                addConsoleLog(`⚠️ Removed file_search tool due to invalid vector store`);
+            }
             assistantParams.tool_resources = undefined;
-            addConsoleLog(`⚠️ WARNING: File search disabled due to vector store creation failure`);
         }
-        addConsoleLog(`🛡️ REQUIRED: Vector store created: ${vectorStore.id}`);
-        addWebLog(`Web: ✅ Güvenlik sistemi kuruldu - Vector Store: ${vectorStore.id}`);
+        if (safeGuardEnabled && vectorStoreValid) {
+            addConsoleLog(`🛡️ SECURITY: Vector store validated and configured: ${vectorStore.id}`);
+            addWebLog(`Web: ✅ Güvenlik sistemi aktif - Vector Store: ${vectorStore.id}`);
+        } else if (safeGuardEnabled) {
+            addConsoleLog(`🚨 CRITICAL: Safe guard enabled but no valid vector store - this should not happen`);
+        } else {
+            addConsoleLog(`ℹ️ Safe guard disabled - no vector store configured`);
+            addWebLog(`Web: ⚠️ Güvenlik sistemi kapalı - yasaklı kelime kontrolü yok`);
+        }
         
         const assistant = await openai.beta.assistants.create(assistantParams);
 
@@ -436,7 +486,7 @@ MUTLAKA YAPILMASI GEREKENLER:
         try {
             // Use only core columns that definitely exist
             const agentData = {
-                userId: getUserId(req) || formData.userId, // SECURITY: Use authenticated user ID
+                userId: authenticatedUserId, // SECURITY: Strict auth - already validated above
                 name: agentName,
                 role: 'OpenAI Assistant',
                 description: agentPurpose,
@@ -454,9 +504,9 @@ MUTLAKA YAPILMASI GEREKENLER:
                     googleCalendar: true,
                     gmail: true,
                     codeInterpreter: false,
-                    fileSearch: true,
+                    fileSearch: safeGuardEnabled && vectorStoreValid,
                     assistantId: assistant.id,
-                    vectorStoreId: profanityFileId ? assistantParams.tool_resources?.file_search?.vector_store_ids?.[0] : null
+                    vectorStoreId: (safeGuardEnabled && vectorStoreValid) ? VECTOR_STORE_ID : null
                 }
                 // Removed is_active temporarily to test
             };
@@ -472,8 +522,8 @@ MUTLAKA YAPILMASI GEREKENLER:
             addWebLog(`Web: Code Interpreter: ❌ Deaktif`);
             addWebLog(`Web: File Search: ✅ Aktif`);
             
-            // Clear cache for this user's agents - CRITICAL FIX
-            const authenticatedUserId = getUserId(req) || formData.userId;
+            // Clear cache for this user's agents - using authenticated user ID only
+            const cacheUserId = authenticatedUserId; // Already validated above, no fallback needed
             cacheManager.invalidateUserData(authenticatedUserId);
             cacheManager.delete(`route:/api/agents?userId=${authenticatedUserId}:anonymous`);
             addConsoleLog(`🧹 Cache cleared for user: ${authenticatedUserId}`);
