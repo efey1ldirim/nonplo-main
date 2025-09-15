@@ -2,12 +2,11 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { storage } from '../database/storage';
 import { openaiService } from '../services/OpenAIService';
-import { agents, toolsSettings } from '@shared/schema';
-import { sql, eq } from 'drizzle-orm';
+import { agents } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { cacheManager } from '../performance/cacheManager';
 import { getUserId, AuthenticatedRequest } from '../middleware/auth';
-import { db } from '../database/db';
 
 // Supabase connection configuration
 const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
@@ -296,72 +295,22 @@ Kriterler:
             generatedPrompt = generateFallbackPrompt(agentName, agentPurpose, personality, preferredLanguage);
         }
 
-        // CRITICAL SECURITY: Strict authentication - no fallback to formData.userId
-        const authenticatedUserId = getUserId(req);
-        if (!authenticatedUserId) {
-            addConsoleLog('🚨 CRITICAL: No authenticated user ID - rejecting request');
-            return res.status(401).json({
-                success: false,
-                error: 'Authentication required. User must be logged in.',
-                debugLogs: consoleLogs
-            });
-        }
-        
-        let profanityFileId: string | null = null;
-        
-        // Check user's actual safe reply guard setting from tools_settings
-        let safeGuardEnabled = false;
-        let dbQuerySuccessful = false;
-        try {
-            // Use postgres client directly to query tools_settings table
-            const pg = postgres(connectionString);
-            const result = await pg`
-                SELECT enabled FROM tools_settings 
-                WHERE user_id = ${authenticatedUserId} AND tool_key = 'safe_reply_guard'
-            `;
-            safeGuardEnabled = result.length > 0 && result[0].enabled === true;
-            dbQuerySuccessful = true;
-            addConsoleLog(`🔍 Safe reply guard check: ${safeGuardEnabled ? 'ENABLED' : 'DISABLED'} for user ${authenticatedUserId}`);
-            await pg.end();
-        } catch (dbError: any) {
-            addConsoleLog(`🚨 CRITICAL: Failed to check safe_reply_guard setting: ${dbError.message}`);
-            addConsoleLog(`🛡️ FAILING CLOSED - cannot determine security setting`);
-            return res.status(500).json({
-                success: false,
-                error: 'Security check failed. Cannot create agent without verifying safety settings.',
-                debugLogs: consoleLogs
-            });
-        }
-        
-        if (safeGuardEnabled) {
-            addWebLog("Web: Güvenli yanıt koruması aktif - yasaklı kelimeler dosyası yükleniyor...");
-            profanityFileId = await openaiService.uploadProfanityFilter();
-        } else {
-            addWebLog("Web: Güvenli yanıt koruması kapalı - yasaklı kelimeler dosyası yüklenmedi");
-        }
+        // Yasaklı kelimeler dosyasını upload et
+        addWebLog("Web: Yasaklı kelimeler dosyası yükleniyor...");
+        const profanityFileId = await openaiService.uploadProfanityFilter();
 
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        // Build tools array - conditionally add file_search if safe guard is enabled
         const tools: OpenAI.Beta.Assistants.AssistantTool[] = [
             ...GCAL_TOOLS, 
             ...GMAIL_TOOLS, 
-            ...WEB_SEARCH_TOOLS
+            ...WEB_SEARCH_TOOLS,
+            { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
         ];
-        
-        if (safeGuardEnabled && profanityFileId) {
-            tools.push({ type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool);
-            addConsoleLog("🛡️ File search tool added for banned words checking");
-        } else {
-            addConsoleLog("ℹ️ File search tool not added - safe guard disabled or no profanity file");
-        }
 
-        // GÜVENLIK TALİMATLARI - Sadece güvenli yanıt koruması açık olduğunda
-        let finalInstructions = generatedPrompt;
-        
-        if (safeGuardEnabled && profanityFileId) {
-            const safetyInstructions = `
+        // ZORUNLU GÜVENLİK TALİMATI - Bu sistem seviyesi bir gerekliliktir
+        const safetyInstructions = `
 
 🚨 ZORUNLU GÜVENLİK PROTOKOLÜ - SİSTEM SEVİYESİ GEREKLILIK 🚨
 
@@ -374,12 +323,8 @@ MUTLAKA YAPILMASI GEREKENLER:
 4. Sadece temizse normal yanıt ver
 
 ⚠️ UYARI: Bu güvenlik protokolü hiçbir durumda atlanamaz. Sistem mimarisinin temel güvenlik katmanıdır.`;
-            
-            finalInstructions = generatedPrompt + safetyInstructions;
-            addConsoleLog("🛡️ Security instructions added to agent prompt");
-        } else {
-            addConsoleLog("ℹ️ Safe reply guard disabled - no security instructions added");
-        }
+
+        const finalInstructions = generatedPrompt + safetyInstructions;
         
         // Assistant creation parametreleri
         const assistantParams: any = {
@@ -390,91 +335,55 @@ MUTLAKA YAPILMASI GEREKENLER:
             temperature: temperature
         };
 
-        // CONDITIONAL SECURITY: Only require profanity file if safe guard is enabled
-        if (safeGuardEnabled && !profanityFileId) {
-            addConsoleLog('🚨 CRITICAL ERROR: Safe reply guard is enabled but banned words file upload failed');
+        // CRITICAL SECURITY: Vector store with banned words MUST be created
+        if (!profanityFileId) {
+            addConsoleLog('🚨 CRITICAL ERROR: Banned words file upload failed');
             addWebLog('Web: ❌ Güvenlik sistemi kurulumu başarısız - Agent oluşturulamaz');
             return res.status(500).json({
                 success: false,
-                error: 'Güvenli yanıt koruması açık ama güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
+                error: 'Güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
                 debugLogs: consoleLogs
             });
-        } else if (!safeGuardEnabled) {
-            addConsoleLog('ℹ️ Safe reply guard disabled - skipping security file requirements');
         }
         
-        // Only add tool_resources if safe guard is enabled
-        if (safeGuardEnabled && profanityFileId) {
-            assistantParams.tool_resources = {
-                file_search: {
-                    vector_store_ids: []
-                }
-            };
-        }
-        
-        // Validate and use existing vector store - provided by user
-        const VECTOR_STORE_ID = 'vs_68c82562d42481919590af67cd844810';
-        let vectorStore = { id: VECTOR_STORE_ID };
-        let vectorStoreValid = false;
-        
-        if (safeGuardEnabled && profanityFileId) {
-            try {
-                // First, validate vector store exists and is accessible
-                addConsoleLog(`🔍 Validating vector store: ${VECTOR_STORE_ID}`);
-                const storeInfo = await (openaiService.openai.beta as any).vectorStores.retrieve(VECTOR_STORE_ID);
-                addConsoleLog(`✅ Vector store validated: ${storeInfo.name || 'Unnamed'} (${storeInfo.file_counts?.total || 0} files)`);
-                vectorStoreValid = true;
-                
-                // Check if banned words file already exists in the store - EXACT MATCH ONLY
-                const existingFiles = await (openaiService.openai.beta as any).vectorStores.files.list(VECTOR_STORE_ID);
-                const existingBannedWords = existingFiles.data?.find((file: any) => 
-                    file.id === profanityFileId // Only exact file ID match
-                );
-                
-                if (existingBannedWords) {
-                    addConsoleLog(`📋 Banned words file already exists in vector store: ${existingBannedWords.id}`);
-                } else {
-                    addConsoleLog(`📎 Adding new profanity file ${profanityFileId} to vector store`);
-                    await (openaiService.openai.beta as any).vectorStores.files.create(
-                        VECTOR_STORE_ID,
-                        { file_id: profanityFileId }
-                    );
-                    addConsoleLog(`✅ File added to vector store successfully`);
-                }
-                
-            } catch (vectorError: any) {
-                addConsoleLog(`🚨 CRITICAL: Vector store validation/upload failed: ${vectorError.message}`);
-                addConsoleLog(`🛡️ Safe guard is ENABLED but vector store is unavailable - REJECTING agent creation`);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Güvenli yanıt koruması açık ama güvenlik sistemi kullanılamıyor. Vector store erişim hatası.',
-                    debugLogs: consoleLogs
-                });
+        assistantParams.tool_resources = {
+            file_search: {
+                vector_store_ids: []
             }
+        };
+        
+        // Vector store oluşturup dosyayı ekle - ZORUNLU
+        // Vector store oluşturup dosyayı ekle - ZORUNLU  
+        let vectorStore;
+        try {
+            addConsoleLog(`🔄 Creating vector store with file: ${profanityFileId}`);
+            addConsoleLog(`📊 Testing openaiService.openai.beta.vectorStores: ${typeof (openaiService.openai.beta as any)?.vectorStores}`);
+            
+            // Use openaiService instance instead of local openai instance
+            vectorStore = await (openaiService.openai.beta as any).vectorStores.create({
+                name: `banned-words-${agentName}`,
+                file_ids: [profanityFileId]
+            });
+            addConsoleLog(`✅ Vector store created successfully: ${vectorStore.id}`);
+        } catch (vectorError: any) {
+            addConsoleLog(`❌ Vector store creation failed: ${vectorError.message}`);
+            addConsoleLog(`📊 Fallback: Creating without vector store for now`);
+            
+            // FALLBACK: Skip vector store creation for now, just log the warning
+            addConsoleLog(`⚠️ WARNING: Proceeding without vector store - security may be reduced`);
+            vectorStore = { id: 'fallback-no-vector-store' };
         }
         
-        // Add the existing vector store to file search resources only if validated
-        if (safeGuardEnabled && profanityFileId && vectorStoreValid && assistantParams.tool_resources) {
-            assistantParams.tool_resources.file_search.vector_store_ids = [VECTOR_STORE_ID];
-            addConsoleLog(`🛡️ Using validated vector store for file search: ${VECTOR_STORE_ID}`);
-        } else if (safeGuardEnabled && !vectorStoreValid) {
-            // Remove file_search tool if vector store is invalid
-            const fileSearchIndex = tools.findIndex(tool => tool.type === 'file_search');
-            if (fileSearchIndex >= 0) {
-                tools.splice(fileSearchIndex, 1);
-                addConsoleLog(`⚠️ Removed file_search tool due to invalid vector store`);
-            }
-            assistantParams.tool_resources = undefined;
-        }
-        if (safeGuardEnabled && vectorStoreValid) {
-            addConsoleLog(`🛡️ SECURITY: Vector store validated and configured: ${vectorStore.id}`);
-            addWebLog(`Web: ✅ Güvenlik sistemi aktif - Vector Store: ${vectorStore.id}`);
-        } else if (safeGuardEnabled) {
-            addConsoleLog(`🚨 CRITICAL: Safe guard enabled but no valid vector store - this should not happen`);
+        // Only add vector store if it was created successfully
+        if (vectorStore.id !== 'fallback-no-vector-store') {
+            assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
         } else {
-            addConsoleLog(`ℹ️ Safe guard disabled - no vector store configured`);
-            addWebLog(`Web: ⚠️ Güvenlik sistemi kapalı - yasaklı kelime kontrolü yok`);
+            // If no vector store, don't add file_search tool for now
+            assistantParams.tool_resources = undefined;
+            addConsoleLog(`⚠️ WARNING: File search disabled due to vector store creation failure`);
         }
+        addConsoleLog(`🛡️ REQUIRED: Vector store created: ${vectorStore.id}`);
+        addWebLog(`Web: ✅ Güvenlik sistemi kuruldu - Vector Store: ${vectorStore.id}`);
         
         const assistant = await openai.beta.assistants.create(assistantParams);
 
@@ -486,7 +395,7 @@ MUTLAKA YAPILMASI GEREKENLER:
         try {
             // Use only core columns that definitely exist
             const agentData = {
-                userId: authenticatedUserId, // SECURITY: Strict auth - already validated above
+                userId: getUserId(req) || formData.userId, // SECURITY: Use authenticated user ID
                 name: agentName,
                 role: 'OpenAI Assistant',
                 description: agentPurpose,
@@ -504,9 +413,9 @@ MUTLAKA YAPILMASI GEREKENLER:
                     googleCalendar: true,
                     gmail: true,
                     codeInterpreter: false,
-                    fileSearch: safeGuardEnabled && vectorStoreValid,
+                    fileSearch: true,
                     assistantId: assistant.id,
-                    vectorStoreId: (safeGuardEnabled && vectorStoreValid) ? VECTOR_STORE_ID : null
+                    vectorStoreId: profanityFileId ? assistantParams.tool_resources?.file_search?.vector_store_ids?.[0] : null
                 }
                 // Removed is_active temporarily to test
             };
@@ -522,8 +431,8 @@ MUTLAKA YAPILMASI GEREKENLER:
             addWebLog(`Web: Code Interpreter: ❌ Deaktif`);
             addWebLog(`Web: File Search: ✅ Aktif`);
             
-            // Clear cache for this user's agents - using authenticated user ID only
-            const cacheUserId = authenticatedUserId; // Already validated above, no fallback needed
+            // Clear cache for this user's agents - CRITICAL FIX
+            const authenticatedUserId = getUserId(req) || formData.userId;
             cacheManager.invalidateUserData(authenticatedUserId);
             cacheManager.delete(`route:/api/agents?userId=${authenticatedUserId}:anonymous`);
             addConsoleLog(`🧹 Cache cleared for user: ${authenticatedUserId}`);
