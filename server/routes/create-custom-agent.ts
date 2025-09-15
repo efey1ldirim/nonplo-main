@@ -354,10 +354,21 @@ MUTLAKA YAPILMASI GEREKENLER:
         };
         
         // Vector store oluşturup dosyayı ekle - ZORUNLU
-        const vectorStore = await openaiService.openai.beta.vectorStores.create({
-            name: `banned-words-${agentName}`,
-            file_ids: [profanityFileId]
-        });
+        // Vector store oluşturup dosyayı ekle - ZORUNLU  
+        let vectorStore;
+        try {
+            addConsoleLog(`🔄 Creating vector store with file: ${profanityFileId}`);
+            // TypeScript type fix - use any to bypass type checking
+            vectorStore = await (openai.beta as any).vectorStores.create({
+                name: `banned-words-${agentName}`,
+                file_ids: [profanityFileId]
+            });
+            addConsoleLog(`✅ Vector store created successfully: ${vectorStore.id}`);
+        } catch (vectorError: any) {
+            addConsoleLog(`❌ Vector store creation failed: ${vectorError.message}`);
+            addConsoleLog(`📊 OpenAI instance: ${typeof openai}, beta: ${typeof openai.beta}, vectorStores: ${typeof (openai.beta as any)?.vectorStores}`);
+            throw vectorError;
+        }
         
         assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
         addConsoleLog(`🛡️ REQUIRED: Vector store created: ${vectorStore.id}`);
