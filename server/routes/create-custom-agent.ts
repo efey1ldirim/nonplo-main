@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { storage } from '../database/storage';
 import { openaiService } from '../services/OpenAIService';
-import { agents } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { agents, toolsSettings } from '@shared/schema';
+import { sql, eq } from 'drizzle-orm';
 import postgres from 'postgres';
 import { cacheManager } from '../performance/cacheManager';
 import { getUserId, AuthenticatedRequest } from '../middleware/auth';
+import { db } from '../database/db';
 
 // Supabase connection configuration
 const supabasePassword = process.env.SUPABASE_DB_PASSWORD;
@@ -295,22 +296,53 @@ Kriterler:
             generatedPrompt = generateFallbackPrompt(agentName, agentPurpose, personality, preferredLanguage);
         }
 
-        // Yasaklı kelimeler dosyasını upload et
-        addWebLog("Web: Yasaklı kelimeler dosyası yükleniyor...");
-        const profanityFileId = await openaiService.uploadProfanityFilter();
+        // Güvenli yanıt koruması kontrolü - sadece açık olduğunda dosya yükle
+        const authenticatedUserId = getUserId(req);
+        let profanityFileId: string | null = null;
+        
+        // Check if safe reply guard is enabled for this user - query tools_settings table
+        let safeGuardEnabled = false;
+        try {
+            const toolSettingRows = await db.select()
+                .from(toolsSettings)
+                .where(eq(toolsSettings.userId, authenticatedUserId));
+            
+            const safeTool = toolSettingRows.find(t => t.toolKey === 'safe_reply_guard');
+            safeGuardEnabled = safeTool?.enabled === true;
+            addConsoleLog(`🔍 Safe reply guard check: ${safeGuardEnabled ? 'ENABLED' : 'DISABLED'} for user ${authenticatedUserId}`);
+        } catch (dbError: any) {
+            addConsoleLog(`⚠️ Tool settings query failed, defaulting to safe_reply_guard OFF: ${dbError.message}`);
+        }
+        
+        if (safeGuardEnabled) {
+            addWebLog("Web: Güvenli yanıt koruması aktif - yasaklı kelimeler dosyası yükleniyor...");
+            profanityFileId = await openaiService.uploadProfanityFilter();
+        } else {
+            addWebLog("Web: Güvenli yanıt koruması kapalı - yasaklı kelimeler dosyası yüklenmedi");
+        }
 
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
+        // Build tools array - conditionally add file_search if safe guard is enabled
         const tools: OpenAI.Beta.Assistants.AssistantTool[] = [
             ...GCAL_TOOLS, 
             ...GMAIL_TOOLS, 
-            ...WEB_SEARCH_TOOLS,
-            { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
+            ...WEB_SEARCH_TOOLS
         ];
+        
+        if (safeGuardEnabled && profanityFileId) {
+            tools.push({ type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool);
+            addConsoleLog("🛡️ File search tool added for banned words checking");
+        } else {
+            addConsoleLog("ℹ️ File search tool not added - safe guard disabled or no profanity file");
+        }
 
-        // ZORUNLU GÜVENLİK TALİMATI - Bu sistem seviyesi bir gerekliliktir
-        const safetyInstructions = `
+        // GÜVENLIK TALİMATLARI - Sadece güvenli yanıt koruması açık olduğunda
+        let finalInstructions = generatedPrompt;
+        
+        if (safeGuardEnabled && profanityFileId) {
+            const safetyInstructions = `
 
 🚨 ZORUNLU GÜVENLİK PROTOKOLÜ - SİSTEM SEVİYESİ GEREKLILIK 🚨
 
@@ -323,8 +355,12 @@ MUTLAKA YAPILMASI GEREKENLER:
 4. Sadece temizse normal yanıt ver
 
 ⚠️ UYARI: Bu güvenlik protokolü hiçbir durumda atlanamaz. Sistem mimarisinin temel güvenlik katmanıdır.`;
-
-        const finalInstructions = generatedPrompt + safetyInstructions;
+            
+            finalInstructions = generatedPrompt + safetyInstructions;
+            addConsoleLog("🛡️ Security instructions added to agent prompt");
+        } else {
+            addConsoleLog("ℹ️ Safe reply guard disabled - no security instructions added");
+        }
         
         // Assistant creation parametreleri
         const assistantParams: any = {
@@ -335,22 +371,27 @@ MUTLAKA YAPILMASI GEREKENLER:
             temperature: temperature
         };
 
-        // CRITICAL SECURITY: Vector store with banned words MUST be created
-        if (!profanityFileId) {
-            addConsoleLog('🚨 CRITICAL ERROR: Banned words file upload failed');
+        // CONDITIONAL SECURITY: Only require profanity file if safe guard is enabled
+        if (safeGuardEnabled && !profanityFileId) {
+            addConsoleLog('🚨 CRITICAL ERROR: Safe reply guard is enabled but banned words file upload failed');
             addWebLog('Web: ❌ Güvenlik sistemi kurulumu başarısız - Agent oluşturulamaz');
             return res.status(500).json({
                 success: false,
-                error: 'Güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
+                error: 'Güvenli yanıt koruması açık ama güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
                 debugLogs: consoleLogs
             });
+        } else if (!safeGuardEnabled) {
+            addConsoleLog('ℹ️ Safe reply guard disabled - skipping security file requirements');
         }
         
-        assistantParams.tool_resources = {
-            file_search: {
-                vector_store_ids: []
-            }
-        };
+        // Only add tool_resources if safe guard is enabled
+        if (safeGuardEnabled && profanityFileId) {
+            assistantParams.tool_resources = {
+                file_search: {
+                    vector_store_ids: []
+                }
+            };
+        }
         
         // Vector store oluşturup dosyayı ekle - ZORUNLU
         // Vector store oluşturup dosyayı ekle - ZORUNLU  
