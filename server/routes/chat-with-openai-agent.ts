@@ -5,6 +5,7 @@ import { db } from '../database/db';
 import { agents, conversations, messages } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { containsProfanity, getProfanityMessage } from '../utils/profanity-filter';
+import { getUserId, AuthenticatedRequest } from '../middleware/auth';
 import OpenAI from 'openai';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -198,7 +199,7 @@ async function getOrCreateThread(
   }
 }
 
-export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatResponse>) => {
+export const chatWithOpenAIAgent = async (req: AuthenticatedRequest, res: Response<ChatResponse>) => {
   const debugLogs: string[] = [];
   const isDebug = req.query.debug === 'true';
 
@@ -213,8 +214,9 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
       return sendErrorResponse(res, HttpStatus.BadRequest, ErrorMessage.InvalidContentType, debugLogs, isDebug);
     }
 
-    // Extract request data
-    const { agentId, message, sessionId, languageCode = 'tr', userId } = req.body as ChatRequest;
+    // Extract request data - SECURITY: Get userId from authenticated session, not request body
+    const { agentId, message, sessionId, languageCode = 'tr' } = req.body as Omit<ChatRequest, 'userId'>;
+    const userId = getUserId(req);
 
     // Basic validation
     if (!agentId || !UUID_REGEX.test(agentId)) {
@@ -226,13 +228,15 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
     }
 
     if (!userId) {
-      return sendErrorResponse(res, HttpStatus.BadRequest, "userId gerekli", debugLogs, isDebug);
+      return sendErrorResponse(res, HttpStatus.Unauthorized, "Authentication required - please log in", debugLogs, isDebug);
     }
 
-    // Profanity check disabled - now handled by OpenAI Assistant file search
-    // if (containsProfanity(message)) {
-    //   return sendErrorResponse(res, HttpStatus.BadRequest, getProfanityMessage(), debugLogs, isDebug);
-    // }
+    // CRITICAL SECURITY: Deterministic server-side backstop - FIRST line of defense
+    if (containsProfanity(message)) {
+      addDebugLog(debugLogs, '🚨 Server-side banned word detected - blocking before OpenAI', isDebug);
+      return sendErrorResponse(res, HttpStatus.BadRequest, getProfanityMessage(), debugLogs, isDebug);
+    }
+    addDebugLog(debugLogs, '✅ Server-side banned word check passed', isDebug);
 
     addDebugLog(debugLogs, `🤖 Starting OpenAI chat for agent: ${agentId}`, isDebug);
 
@@ -284,10 +288,25 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
       });
       addDebugLog(debugLogs, '📝 User message added to thread', isDebug);
 
-      // Run the assistant
-      const run = await openaiService.openai.beta.threads.runs.create(threadId, {
+      // Run the assistant with vector store for file search (SECURITY: mandatory for banned words)
+      const runParams: any = {
         assistant_id: agentData.openaiAssistantId
-      });
+      };
+      
+      // CRITICAL SECURITY: Vector store MUST be present for banned words filtering
+      if (!agentData.tools || !(agentData.tools as any).vectorStoreId) {
+        addDebugLog(debugLogs, '🚨 SECURITY ERROR: No vector store found - banned words filtering impossible!', isDebug);
+        return sendErrorResponse(res, HttpStatus.InternalServerError, 'Güvenlik sistemi aktif değil. Agent yapılandırması eksik.', debugLogs, isDebug);
+      }
+      
+      runParams.tool_resources = {
+        file_search: {
+          vector_store_ids: [(agentData.tools as any).vectorStoreId]
+        }
+      };
+      addDebugLog(debugLogs, `🛡️ Vector store attached for banned words filtering: ${(agentData.tools as any).vectorStoreId}`, isDebug);
+
+      const run = await openaiService.openai.beta.threads.runs.create(threadId, runParams);
       addDebugLog(debugLogs, `🏃 Run started: ${run.id}`, isDebug);
 
       // Wait for completion
@@ -305,6 +324,29 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
 
       if (currentRun.status !== "completed") {
         throw new Error(`Assistant run failed with status: ${currentRun.status}`);
+      }
+
+      // CRITICAL SECURITY CHECK: Verify file_search tool was used - NO BYPASS ALLOWED
+      addDebugLog(debugLogs, '🔍 Verifying file_search tool usage for security...', isDebug);
+      const runSteps = await openaiService.openai.beta.threads.runs.steps.list(threadId, run.id);
+      let fileSearchUsed = false;
+      
+      for (const step of runSteps.data) {
+        if (step.step_details.type === 'tool_calls') {
+          for (const toolCall of (step.step_details as any).tool_calls) {
+            if (toolCall.type === 'file_search') {
+              fileSearchUsed = true;
+              addDebugLog(debugLogs, '✅ File search tool verified - banned words check performed', isDebug);
+              break;
+            }
+          }
+        }
+        if (fileSearchUsed) break;
+      }
+      
+      if (!fileSearchUsed) {
+        addDebugLog(debugLogs, '🚨 CRITICAL SECURITY VIOLATION: File search not used - REJECTING MESSAGE', isDebug);
+        return sendErrorResponse(res, HttpStatus.Forbidden, 'Güvenlik kontrolü başarısız. Mesaj işlenemedi.', debugLogs, isDebug);
       }
 
       // Get the assistant's response

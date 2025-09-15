@@ -309,16 +309,20 @@ Kriterler:
             { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
         ];
 
-        // Güvenli yanıt talimatını ekle
+        // ZORUNLU GÜVENLİK TALİMATI - Bu sistem seviyesi bir gerekliliktir
         const safetyInstructions = `
 
-ÖNEMLİ GÜVENLİK TALİMATI:
-Eğer file search özelliğini kullanabiliyorsan, yasaklı kelimeler listesine erişimin var. Kullanıcıdan gelen her mesajı yazmadan önce şu adımları takip et:
-1. Kullanıcının mesajını yasaklı kelimeler listesinde kontrol et
-2. Eğer yasaklı kelime varsa: "Mesajınız uygunsuz kelimeler içeriyor. Lütfen daha uygun bir şekilde yazın." yanıtı ver
-3. Temizse normal şekilde devam et
+🚨 ZORUNLU GÜVENLİK PROTOKOLÜ - SİSTEM SEVİYESİ GEREKLILIK 🚨
 
-Bu güvenlik kontrolünü her zaman yap!`;
+Bu bir seçenek değil, sistem seviyesinde ZORUNLU bir protokoldür:
+
+MUTLAKA YAPILMASI GEREKENLER:
+1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap
+2. Bu kontrolü yapmadan ASLA yanıt verme
+3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."
+4. Sadece temizse normal yanıt ver
+
+⚠️ UYARI: Bu güvenlik protokolü hiçbir durumda atlanamaz. Sistem mimarisinin temel güvenlik katmanıdır.`;
 
         const finalInstructions = generatedPrompt + safetyInstructions;
         
@@ -331,23 +335,32 @@ Bu güvenlik kontrolünü her zaman yap!`;
             temperature: temperature
         };
 
-        // Eğer profanity file upload edilmişse attach et
-        if (profanityFileId) {
-            assistantParams.tool_resources = {
-                file_search: {
-                    vector_store_ids: []
-                }
-            };
-            
-            // Vector store oluşturup dosyayı ekle
-            const vectorStore = await openai.beta.vectorStores.create({
-                name: "Yasaklı Kelimeler",
-                file_ids: [profanityFileId]
+        // CRITICAL SECURITY: Vector store with banned words MUST be created
+        if (!profanityFileId) {
+            addConsoleLog('🚨 CRITICAL ERROR: Banned words file upload failed');
+            addWebLog('Web: ❌ Güvenlik sistemi kurulumu başarısız - Agent oluşturulamaz');
+            return res.status(500).json({
+                success: false,
+                error: 'Güvenlik sistemi kurulumu başarısız. Agent oluşturulamadı.',
+                debugLogs: consoleDebugLogs
             });
-            
-            assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
-            addWebLog(`Web: Yasaklı kelimeler dosyası Assistant'a bağlandı (${profanityFileId})`);
         }
+        
+        assistantParams.tool_resources = {
+            file_search: {
+                vector_store_ids: []
+            }
+        };
+        
+        // Vector store oluşturup dosyayı ekle - ZORUNLU
+        const vectorStore = await openai.beta.vectorStores.create({
+            name: `banned-words-${agentName}`,
+            file_ids: [profanityFileId]
+        });
+        
+        assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
+        addConsoleLog(`🛡️ REQUIRED: Vector store created: ${vectorStore.id}`);
+        addWebLog(`Web: ✅ Güvenlik sistemi kuruldu - Vector Store: ${vectorStore.id}`);
         
         const assistant = await openai.beta.assistants.create(assistantParams);
 
