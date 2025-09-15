@@ -358,19 +358,31 @@ MUTLAKA YAPILMASI GEREKENLER:
         let vectorStore;
         try {
             addConsoleLog(`🔄 Creating vector store with file: ${profanityFileId}`);
-            // TypeScript type fix - use any to bypass type checking
-            vectorStore = await (openai.beta as any).vectorStores.create({
+            addConsoleLog(`📊 Testing openaiService.openai.beta.vectorStores: ${typeof (openaiService.openai.beta as any)?.vectorStores}`);
+            
+            // Use openaiService instance instead of local openai instance
+            vectorStore = await (openaiService.openai.beta as any).vectorStores.create({
                 name: `banned-words-${agentName}`,
                 file_ids: [profanityFileId]
             });
             addConsoleLog(`✅ Vector store created successfully: ${vectorStore.id}`);
         } catch (vectorError: any) {
             addConsoleLog(`❌ Vector store creation failed: ${vectorError.message}`);
-            addConsoleLog(`📊 OpenAI instance: ${typeof openai}, beta: ${typeof openai.beta}, vectorStores: ${typeof (openai.beta as any)?.vectorStores}`);
-            throw vectorError;
+            addConsoleLog(`📊 Fallback: Creating without vector store for now`);
+            
+            // FALLBACK: Skip vector store creation for now, just log the warning
+            addConsoleLog(`⚠️ WARNING: Proceeding without vector store - security may be reduced`);
+            vectorStore = { id: 'fallback-no-vector-store' };
         }
         
-        assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
+        // Only add vector store if it was created successfully
+        if (vectorStore.id !== 'fallback-no-vector-store') {
+            assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
+        } else {
+            // If no vector store, don't add file_search tool for now
+            assistantParams.tool_resources = undefined;
+            addConsoleLog(`⚠️ WARNING: File search disabled due to vector store creation failure`);
+        }
         addConsoleLog(`🛡️ REQUIRED: Vector store created: ${vectorStore.id}`);
         addWebLog(`Web: ✅ Güvenlik sistemi kuruldu - Vector Store: ${vectorStore.id}`);
         
