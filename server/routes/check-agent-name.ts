@@ -25,7 +25,7 @@ export const checkAgentName = async (req: Request, res: Response<CheckAgentNameR
       });
     }
 
-    // Check for profanity first
+    // Profanity check - critical security feature
     if (containsProfanity(name)) {
       return res.status(400).json({
         available: false,

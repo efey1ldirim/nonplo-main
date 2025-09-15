@@ -4,6 +4,7 @@ import { openaiService } from '../services/OpenAIService';
 import { db } from '../database/storage';
 import { agents, conversations, messages } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { containsProfanity, getProfanityMessage } from '../utils/profanity-filter';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -187,6 +188,11 @@ export const chatWithOpenAIAgent = async (req: Request, res: Response<ChatRespon
 
     if (!userId) {
       return sendErrorResponse(res, HttpStatus.BadRequest, "userId gerekli", debugLogs, isDebug);
+    }
+
+    // Profanity check - critical security feature
+    if (containsProfanity(message)) {
+      return sendErrorResponse(res, HttpStatus.BadRequest, getProfanityMessage(), debugLogs, isDebug);
     }
 
     addDebugLog(debugLogs, `🤖 Starting OpenAI chat for agent: ${agentId}`, isDebug);

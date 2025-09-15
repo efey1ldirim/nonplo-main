@@ -409,8 +409,61 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       'gpt-4o-mini': { input: 0.00015, output: 0.0006 }, // per 1K tokens
       'gpt-4o': { input: 0.005, output: 0.015 },
       'gpt-4': { input: 0.03, output: 0.06 }
-    };\n    
-    const modelPricing = pricing[model] || pricing['gpt-4o-mini'];\n    // Assuming roughly 50/50 input/output ratio\n    return (tokens / 1000) * ((modelPricing.input + modelPricing.output) / 2);\n  }\n\n  /**\n   * Get AI usage analytics\n   */\n  getUsageAnalytics(hours: number = 24) {\n    return aiAnalytics.getUsageStats(hours);\n  }\n\n  /**\n   * Validate OpenAI API key\n   */\n  async validateApiKey(): Promise<boolean> {\n    try {\n      await this.openai.models.list();\n      return true;\n    } catch (error) {\n      return false;\n    }\n  }
+    };
+    
+    const modelPricing = pricing[model] || pricing['gpt-4o-mini'];
+    // Assuming roughly 50/50 input/output ratio
+    return (tokens / 1000) * ((modelPricing.input + modelPricing.output) / 2);
+  }
+
+  /**
+   * Upload yasaklikelimeler.txt file to OpenAI for file search
+   */
+  async uploadProfanityFilter(): Promise<string | null> {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const filePath = path.join(process.cwd(), 'yasaklikelimeler.txt');
+      
+      if (!fs.existsSync(filePath)) {
+        console.warn('yasaklikelimeler.txt not found, skipping upload');
+        return null;
+      }
+      
+      const fileContent = fs.readFileSync(filePath);
+      
+      const file = await this.openai.files.create({
+        file: fileContent,
+        purpose: 'assistants'
+      });
+      
+      console.log(`🛡️ Yasaklı kelimeler dosyası yüklendi - File ID: ${file.id}`);
+      return file.id;
+    } catch (error: any) {
+      console.error('Yasaklı kelimeler dosyası yüklenirken hata:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get AI usage analytics
+   */
+  getUsageAnalytics(hours: number = 24) {
+    return aiAnalytics.getUsageStats(hours);
+  }
+
+  /**
+   * Validate OpenAI API key
+   */
+  async validateApiKey(): Promise<boolean> {
+    try {
+      await this.openai.models.list();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 }
 
 // Create singleton instance

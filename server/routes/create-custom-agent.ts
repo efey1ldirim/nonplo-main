@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { storage } from '../database/storage';
-import { db } from '../database/storage';
+import { openaiService } from '../services/OpenAIService';
 import { agents } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
@@ -294,18 +294,62 @@ Kriterler:
             generatedPrompt = generateFallbackPrompt(agentName, agentPurpose, personality, preferredLanguage);
         }
 
+        // Yasaklı kelimeler dosyasını upload et
+        addWebLog("Web: Yasaklı kelimeler dosyası yükleniyor...");
+        const profanityFileId = await openaiService.uploadProfanityFilter();
+
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
+        const tools: OpenAI.Beta.Assistants.AssistantTool[] = [
+            ...GCAL_TOOLS, 
+            ...GMAIL_TOOLS, 
+            ...WEB_SEARCH_TOOLS,
+            { type: "code_interpreter" } as OpenAI.Beta.Assistants.CodeInterpreterTool,
+            { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
+        ];
+
+        // Güvenli yanıt talimatını ekle
+        const safetyInstructions = `
+
+ÖNEMLİ GÜVENLİK TALİMATI:
+Eğer file search özelliğini kullanabiliyorsan, yasaklı kelimeler listesine erişimin var. Kullanıcıdan gelen her mesajı yazmadan önce şu adımları takip et:
+1. Kullanıcının mesajını yasaklı kelimeler listesinde kontrol et
+2. Eğer yasaklı kelime varsa: "Mesajınız uygunsuz kelimeler içeriyor. Lütfen daha uygun bir şekilde yazın." yanıtı ver
+3. Temizse normal şekilde devam et
+
+Bu güvenlik kontrolünü her zaman yap!`;
+
+        const finalInstructions = generatedPrompt + safetyInstructions;
         
-        const assistant = await openai.beta.assistants.create({
+        // Assistant creation parametreleri
+        const assistantParams: any = {
             name: agentName,
-            instructions: generatedPrompt,
+            instructions: finalInstructions,
             model: "gpt-4o-mini",
             tools: tools,
             temperature: temperature
-        });
+        };
+
+        // Eğer profanity file upload edilmişse attach et
+        if (profanityFileId) {
+            assistantParams.tool_resources = {
+                file_search: {
+                    vector_store_ids: []
+                }
+            };
+            
+            // Vector store oluşturup dosyayı ekle
+            const vectorStore = await openai.beta.vectorStores.create({
+                name: "Yasaklı Kelimeler",
+                file_ids: [profanityFileId]
+            });
+            
+            assistantParams.tool_resources.file_search.vector_store_ids = [vectorStore.id];
+            addWebLog(`Web: Yasaklı kelimeler dosyası Assistant'a bağlandı (${profanityFileId})`);
+        }
+        
+        const assistant = await openai.beta.assistants.create(assistantParams);
 
         addWebLog(`Web: Assistant oluşturuldu - ID: ${assistant.id}`);
 
@@ -547,7 +591,13 @@ Kriterler:
         // OpenAI Assistant oluştur
         addWebLog("Web: OpenAI Assistant oluşturuluyor");
         
-        const tools = [...GCAL_TOOLS, ...GMAIL_TOOLS, ...WEB_SEARCH_TOOLS];
+        const tools: OpenAI.Beta.Assistants.AssistantTool[] = [
+            ...GCAL_TOOLS, 
+            ...GMAIL_TOOLS, 
+            ...WEB_SEARCH_TOOLS,
+            { type: "code_interpreter" } as OpenAI.Beta.Assistants.CodeInterpreterTool,
+            { type: "file_search" } as OpenAI.Beta.Assistants.FileSearchTool
+        ];
         
         const assistant = await openai.beta.assistants.create({
             name: agentName,
