@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Globe, Instagram, Twitter, Facebook, Youtube, Linkedin, TikTok } from 'lucide-react';
+import { Globe, Instagram, Twitter, Facebook, Youtube, Linkedin, Video } from 'lucide-react';
 import { wizardStep4Schema, type WizardStep4Data, type AgentWizardSession } from '@shared/schema';
 
 interface WizardStep4Props {
@@ -40,7 +40,7 @@ const SOCIAL_PLATFORMS = [
   {
     key: 'tiktok',
     name: 'TikTok',
-    icon: TikTok,
+    icon: Video,
     placeholder: 'tiktok.com/@your-account',
     color: 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
   },
