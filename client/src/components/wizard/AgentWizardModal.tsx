@@ -364,27 +364,31 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-4 sm:py-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center min-h-64">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto"></div>
-                      <p className="mt-2 text-gray-600 text-sm sm:text-base">Yükleniyor...</p>
-                    </div>
-                  </div>
-                ) : (
-                  getCurrentStepComponent()
-                )}
-              </motion.div>
-            </AnimatePresence>
+          <div className="flex-1 min-h-0 relative">
+            <div className="absolute inset-0 overflow-y-auto">
+              <div className="p-4 sm:p-6">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center min-h-64">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto"></div>
+                          <p className="mt-2 text-gray-600 text-sm sm:text-base">Yükleniyor...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      getCurrentStepComponent()
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
 
           {/* Footer Navigation */}
