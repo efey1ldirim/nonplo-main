@@ -41,17 +41,19 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-
+    console.log('🔐 Authentication middleware called for:', req.method, req.path);
+    
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-
+      console.log('❌ Missing or invalid authorization header:', authHeader);
       return res.status(401).json({ 
         error: 'Missing or invalid authorization header' 
       });
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('🔍 Token received:', token ? `${token.substring(0, 20)}...` : 'none');
 
     // Allow test token in development mode
     if (token === 'test-token' && process.env.NODE_ENV === 'development') {
@@ -86,14 +88,18 @@ export const authenticate = async (
     }
 
     // Validate token with Supabase
+    console.log('🔍 Validating token with Supabase...');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      console.error('❌ Token validation failed:', authError?.message, 'User:', user);
       return res.status(401).json({ 
         error: 'Invalid or expired token',
         details: authError?.message 
       });
     }
+
+    console.log('✅ Token validated successfully for user:', user.id);
 
     // Attach user info to request
     req.user = {

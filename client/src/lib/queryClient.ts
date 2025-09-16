@@ -18,11 +18,12 @@ const defaultQueryFn = async ({ queryKey, signal }: { queryKey: readonly unknown
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
       console.log('🔐 Using auth token for query:', `${token.substring(0, 20)}...`);
+      console.log('🔐 Full token length:', token.length);
     } else {
-      // Fallback to test token in development
-      if (process.env.NODE_ENV === 'development' || window.location.hostname.includes('replit')) {
-        headers['Authorization'] = 'Bearer test-token';
-        console.log('🔐 Using test token for query');
+      console.log('❌ No auth token available for query');
+      // Don't fall back to test token anymore - require real authentication for protected routes
+      if (url.includes('/api/wizard') || url.includes('/api/agents') || url.includes('/api/chat')) {
+        throw new Error('Authentication required - please log in');
       }
     }
     
@@ -108,12 +109,11 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
     if (token) {
       defaultHeaders['Authorization'] = `Bearer ${token}`;
       console.log('🔐 Using auth token for mutation:', token ? `${token.substring(0, 20)}...` : 'none');
+      console.log('🔐 Full token length:', token.length);
     } else {
-      // Fallback to test token in development
-      if (process.env.NODE_ENV === 'development' || window.location.hostname.includes('replit')) {
-        defaultHeaders['Authorization'] = 'Bearer test-token';
-        console.log('🔐 Using test token for mutation');
-      }
+      console.log('❌ No auth token available for mutation');
+      // Don't fall back to test token anymore - require real authentication
+      throw new Error('Authentication required - please log in');
     }
 
     const config: RequestInit = {
