@@ -26,18 +26,19 @@ import { memoryManager } from "./performance/memoryManager";
 
 const app = express();
 
-// Apply optimized middleware stack
+// Apply basic middleware stack
 app.use(earlyRequestFilter);           // Block malicious requests early
 app.use(healthCheckFastPath);          // Fast path for health checks
 app.use(analyticsTrackingMiddleware);  // Analytics and user tracking
-app.use(performanceTrackingMiddleware); // Performance monitoring
-app.use(compressionOptimizer);         // Gzip/Brotli compression
-app.use(assetOptimization);            // Asset caching and optimization
-app.use(resourceHints);                // Preload hints for critical assets
-app.use(webpDetection);                // WebP support detection
-app.use(bundleTracking);               // Bundle performance tracking
-app.use(responseCacheHeaders);         // Set cache headers
-app.use(requestOptimizer);             // Connection and header optimization
+// Temporarily disable heavy middleware for debugging
+// app.use(performanceTrackingMiddleware); 
+// app.use(compressionOptimizer);         
+// app.use(assetOptimization);            
+// app.use(resourceHints);                
+// app.use(webpDetection);                
+// app.use(bundleTracking);               
+// app.use(responseCacheHeaders);         
+// app.use(requestOptimizer);
 
 // Conditional JSON parsing - only for requests that need it
 app.use('/api', (req, res, next) => {
