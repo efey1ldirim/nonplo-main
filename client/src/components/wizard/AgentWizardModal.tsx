@@ -280,7 +280,18 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[95vh] p-0 overflow-hidden">
+      <DialogContent 
+        className="
+          w-[98vw] sm:w-[95vw] md:w-[90vw] lg:w-[85vw] xl:w-[80vw] 2xl:w-[75vw]
+          max-w-6xl
+          h-[98vh] sm:h-[95vh] md:h-[90vh] lg:h-[85vh]
+          max-h-[800px]
+          p-0 
+          overflow-hidden
+          m-1 sm:m-2 md:m-4
+        "
+        aria-describedby="wizard-description"
+      >
         {/* Dialog Description for accessibility */}
         <div className="sr-only" id="wizard-description">
           Dijital çalışan oluşturmak için 10 adımlık sihirbaz. Her adımda işletmeniz hakkında bilgi verip, sonunda kişiselleştirilmiş AI asistanınızı alacaksınız.
@@ -290,19 +301,36 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
         </DialogTitle>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 md:p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+          <div className="
+            flex items-center justify-between 
+            p-3 sm:p-4 lg:p-6 
+            border-b 
+            bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950
+            min-h-[60px] sm:min-h-[70px] lg:min-h-[80px]
+          ">
+            <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 flex-1 min-w-0">
+              <div className="
+                w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 
+                rounded-full bg-blue-500 
+                flex items-center justify-center 
+                text-white font-bold 
+                text-sm sm:text-base
+                flex-shrink-0
+              ">
                 {currentStep}
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <div className="min-w-0 flex-1">
+                <h2 className="
+                  text-base sm:text-lg lg:text-xl xl:text-2xl 
+                  font-semibold text-gray-900 dark:text-white
+                  truncate
+                ">
                   {STEP_TITLES[currentStep - 1]}
                 </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                   Adım {currentStep} / {STEP_TITLES.length}
                   {REQUIRED_STEPS.includes(currentStep) && (
-                    <span className="ml-2 text-red-500 text-xs">* Zorunlu</span>
+                    <span className="ml-1 sm:ml-2 text-red-500 text-xs">* Zorunlu</span>
                   )}
                 </p>
               </div>
@@ -312,7 +340,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 flex-shrink-0 ml-2"
               disabled={isCreating}
             >
               <X className="w-4 h-4" />
@@ -320,17 +348,23 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
           </div>
 
           {/* Progress Bar */}
-          <div className="px-4 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-900">
-            <Progress value={progressPercentage} className="h-2" />
-            <div className="flex justify-between mt-2 text-xs text-gray-500">
-              <span>Başlangıç</span>
-              <span>%{Math.round(progressPercentage)} Tamamlandı</span>
-              <span>Tamamlandı</span>
+          <div className="
+            px-3 sm:px-4 lg:px-6 
+            py-2 sm:py-3 lg:py-4 
+            bg-gray-50 dark:bg-gray-900
+            flex-shrink-0
+          ">
+            <Progress value={progressPercentage} className="h-1.5 sm:h-2" />
+            <div className="flex justify-between mt-1.5 sm:mt-2 text-xs text-gray-500">
+              <span className="hidden sm:inline">Başlangıç</span>
+              <span className="sm:hidden">%{Math.round(progressPercentage)}</span>
+              <span className="hidden sm:inline">%{Math.round(progressPercentage)} Tamamlandı</span>
+              <span className="hidden sm:inline">Tamamlandı</span>
             </div>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto min-h-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -343,8 +377,8 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
                 {isLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                      <p className="mt-2 text-gray-600">Yükleniyor...</p>
+                      <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500 mx-auto"></div>
+                      <p className="mt-2 text-gray-600 text-sm sm:text-base">Yükleniyor...</p>
                     </div>
                   </div>
                 ) : (
@@ -356,34 +390,56 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
 
           {/* Footer Navigation */}
           {currentStep < 11 && (
-            <div className="flex items-center justify-between p-6 border-t bg-gray-50 dark:bg-gray-900">
+            <div className="
+              flex items-center justify-between 
+              p-3 sm:p-4 lg:p-6 
+              border-t bg-gray-50 dark:bg-gray-900
+              flex-shrink-0
+              gap-2 sm:gap-4
+            ">
               <Button
                 variant="outline"
                 onClick={prevStep}
                 disabled={currentStep === 1}
-                className="flex items-center space-x-2"
+                className="
+                  flex items-center space-x-1 sm:space-x-2
+                  px-3 sm:px-4 py-2
+                  text-sm sm:text-base
+                "
               >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Önceki</span>
+                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Önceki</span>
+                <span className="sm:hidden">Geri</span>
               </Button>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClose}
                   disabled={isCreating}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  Çık & Kaydet
+                  <span className="hidden sm:inline">Çık & Kaydet</span>
+                  <span className="sm:hidden">Çık</span>
                 </Button>
                 
                 <Button
                   onClick={nextStep}
                   disabled={!canProceed() || updateSessionMutation.isPending}
-                  className="flex items-center space-x-2"
+                  className="
+                    flex items-center space-x-1 sm:space-x-2
+                    px-3 sm:px-4 py-2
+                    text-sm sm:text-base
+                  "
                 >
-                  <span>{currentStep === 10 ? 'Onaya Git' : 'Devam Et'}</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {currentStep === 10 ? 'Onaya Git' : 'Devam Et'}
+                  </span>
+                  <span className="sm:hidden">
+                    {currentStep === 10 ? 'Onay' : 'İleri'}
+                  </span>
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
             </div>
