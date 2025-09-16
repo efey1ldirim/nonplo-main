@@ -117,12 +117,14 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
     }
 
     const config: RequestInit = {
+      ...options,
       credentials: 'include',
       headers: {
         ...defaultHeaders,
-        ...options.headers,
+        ...(options.headers instanceof Headers
+          ? Object.fromEntries(options.headers.entries())
+          : (options.headers as Record<string, string> | undefined)),
       },
-      ...options,
     };
 
     // Auto-stringify body if Content-Type is application/json and body is an object
