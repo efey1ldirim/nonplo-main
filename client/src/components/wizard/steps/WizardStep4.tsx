@@ -122,7 +122,8 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
+    <div className="w-full h-full overflow-y-auto">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-full">
       <div className="text-center space-y-2">
         <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mx-auto">
           <Globe className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
@@ -231,6 +232,7 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
           Sosyal medya hesaplarınızdaki içerikler analiz edilerek dijital çalışanınızın
           daha kişiselleştirilmiş yanıtlar vermesi sağlanır. Bu adım isteğe bağlıdır.
         </p>
+      </div>
       </div>
     </div>
   );
