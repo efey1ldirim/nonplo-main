@@ -280,13 +280,17 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[95vh] p-0 overflow-hidden">
+        {/* Dialog Description for accessibility */}
+        <div className="sr-only" id="wizard-description">
+          Dijital çalışan oluşturmak için 10 adımlık sihirbaz. Her adımda işletmeniz hakkında bilgi verip, sonunda kişiselleştirilmiş AI asistanınızı alacaksınız.
+        </div>
         <DialogTitle className="sr-only">
           Dijital Çalışan Oluşturma Sihirbazı - {STEP_TITLES[currentStep - 1]}
         </DialogTitle>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+          <div className="flex items-center justify-between p-4 md:p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
                 {currentStep}
@@ -316,7 +320,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
           </div>
 
           {/* Progress Bar */}
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900">
+          <div className="px-4 md:px-6 py-3 md:py-4 bg-gray-50 dark:bg-gray-900">
             <Progress value={progressPercentage} className="h-2" />
             <div className="flex justify-between mt-2 text-xs text-gray-500">
               <span>Başlangıç</span>
