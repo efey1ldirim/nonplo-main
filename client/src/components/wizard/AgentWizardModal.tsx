@@ -364,7 +364,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-4 sm:py-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}

@@ -97,8 +97,7 @@ export default function WizardStep9({ data, onSave, onNext, canProceed }: Wizard
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-full">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <div className="w-16 h-16 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center mx-auto">
           <Heart className="w-8 h-8 text-violet-600 dark:text-violet-400" />
@@ -300,7 +299,6 @@ export default function WizardStep9({ data, onSave, onNext, canProceed }: Wizard
           Kişilik ayarları müşterilerinizin dijital çalışanınızla nasıl bir deneyim yaşayacağını belirler.
           İşletmenizin tarzına uygun seçimler yapın.
         </p>
-      </div>
       </div>
     </div>
   );

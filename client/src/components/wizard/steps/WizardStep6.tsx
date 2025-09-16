@@ -40,8 +40,7 @@ export default function WizardStep6({ data, onSave, onNext, canProceed }: Wizard
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-full">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center mx-auto">
           <Package className="w-8 h-8 text-orange-600 dark:text-orange-400" />
@@ -125,7 +124,6 @@ Kaliteli ürünler kullanarak saçlarınızı sağlıklı tutmaya özen gösteri
         <p className="text-sm text-red-800 dark:text-red-200">
           Bu bilgiler dijital çalışanınızın müşterilerinize doğru bilgi verebilmesi için çok önemlidir.
         </p>
-      </div>
       </div>
     </div>
   );

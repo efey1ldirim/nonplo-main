@@ -40,8 +40,7 @@ export default function WizardStep5({ data, onSave, onNext }: WizardStep5Props) 
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-full">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto">
           <HelpCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
@@ -115,7 +114,6 @@ C: Pazartesi-Cuma 09:00-18:00, Cumartesi 10:00-17:00 saatleri arasında hizmet v
         <p className="text-sm text-blue-800 dark:text-blue-200">
           FAQ'lar dijital çalışanınızın müşteri sorularına daha hızlı ve doğru yanıt vermesini sağlar. Bu adım isteğe bağlıdır.
         </p>
-      </div>
       </div>
     </div>
   );

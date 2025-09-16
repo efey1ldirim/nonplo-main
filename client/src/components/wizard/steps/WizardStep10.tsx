@@ -126,8 +126,7 @@ export default function WizardStep10({ data, onSave, onNext, canProceed }: Wizar
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto">
-      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-full">
+    <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900 rounded-full flex items-center justify-center mx-auto">
           <Search className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
@@ -222,7 +221,6 @@ export default function WizardStep10({ data, onSave, onNext, canProceed }: Wizar
           <li>• Ödeme linkleri için Stripe entegrasyonu kurulmalı</li>
           <li>• Seçilen araçlar sonradan da değiştirilebilir</li>
         </ul>
-      </div>
       </div>
     </div>
   );
