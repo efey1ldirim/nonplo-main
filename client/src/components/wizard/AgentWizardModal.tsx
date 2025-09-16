@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabase';
 
 // Step components
 import WizardStep1 from './steps/WizardStep1';
@@ -56,6 +58,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch or create wizard session
   const { data: session, isLoading } = useQuery({
@@ -68,12 +71,42 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
     enabled: !!wizardSessionId && isOpen,
   });
 
-  // Create new wizard session when modal opens
+  // Check authentication and create wizard session when modal opens
   useEffect(() => {
     if (isOpen && !wizardSessionId) {
-      createSession();
+      checkAuthAndCreateSession();
     }
   }, [isOpen]);
+
+  const checkAuthAndCreateSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+
+      if (!user) {
+        // User is not authenticated, close modal and redirect to auth
+        onClose();
+        navigate(`/auth?next=${encodeURIComponent('/?openNewWizard=1')}`);
+        toast({
+          title: "Giriş Gerekli",
+          description: "Wizard'ı kullanabilmek için önce giriş yapmanız gerekiyor",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // User is authenticated, create session
+      createSession();
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      onClose();
+      toast({
+        title: "Hata",
+        description: "Kimlik doğrulama kontrolü yapılamadı",
+        variant: "destructive"
+      });
+    }
+  };
 
   const createSessionMutation = useMutation({
     mutationFn: async () => {
@@ -248,6 +281,9 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden">
+        <DialogTitle className="sr-only">
+          Dijital Çalışan Oluşturma Sihirbazı - {STEP_TITLES[currentStep - 1]}
+        </DialogTitle>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
