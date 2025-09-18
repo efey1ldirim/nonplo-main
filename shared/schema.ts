@@ -532,8 +532,8 @@ export type CalendarOperation = typeof calendarOperations.$inferSelect;
 
 // Agent wizard sessions - tracks the 10-step wizard progress
 export const agentWizardSessions = pgTable("agent_wizard_sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   
   // Step 1: Business Name & Industry (Required)
   businessName: text("business_name"),
@@ -591,8 +591,8 @@ export const agentWizardSessions = pgTable("agent_wizard_sessions", {
 
 // Agent wizard files - manages uploaded training files
 export const agentWizardFiles = pgTable("agent_wizard_files", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  wizardSessionId: uuid("wizard_session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
   
   fileName: text("file_name").notNull(),
   originalName: text("original_name").notNull(),
@@ -616,8 +616,8 @@ export const agentWizardFiles = pgTable("agent_wizard_files", {
 
 // Agent wizard events - tracks progress and actions
 export const agentWizardEvents = pgTable("agent_wizard_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  wizardSessionId: uuid("wizard_session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => agentWizardSessions.id, { onDelete: 'cascade' }),
   
   eventType: text("event_type").notNull(), // step_completed, file_uploaded, social_scraped, agent_created, error
   stepNumber: integer("step_number"), // 1-10 for step events
@@ -661,7 +661,7 @@ export const insertAgentWizardSessionSchema = createInsertSchema(agentWizardSess
 });
 
 export const insertAgentWizardFileSchema = createInsertSchema(agentWizardFiles).pick({
-  wizardSessionId: true,
+  sessionId: true,
   fileName: true,
   originalName: true,
   fileSize: true,
@@ -676,7 +676,7 @@ export const insertAgentWizardFileSchema = createInsertSchema(agentWizardFiles).
 });
 
 export const insertAgentWizardEventSchema = createInsertSchema(agentWizardEvents).pick({
-  wizardSessionId: true,
+  sessionId: true,
   eventType: true,
   stepNumber: true,
   eventData: true,

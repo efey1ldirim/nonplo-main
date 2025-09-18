@@ -3426,7 +3426,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
 
       // Log event
       await storage.logWizardEvent({
-        wizardSessionId: sessionId,
+        sessionId: sessionId,
         eventType: 'agent_creation_started',
         success: true,
         eventData: {}
@@ -3444,7 +3444,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
 
       // Log success event
       await storage.logWizardEvent({
-        wizardSessionId: sessionId,
+        sessionId: sessionId,
         eventType: 'agent_created',
         success: true,
         eventData: { agentId: createdAgent.id, agentName: createdAgent.name }
@@ -3470,7 +3470,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
         
         // Log error event
         await storage.logWizardEvent({
-          wizardSessionId: req.params.sessionId,
+          sessionId: req.params.sessionId,
           eventType: 'agent_creation_error',
           success: false,
           errorMessage: error.message,

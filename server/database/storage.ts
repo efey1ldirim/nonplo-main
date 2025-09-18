@@ -1390,7 +1390,7 @@ export class DatabaseStorage implements IStorage {
   async getWizardFiles(sessionId: string): Promise<AgentWizardFile[]> {
     return await db.select()
       .from(agentWizardFiles)
-      .where(eq(agentWizardFiles.wizardSessionId, sessionId))
+      .where(eq(agentWizardFiles.sessionId, sessionId))
       .orderBy(desc(agentWizardFiles.createdAt));
   }
 
@@ -1422,7 +1422,7 @@ export class DatabaseStorage implements IStorage {
   async getWizardEvents(sessionId: string): Promise<AgentWizardEvent[]> {
     return await db.select()
       .from(agentWizardEvents)
-      .where(eq(agentWizardEvents.wizardSessionId, sessionId))
+      .where(eq(agentWizardEvents.sessionId, sessionId))
       .orderBy(desc(agentWizardEvents.createdAt));
   }
 }
