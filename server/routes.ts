@@ -1017,7 +1017,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
-  app.delete("/api/agents/:id", authenticate, rateLimiters.api, auditMiddleware, async (req: AuthenticatedRequest, res) => {
+  app.delete("/api/agents/:id", authenticate, rateLimiters.api, auditMiddleware(), async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
       const userId = getUserId(req);
