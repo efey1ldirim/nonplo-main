@@ -37,11 +37,9 @@ const AppContent = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AppContent />
     </QueryClientProvider>
   </ErrorBoundary>
 );

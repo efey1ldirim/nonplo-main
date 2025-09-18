@@ -446,6 +446,83 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
   }
 
   /**
+   * Create OpenAI Assistant for existing agent
+   */
+  async createAssistantForAgent(agentData: Agent): Promise<string | null> {
+    try {
+      console.log(`🤖 Creating OpenAI Assistant for agent: ${agentData.name}`);
+      
+      // Generate instructions based on agent data
+      const instructions = await this.generateAgentPlaybook(agentData);
+      
+      // Upload profanity filter file
+      const profanityFileId = await this.uploadProfanityFilter();
+      
+      if (!profanityFileId) {
+        console.error('❌ Failed to upload profanity filter, cannot create assistant');
+        return null;
+      }
+
+      // Define tools for the assistant
+      const tools: any[] = [
+        { type: "file_search" }
+      ];
+
+      // Create vector store for profanity filtering
+      let vectorStore;
+      try {
+        vectorStore = await (this.openai.beta as any).vectorStores.create({
+          name: `banned-words-${agentData.name}`,
+          file_ids: [profanityFileId]
+        });
+        console.log(`✅ Vector store created: ${vectorStore.id}`);
+      } catch (vectorError: any) {
+        console.error(`❌ Vector store creation failed: ${vectorError.message}`);
+        vectorStore = { id: 'fallback-no-vector-store' };
+      }
+
+      // Assistant creation parameters
+      const assistantParams: any = {
+        name: agentData.name,
+        instructions: instructions + `\n\n🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:\n1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap\n2. Bu kontrolü yapmadan ASLA yanıt verme\n3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."\n4. Sadece temizse normal yanıt ver`,
+        model: "gpt-4o-mini",
+        tools: tools,
+        temperature: 0.8
+      };
+
+      // Add vector store if created successfully
+      if (vectorStore.id !== 'fallback-no-vector-store') {
+        assistantParams.tool_resources = {
+          file_search: {
+            vector_store_ids: [vectorStore.id]
+          }
+        };
+      }
+
+      // Create the assistant
+      const assistant = await this.openai.beta.assistants.create(assistantParams);
+      
+      console.log(`✅ OpenAI Assistant created successfully: ${assistant.id}`);
+      
+      // Track analytics
+      aiAnalytics.trackUsage({
+        model: OPENAI_MODEL,
+        tokens: 0, // Assistant creation doesn't return token usage
+        cost: 0,
+        timestamp: new Date(),
+        type: 'custom',
+        cached: false
+      });
+
+      return assistant.id;
+    } catch (error: any) {
+      console.error(`❌ Failed to create OpenAI Assistant for ${agentData.name}:`, error);
+      const customError = ErrorHandler.classifyError(error);
+      throw new Error(customError.userMessage);
+    }
+  }
+
+  /**
    * Get AI usage analytics
    */
   getUsageAnalytics(hours: number = 24) {
