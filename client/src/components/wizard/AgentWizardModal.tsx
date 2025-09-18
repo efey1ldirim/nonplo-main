@@ -417,17 +417,6 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
 
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClose}
-                  disabled={isCreating}
-                  className="text-xs sm:text-sm px-2 sm:px-3"
-                >
-                  <span className="hidden sm:inline">Çık & Kaydet</span>
-                  <span className="sm:hidden">Çık</span>
-                </Button>
-                
-                <Button
                   onClick={nextStep}
                   disabled={!canProceed() || updateSessionMutation.isPending}
                   className="
