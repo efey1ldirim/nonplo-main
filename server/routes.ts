@@ -1016,12 +1016,11 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
-  app.delete("/api/agents/:id", async (req, res) => {
+  app.delete("/api/agents/:id", authenticate, rateLimiters.api, auditMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
-      const userId = req.body.userId;
+      const userId = getUserId(req);
       console.log(`🗑️ DELETE Agent Request - Agent ID: ${id}, User ID: ${userId}`);
-      console.log("DELETE request body:", JSON.stringify(req.body, null, 2));
       
       if (!userId) {
         console.error("❌ User ID missing in delete request");
