@@ -335,16 +335,6 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
                 </p>
               </div>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="text-gray-500 hover:text-gray-700 flex-shrink-0 ml-2"
-              disabled={isCreating}
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
 
           {/* Progress Bar */}
