@@ -3449,9 +3449,15 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       });
 
       // Create OpenAI Assistant for the new agent
+      console.log(`🔧 Starting OpenAI Assistant creation for agent: ${createdAgent.name}`);
       try {
+        console.log(`📦 Importing OpenAIService...`);
         const { openaiService } = await import('./services/OpenAIService');
+        console.log(`✅ OpenAIService imported successfully`);
+        
+        console.log(`🤖 Calling createAssistantForAgent...`);
         const assistantId = await openaiService.createAssistantForAgent(createdAgent);
+        console.log(`🎯 createAssistantForAgent returned: ${assistantId}`);
         
         if (assistantId) {
           // Update agent with OpenAI Assistant ID
