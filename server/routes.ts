@@ -11,6 +11,7 @@ import { cacheMiddleware, cacheManager } from "./performance/cacheManager";
 import * as monitoring from "./routes/monitoring";
 import { calendarMonitoring, validateCalendarRequest, getCalendarAnalytics, calendarErrorAlert } from "./middleware/calendarMonitoring";
 import { sanitizeRequest } from "./middleware/security";
+import { auditMiddleware } from "./middleware/auditLogger";
 import { chatWithAgent, getChatHistory, getMessages, GCAL_TOOLS, WEB_SEARCH_TOOLS } from "./routes/chat";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
