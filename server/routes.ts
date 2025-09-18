@@ -3435,11 +3435,86 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       // Create the agent using existing method
       const createdAgent = await storage.createAgentFromWizard(userId, session);
 
-      // Update session with success
+      // Update progress for OpenAI Assistant creation
+      await storage.updateWizardSession(sessionId, userId, { 
+        buildProgress: { step: 6, message: 'Creating OpenAI Assistant...' }
+      });
+
+      // Log assistant creation start
+      await storage.logWizardEvent({
+        sessionId: sessionId,
+        eventType: 'openai_assistant_creation_started',
+        success: true,
+        eventData: { agentId: createdAgent.id }
+      });
+
+      // Create OpenAI Assistant for the new agent
+      try {
+        const { openaiService } = await import('./services/OpenAIService');
+        const assistantId = await openaiService.createAssistantForAgent(createdAgent);
+        
+        if (assistantId) {
+          // Update agent with OpenAI Assistant ID
+          await storage.updateAgent(createdAgent.id, userId, {
+            openaiAssistantId: assistantId,
+            openaiModel: 'gpt-4o-mini',
+            openaiInstructions: 'Created by wizard system'
+          });
+
+          console.log(`✅ OpenAI Assistant created for ${createdAgent.name}: ${assistantId}`);
+          
+          // Log success
+          await storage.logWizardEvent({
+            sessionId: sessionId,
+            eventType: 'openai_assistant_created',
+            success: true,
+            eventData: { agentId: createdAgent.id, assistantId: assistantId }
+          });
+
+          // Update progress
+          await storage.updateWizardSession(sessionId, userId, { 
+            buildProgress: { step: 7, message: 'OpenAI Assistant created successfully' }
+          });
+        } else {
+          console.error(`❌ Failed to create OpenAI Assistant for ${createdAgent.name}`);
+          
+          // Log failure but don't fail the entire creation
+          await storage.logWizardEvent({
+            sessionId: sessionId,
+            eventType: 'openai_assistant_creation_failed',
+            success: false,
+            errorMessage: 'Assistant creation returned null',
+            eventData: { agentId: createdAgent.id }
+          });
+
+          // Update progress with warning
+          await storage.updateWizardSession(sessionId, userId, { 
+            buildProgress: { step: 7, message: 'Warning: OpenAI Assistant creation failed, but agent created successfully' }
+          });
+        }
+      } catch (assistantError: any) {
+        console.error(`❌ Error creating OpenAI Assistant for ${createdAgent.name}:`, assistantError);
+        
+        // Log error but don't fail the entire creation
+        await storage.logWizardEvent({
+          sessionId: sessionId,
+          eventType: 'openai_assistant_creation_error',
+          success: false,
+          errorMessage: assistantError.message,
+          eventData: { agentId: createdAgent.id }
+        });
+
+        // Update progress with warning  
+        await storage.updateWizardSession(sessionId, userId, { 
+          buildProgress: { step: 7, message: `Warning: ${assistantError.message}, but agent created successfully` }
+        });
+      }
+
+      // Update session with final success
       await storage.updateWizardSession(sessionId, userId, { 
         status: 'completed',
         createdAgentId: createdAgent.id,
-        buildProgress: { step: 8, message: 'Agent created successfully' }
+        buildProgress: { step: 8, message: 'Agent and OpenAI Assistant created successfully' }
       });
 
       // Log success event
