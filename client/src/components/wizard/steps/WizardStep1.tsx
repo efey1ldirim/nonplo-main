@@ -229,29 +229,8 @@ export default function WizardStep1({ data, onSave, onNext, canProceed }: Wizard
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={!canProceed}
-              className="min-w-32"
-              data-testid="button-next-step1"
-            >
-              Devam Et
-            </Button>
-          </div>
         </form>
       </Form>
-
-      {/* Help Text */}
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
-        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-          💡 İpucu
-        </h4>
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          İşletme adınız müşterilerinizin sizi tanıyacağı isimdir. 
-          Sektör seçiminiz dijital çalışanınızın size özel yanıtlar verebilmesi için önemlidir.
-        </p>
-      </div>
     </div>
   );
 }

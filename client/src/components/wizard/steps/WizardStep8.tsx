@@ -128,25 +128,9 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
               <Sparkles className="w-4 h-4" />
               <span>AI ile Optimize Et</span>
             </Button>
-            <Button
-              type="submit"
-              disabled={!canProceed}
-              className="min-w-32"
-              data-testid="button-next-step8"
-            >
-              Devam Et
-            </Button>
           </div>
         </form>
       </Form>
-
-      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <h4 className="font-medium text-red-900 dark:text-red-100 mb-2">⚠️ Önemli</h4>
-        <p className="text-sm text-red-800 dark:text-red-200">
-          Görev tanımı ne kadar detaylı olursa dijital çalışanınız o kadar etkili olur.
-          Müşterilerle nasıl iletişim kurmasını istediğinizi açıkça belirtin.
-        </p>
-      </div>
     </div>
   );
 }

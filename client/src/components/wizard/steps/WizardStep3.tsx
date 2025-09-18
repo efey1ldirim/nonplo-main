@@ -267,28 +267,8 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={!canProceed}
-              className="min-w-32"
-              data-testid="button-next-step3"
-            >
-              Devam Et
-            </Button>
-          </div>
         </form>
       </Form>
-
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-          💡 İpucu
-        </h4>
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          Çalışma saatleriniz dijital çalışanınızın müşterilerinize ne zaman yanıt verebileceğini belirler.
-          Kapalı olduğunuz saatlerde otomatik mesajlar gönderilir.
-        </p>
-      </div>
     </div>
   );
 }

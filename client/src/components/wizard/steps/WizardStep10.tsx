@@ -202,26 +202,8 @@ export default function WizardStep10({ data, onSave, onNext, canProceed }: Wizar
             </Card>
           ))}
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              className="min-w-32"
-              data-testid="button-next-step10"
-            >
-              Onaya Git
-            </Button>
-          </div>
         </form>
       </Form>
-
-      <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-        <h4 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">⚠️ Önemli Notlar</h4>
-        <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-          <li>• Google Takvim ve Gmail için ayrıca hesap bağlantısı yapmanız gerekecek</li>
-          <li>• Ödeme linkleri için Stripe entegrasyonu kurulmalı</li>
-          <li>• Seçilen araçlar sonradan da değiştirilebilir</li>
-        </ul>
-      </div>
     </div>
   );
 }

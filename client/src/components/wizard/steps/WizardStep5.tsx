@@ -102,19 +102,9 @@ C: Pazartesi-Cuma 09:00-18:00, Cumartesi 10:00-17:00 saatleri arasında hizmet v
               <Sparkles className="w-4 h-4" />
               <span>AI ile Optimize Et</span>
             </Button>
-            <Button type="submit" data-testid="button-next-step5">
-              Devam Et
-            </Button>
           </div>
         </form>
       </Form>
-
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">💡 İpucu</h4>
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          FAQ'lar dijital çalışanınızın müşteri sorularına daha hızlı ve doğru yanıt vermesini sağlar. Bu adım isteğe bağlıdır.
-        </p>
-      </div>
     </div>
   );
 }

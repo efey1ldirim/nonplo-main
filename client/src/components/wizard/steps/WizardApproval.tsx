@@ -307,15 +307,6 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
         </Button>
       </div>
 
-      <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-        <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">
-          🎉 Harika! Neredeyse tamam
-        </h4>
-        <p className="text-sm text-green-800 dark:text-green-200">
-          Dijital çalışanınız birkaç dakika içinde hazır olacak. Oluşturulduktan sonra
-          entegrasyonlar sayfasına yönlendirileceksiniz.
-        </p>
-      </div>
     </div>
   );
 }
