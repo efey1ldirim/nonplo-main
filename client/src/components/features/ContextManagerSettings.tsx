@@ -4,8 +4,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Brain, Activity, TrendingUp, Settings2 } from "lucide-react";
+import { Brain, Activity, TrendingUp, Settings2, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ContextManagerStats {
   enabled: boolean;
@@ -25,22 +26,37 @@ interface ContextManagerStats {
 }
 
 const ContextManagerSettings = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<ContextManagerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [authError, setAuthError] = useState(false);
   const { toast } = useToast();
 
   // Context Manager stats'larını yükle
   const loadStats = async () => {
+    if (!user) {
+      setAuthError(true);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setAuthError(false);
       const response = await fetch('/api/context-manager/stats');
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else if (response.status === 401) {
+        setAuthError(true);
+        console.error('Authentication required for Context Manager stats');
       } else {
-        console.error('Failed to load Context Manager stats');
+        console.error('Failed to load Context Manager stats:', response.status);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message?.includes('Authentication required')) {
+        setAuthError(true);
+      }
       console.error('Error loading Context Manager stats:', error);
     } finally {
       setLoading(false);
@@ -84,10 +100,48 @@ const ContextManagerSettings = () => {
   };
 
   useEffect(() => {
-    loadStats();
-  }, []);
+    if (!authLoading) {
+      loadStats();
+    }
+  }, [user, authLoading]);
 
-  if (loading) {
+  // Authentication required state
+  if (authError || !user) {
+    return (
+      <Card data-testid="card-context-manager-auth">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-muted-foreground" />
+            Context Manager
+            <Badge variant="secondary" data-testid="badge-status">
+              Giriş Gerekli
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Context Manager ayarlarına erişmek için giriş yapın
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <LogIn className="h-4 w-4" />
+            <span>Lütfen hesabınıza giriş yapın</span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => window.location.href = '/auth'}
+            data-testid="button-login"
+          >
+            <LogIn className="h-4 w-4 mr-2" />
+            Giriş Yap
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loading || authLoading) {
     return (
       <Card data-testid="card-context-manager-loading">
         <CardHeader>

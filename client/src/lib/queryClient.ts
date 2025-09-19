@@ -22,7 +22,7 @@ const defaultQueryFn = async ({ queryKey, signal }: { queryKey: readonly unknown
     } else {
       console.log('❌ No auth token available for query');
       // Don't fall back to test token anymore - require real authentication for protected routes
-      if (url.includes('/api/wizard') || url.includes('/api/agents') || url.includes('/api/chat')) {
+      if (url.includes('/api/wizard') || url.includes('/api/agents') || url.includes('/api/chat') || url.includes('/api/context-manager')) {
         throw new Error('Authentication required - please log in');
       }
     }
