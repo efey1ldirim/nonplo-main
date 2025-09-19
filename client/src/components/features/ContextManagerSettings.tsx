@@ -43,30 +43,21 @@ const ContextManagerSettings = () => {
 
     try {
       setAuthError(false);
-      // Use apiRequest from queryClient to handle authentication properly
-      const data = await fetch('/api/context-manager/stats', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${user?.session?.access_token || user?.access_token || ''}`,
-          'Content-Type': 'application/json'
-        }
+      
+      // Import ApiClient dinamik olarak
+      const { ApiClient } = await import('@/lib/api');
+      const data = await ApiClient.request('/context-manager/stats', {
+        method: 'GET'
       });
 
-      if (data.ok) {
-        const stats = await data.json();
-        setStats(stats);
-      } else if (data.status === 401) {
+      setStats(data as ContextManagerStats);
+    } catch (error: any) {
+      if (error.message?.includes('401') || error.message?.includes('Authentication required')) {
         setAuthError(true);
         console.error('Authentication required for Context Manager stats');
       } else {
-        console.error('Failed to load Context Manager stats:', data.status);
+        console.error('Error loading Context Manager stats:', error);
       }
-    } catch (error: any) {
-      if (error.message?.includes('Authentication required')) {
-        setAuthError(true);
-      }
-      console.error('Error loading Context Manager stats:', error);
     } finally {
       setLoading(false);
     }
@@ -81,26 +72,22 @@ const ContextManagerSettings = () => {
     
     setToggling(true);
     try {
-      const response = await fetch('/api/context-manager/toggle', {
+      // Import ApiClient dinamik olarak
+      const { ApiClient } = await import('@/lib/api');
+      const updatedStats = await ApiClient.request('/context-manager/toggle', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${user?.session?.access_token || user?.access_token || ''}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ enabled }),
       });
 
-      if (response.ok) {
-        const updatedStats = await response.json();
-        setStats(updatedStats);
-        toast({
-          title: enabled ? "Context Manager Etkinleştirildi" : "Context Manager Devre Dışı Bırakıldı",
-          description: enabled 
-            ? "Token optimizasyonu ve akıllı özet sistemi aktif." 
-            : "Token optimizasyonu devre dışı bırakıldı.",
-        });
-      } else if (response.status === 401) {
+      setStats(updatedStats as ContextManagerStats);
+      toast({
+        title: enabled ? "Context Manager Etkinleştirildi" : "Context Manager Devre Dışı Bırakıldı",
+        description: enabled 
+          ? "Token optimizasyonu ve akıllı özet sistemi aktif." 
+          : "Token optimizasyonu devre dışı bırakıldı.",
+      });
+    } catch (error: any) {
+      if (error.message?.includes('401') || error.message?.includes('Authentication required')) {
         setAuthError(true);
         toast({
           title: "Giriş Gerekli",
@@ -108,15 +95,13 @@ const ContextManagerSettings = () => {
           variant: "destructive",
         });
       } else {
-        throw new Error('Failed to toggle Context Manager');
+        console.error('Error toggling Context Manager:', error);
+        toast({
+          title: "Hata",
+          description: "Context Manager ayarı değiştirilemedi.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Error toggling Context Manager:', error);
-      toast({
-        title: "Hata",
-        description: "Context Manager ayarı değiştirilemedi.",
-        variant: "destructive",
-      });
     } finally {
       setToggling(false);
     }
@@ -125,8 +110,22 @@ const ContextManagerSettings = () => {
   useEffect(() => {
     if (!authLoading && user) {
       loadStats();
+    } else if (!authLoading && !user) {
+      setAuthError(true);
+      setLoading(false);
     }
   }, [user, authLoading]);
+
+  // Her 30 saniyede bir stats'ları otomatik güncelle (sadece component aktifken ve user varken)
+  useEffect(() => {
+    if (!user || authError || authLoading) return;
+    
+    const interval = setInterval(() => {
+      loadStats();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user, authError, authLoading]);
 
   // Authentication required state
   if (authError || !user) {
