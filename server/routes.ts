@@ -13,6 +13,15 @@ import { calendarMonitoring, validateCalendarRequest, getCalendarAnalytics, cale
 import { sanitizeRequest } from "./middleware/security";
 import { auditMiddleware } from "./middleware/auditLogger";
 import { chatWithAgent, getChatHistory, getMessages, GCAL_TOOLS, WEB_SEARCH_TOOLS } from "./routes/chat";
+import { 
+  getContextManagerStatus, 
+  toggleContextManager, 
+  getContextManagerStats, 
+  triggerOptimization, 
+  updateContextManagerSettings, 
+  clearContextManagerCache, 
+  getContextManagerHealth 
+} from "./routes/context-manager";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import OpenAI from "openai";
@@ -122,6 +131,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/monitoring/query-metrics', monitoring.clearQueryMetrics);
   app.post('/api/monitoring/load-test', monitoring.runLoadTest);
   app.post('/api/monitoring/e2e-test', monitoring.runE2ETests);
+
+  // Context Manager endpoints (protected with authentication)
+  app.get('/api/context-manager/status', authenticate, getContextManagerStatus);
+  app.post('/api/context-manager/toggle', authenticate, toggleContextManager);
+  app.get('/api/context-manager/stats', authenticate, getContextManagerStats);
+  app.post('/api/context-manager/optimize', authenticate, triggerOptimization);
+  app.post('/api/context-manager/settings', authenticate, updateContextManagerSettings);
+  app.post('/api/context-manager/clear-cache', authenticate, clearContextManagerCache);
+  app.get('/api/context-manager/health', getContextManagerHealth); // No auth required for health check
 
   // Newsletter subscription
   app.post("/api/newsletter/subscribe", rateLimiters.api, async (req, res) => {

@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { storage } from '../database/storage';
 import { CalendarService } from '../services/CalendarService';
 import { v4 as uuidv4 } from 'uuid';
+import { contextManager } from '../context';
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -222,13 +223,6 @@ export const chatWithAgent = async (req: any, res: Response) => {
       console.log('💾 User message stored in database');
     }
 
-    // Add user message to OpenAI thread
-    await openai.beta.threads.messages.create(currentThreadId!, {
-      role: 'user',
-      content: finalMessage,
-    });
-    console.log('📤 User message added to OpenAI thread');
-
     // Get agent tool settings to determine which tools to enable
     const agentTools = await storage.getAgentToolSettings(userId, agentId);
     console.log('🔧 Agent tool settings:', agentTools);
@@ -276,6 +270,45 @@ export const chatWithAgent = async (req: any, res: Response) => {
     } else {
       console.log('⚠️ No forbidden words vector store ID found for agent');
     }
+
+    // 🧠 Context Manager Integration - Prepare thread for optimal token usage
+    let contextResult;
+    try {
+      contextResult = await contextManager.prepareThreadForRun({
+        threadId: currentThreadId,
+        assistantId,
+        newUserMessage: finalMessage,
+        userId,
+        agentId
+      });
+      
+      // Update threadId based on Context Manager action
+      if (contextResult.action === 'new_thread_with_summary') {
+        currentThreadId = contextResult.threadId;
+        console.log(`🧠 Context Manager created new thread with summary: ${currentThreadId}`);
+        console.log(`📊 Context Manager stats: ${contextResult.diagnostics.originalTokens} → ${contextResult.diagnostics.finalTokens} tokens (${contextResult.diagnostics.reductionPercentage}% reduction)`);
+        
+        // Update conversation record with new threadId
+        if (conversation) {
+          await storage.updateConversation(conversation.id, { threadId: currentThreadId });
+          console.log('💾 Conversation updated with new threadId');
+        }
+      } else if (contextResult.action === 'reuse_thread') {
+        console.log(`🧠 Context Manager reusing existing thread: ${currentThreadId}`);
+      } else {
+        console.log(`🧠 Context Manager passthrough mode`);
+      }
+    } catch (contextError: any) {
+      console.error('❌ Context Manager error, proceeding with original thread:', contextError);
+      // Continue with original flow if Context Manager fails
+    }
+
+    // Add user message to the current thread (determined by Context Manager)
+    await openai.beta.threads.messages.create(currentThreadId!, {
+      role: 'user',
+      content: finalMessage,
+    });
+    console.log('📤 User message added to OpenAI thread');
 
     // Start OpenAI run with combined instructions and tool resources
     let run = await openai.beta.threads.runs.create(currentThreadId!, {
