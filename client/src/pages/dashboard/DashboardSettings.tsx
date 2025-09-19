@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Settings, Shield, Bell, Database } from "lucide-react";
+import ContextManagerSettings from "@/components/features/ContextManagerSettings";
 
 const DashboardSettings = () => {
   return (
@@ -75,6 +76,9 @@ const DashboardSettings = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* Context Manager Settings */}
+        <ContextManagerSettings />
       </div>
 
       {/* Coming Soon Notice */}
