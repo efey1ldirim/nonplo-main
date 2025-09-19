@@ -18,9 +18,15 @@ export class ApiClient {
     };
 
     if (!skipAuth) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        } else {
+        }
+      } catch (error) {
+        console.error('Error getting Supabase session:', error);
       }
     }
 
@@ -51,11 +57,18 @@ export class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(error.error || `HTTP ${response.status}`);
+        const errorText = await response.text();
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        } catch (parseError) {
+          throw new Error(errorText || `HTTP ${response.status}: ${response.statusText}`);
+        }
       }
 
-      return response.json();
+      const responseData = await response.json();
+      return responseData;
     } catch (error) {
       // Handle network errors gracefully
       if (error instanceof Error) {

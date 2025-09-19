@@ -9,20 +9,62 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ContextManagerStats {
-  enabled: boolean;
-  liveBudget: number;
-  hardCap: number;
-  usage?: {
+  overview: {
+    enabled: boolean;
+    optimizationLevel: string;
+  };
+  settings: {
+    enabled: boolean;
+    liveBudget: number;
+    hardCap: number;
+    autoOptimize: boolean;
+    enablePiiStripping: boolean;
+    debugMode: boolean;
+    usage: {
+      totalTokensUsed: number;
+      totalCost: number;
+      requestCount: number;
+      lastReset: string;
+    };
+    storeStats: {
+      settingsFileExists: boolean;
+      backupFileExists: boolean;
+      settingsFileSize: number;
+      lastModified: string;
+      cacheHit: boolean;
+    };
+  };
+  usage: {
     totalTokensUsed: number;
     totalCost: number;
     requestCount: number;
     lastReset: string;
   };
-  diagnostics?: {
-    totalOptimizations: number;
-    averageReduction: number;
-    lastOptimization: string;
+  components: {
+    tokenizer: {
+      cacheSize: number;
+      cacheHitRate: number;
+      encoderAvailable: boolean;
+    };
+    summarizer: {
+      cacheSize: number;
+      totalSummaries: number;
+      averageCompressionRatio: number;
+      totalProcessingTime: number;
+    };
+    optimizer: {
+      cacheSize: number;
+      lastOptimization: string | null;
+      metricsCount: number;
+      currentLevel: string | null;
+    };
   };
+  projections: {
+    daily: { tokens: number; cost: number; requests: number; };
+    weekly: { tokens: number; cost: number; requests: number; };
+    monthly: { tokens: number; cost: number; requests: number; };
+  };
+  timestamp: string;
 }
 
 const ContextManagerSettings = () => {
@@ -35,9 +77,11 @@ const ContextManagerSettings = () => {
 
   // Context Manager stats'larını yükle
   const loadStats = async () => {
-    if (!user) {
-      setAuthError(true);
-      setLoading(false);
+    if (!user || authLoading) {
+      if (!authLoading) {
+        setAuthError(true);
+        setLoading(false);
+      }
       return;
     }
 
@@ -46,17 +90,21 @@ const ContextManagerSettings = () => {
       
       // Import ApiClient dinamik olarak
       const { ApiClient } = await import('@/lib/api');
-      const data = await ApiClient.request('/context-manager/stats', {
+      const response = await ApiClient.request('/context-manager/stats', {
         method: 'GET'
       });
 
-      setStats(data as ContextManagerStats);
+      
+      // Backend returns { success: true, data: {...} } format
+      const stats = response.success ? response.data : response;
+      setStats(stats as ContextManagerStats);
     } catch (error: any) {
+      console.error('Error loading Context Manager stats:', error);
       if (error.message?.includes('401') || error.message?.includes('Authentication required')) {
         setAuthError(true);
         console.error('Authentication required for Context Manager stats');
       } else {
-        console.error('Error loading Context Manager stats:', error);
+        console.error('Unexpected error:', error);
       }
     } finally {
       setLoading(false);
@@ -65,21 +113,26 @@ const ContextManagerSettings = () => {
 
   // Context Manager'ı aç/kapat
   const toggleContextManager = async (enabled: boolean) => {
-    if (!user) {
+    if (!user || authLoading) {
       setAuthError(true);
       return;
     }
     
     setToggling(true);
     try {
+      
       // Import ApiClient dinamik olarak
       const { ApiClient } = await import('@/lib/api');
-      const updatedStats = await ApiClient.request('/context-manager/toggle', {
+      const response = await ApiClient.request('/context-manager/toggle', {
         method: 'POST',
         body: JSON.stringify({ enabled }),
       });
 
+      
+      // Backend returns { success: true, data: {...} } format
+      const updatedStats = response.success ? response.data : response;
       setStats(updatedStats as ContextManagerStats);
+      
       toast({
         title: enabled ? "Context Manager Etkinleştirildi" : "Context Manager Devre Dışı Bırakıldı",
         description: enabled 
@@ -87,6 +140,7 @@ const ContextManagerSettings = () => {
           : "Token optimizasyonu devre dışı bırakıldı.",
       });
     } catch (error: any) {
+      console.error('Error toggling Context Manager:', error);
       if (error.message?.includes('401') || error.message?.includes('Authentication required')) {
         setAuthError(true);
         toast({
@@ -95,7 +149,6 @@ const ContextManagerSettings = () => {
           variant: "destructive",
         });
       } else {
-        console.error('Error toggling Context Manager:', error);
         toast({
           title: "Hata",
           description: "Context Manager ayarı değiştirilemedi.",
@@ -108,23 +161,30 @@ const ContextManagerSettings = () => {
   };
 
   useEffect(() => {
-    if (!authLoading && user) {
-      loadStats();
-    } else if (!authLoading && !user) {
-      setAuthError(true);
-      setLoading(false);
+    
+    if (!authLoading) {
+      if (user) {
+        loadStats();
+      } else {
+        setAuthError(true);
+        setLoading(false);
+      }
     }
   }, [user, authLoading]);
 
   // Her 30 saniyede bir stats'ları otomatik güncelle (sadece component aktifken ve user varken)
   useEffect(() => {
-    if (!user || authError || authLoading) return;
+    if (!user || authError || authLoading) {
+      return;
+    }
     
     const interval = setInterval(() => {
       loadStats();
     }, 30000);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+    };
   }, [user, authError, authLoading]);
 
   // Authentication required state
