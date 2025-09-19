@@ -82,7 +82,8 @@ export class CacheManager {
     let count = 0;
     const regex = new RegExp(pattern);
 
-    for (const key of this.cache.keys()) {
+    const keys = Array.from(this.cache.keys());
+    for (const key of keys) {
       if (regex.test(key)) {
         this.cache.delete(key);
         count++;
@@ -125,7 +126,8 @@ export class CacheManager {
     let oldestEntry = now;
     let memoryUsage = 0;
 
-    for (const key of this.cache.keys()) {
+    const keys = Array.from(this.cache.keys());
+    for (const key of keys) {
       const entry = this.cache.get(key)!;
       oldestEntry = Math.min(oldestEntry, entry.timestamp);
       memoryUsage += this.estimateSize(key, entry);
@@ -164,7 +166,8 @@ export class CacheManager {
     const now = Date.now();
     let expiredCount = 0;
 
-    for (const key of this.cache.keys()) {
+    const keys = Array.from(this.cache.keys());
+    for (const key of keys) {
       const entry = this.cache.get(key)!;
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
@@ -181,7 +184,8 @@ export class CacheManager {
     let oldestKey: string | null = null;
     let oldestAccess = Date.now();
 
-    for (const key of this.cache.keys()) {
+    const keys = Array.from(this.cache.keys());
+    for (const key of keys) {
       const entry = this.cache.get(key)!;
       if (entry.lastAccess < oldestAccess) {
         oldestAccess = entry.lastAccess;
