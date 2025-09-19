@@ -33,7 +33,7 @@ export class Store {
   constructor() {
     this.settingsPath = path.resolve(STORE_CONFIG.SETTINGS_FILE);
     this.backupPath = path.resolve(STORE_CONFIG.BACKUP_FILE);
-    this.ensureDirectoryExists();
+    // Directory creation will be handled lazily in loadSettings
   }
 
   /**
@@ -47,6 +47,9 @@ export class Store {
         return this.cachedSettings;
       }
 
+      // Directory'nin var olduğunu garantile
+      await this.ensureDirectoryExists();
+
       const data = await fs.readFile(this.settingsPath, 'utf-8');
       const settings = JSON.parse(data) as ContextManagerSettings;
       
@@ -59,8 +62,10 @@ export class Store {
       return completeSettings;
     } catch (error: any) {
       if (error.code === 'ENOENT') {
-        // Dosya yoksa default ayarları oluştur
-        console.log('📁 Context Manager ayar dosyası bulunamadı, default ayarlar oluşturuluyor');
+        // Dosya yoksa default ayarları oluştur (sadece bir kez log)
+        if (!this.cachedSettings) {
+          console.log('📁 Context Manager ayar dosyası bulunamadı, default ayarlar oluşturuluyor');
+        }
         return await this.createDefaultSettings();
       }
       
@@ -84,12 +89,30 @@ export class Store {
    */
   async saveSettings(settings: Partial<ContextManagerSettings>): Promise<void> {
     try {
-      // Mevcut ayarları yükle ve güncelle
-      const currentSettings = await this.loadSettings();
+      let currentSettings: ContextManagerSettings;
+      
+      // Eğer cache'de varsa kullan, yoksa default ayarları kullan (infinite loop'u önle)
+      if (this.cachedSettings) {
+        currentSettings = this.cachedSettings;
+      } else {
+        // İlk kez ayar oluşturuluyorsa default'ları kullan
+        currentSettings = {
+          ...STORE_CONFIG.DEFAULT_SETTINGS,
+          usage: {
+            totalTokensUsed: 0,
+            totalCost: 0,
+            requestCount: 0,
+            lastReset: new Date()
+          }
+        };
+      }
+      
       const updatedSettings = { ...currentSettings, ...settings };
       
-      // Backup oluştur
-      await this.createBackup(currentSettings);
+      // Backup oluştur (sadece cache'de ayar varsa)
+      if (this.cachedSettings) {
+        await this.createBackup(currentSettings);
+      }
       
       // Ayarları kaydet
       await fs.writeFile(
