@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "liveBudget": 12000,
+  "hardCap": 120000,
+  "autoOptimize": true,
+  "enablePiiStripping": true,
+  "debugMode": false,
+  "usage": {
+    "totalTokensUsed": 0,
+    "totalCost": 0,
+    "requestCount": 0,
+    "lastReset": "2025-09-19T08:09:01.138Z"
+  }
+}

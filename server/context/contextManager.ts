@@ -86,7 +86,7 @@ export class ContextManager {
       }
       
       if (!settings.enabled) {
-        timer(true, 0); // Success but disabled
+        timer(true); // Success but disabled
         return this.createPassthroughResponse(request.threadId || '', startTime);
       }
 
@@ -157,7 +157,7 @@ export class ContextManager {
 
       console.log(`✅ Context Manager completed: ${diagnostics.originalTokens} → ${diagnostics.finalTokens} tokens (${diagnostics.reductionPercentage}% reduction)`);
 
-      timer(true, diagnostics.originalTokens); // Success with token count
+      timer(true); // Success with optimization
       return {
         threadId: newThreadId,
         action: 'new_thread_with_summary',
