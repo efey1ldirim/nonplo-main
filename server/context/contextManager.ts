@@ -10,6 +10,9 @@ import { summarizer } from './summarizer';
 import { usageOptimizer } from './usageOptimizer';
 import { store } from './store';
 import { privacy } from './privacy';
+import { openaiCircuitBreaker, summarizerCircuitBreaker } from './circuitBreaker';
+import { performanceMonitor } from './performanceMonitor';
+import { cacheManager, CacheManager } from './cacheManager';
 
 interface PrepareThreadRequest {
   threadId?: string;
@@ -63,6 +66,7 @@ export class ContextManager {
    */
   async prepareThreadForRun(request: PrepareThreadRequest): Promise<PrepareThreadResponse> {
     const startTime = Date.now();
+    const timer = performanceMonitor.startTimer('prepareThreadForRun', request.userId);
     
     try {
       // Context Manager etkin mi kontrol et
@@ -72,9 +76,17 @@ export class ContextManager {
 
       console.log(`🧠 Context Manager started for assistant ${request.assistantId.slice(0, 20)}...`);
 
-      // Ayarları yükle
-      const settings = await store.loadSettings();
+      // Ayarları cache'den yükle
+      const cacheKey = CacheManager.keys.systemSettings();
+      let settings = cacheManager.get<any>(cacheKey);
+      
+      if (!settings) {
+        settings = await store.loadSettings();
+        cacheManager.set(cacheKey, settings, 300000); // 5 minutes cache
+      }
+      
       if (!settings.enabled) {
+        timer(true, 0); // Success but disabled
         return this.createPassthroughResponse(request.threadId || '', startTime);
       }
 
@@ -106,11 +118,13 @@ export class ContextManager {
         return this.createReuseThreadResponse(request.threadId, threadAnalysis, startTime);
       }
 
-      // Eski mesajları özetle
-      const summaryResult = await summarizer.summarizeMessages({
-        messages: oldMessages,
-        targetTokens: TOKEN_LIMITS.SUMMARY_CHUNK_TARGET,
-        language: this.detectLanguage(request.newUserMessage)
+      // Eski mesajları özetle (circuit breaker ile korumalı)
+      const summaryResult = await summarizerCircuitBreaker.execute(async () => {
+        return await summarizer.summarizeMessages({
+          messages: oldMessages,
+          targetTokens: TOKEN_LIMITS.SUMMARY_CHUNK_TARGET,
+          language: this.detectLanguage(request.newUserMessage)
+        });
       });
 
       // Yeni thread oluştur
@@ -143,6 +157,7 @@ export class ContextManager {
 
       console.log(`✅ Context Manager completed: ${diagnostics.originalTokens} → ${diagnostics.finalTokens} tokens (${diagnostics.reductionPercentage}% reduction)`);
 
+      timer(true, diagnostics.originalTokens); // Success with token count
       return {
         threadId: newThreadId,
         action: 'new_thread_with_summary',
@@ -153,6 +168,7 @@ export class ContextManager {
 
     } catch (error) {
       console.error('❌ Context Manager error:', error);
+      timer(false, 0, error instanceof Error ? error.message : 'Unknown error');
       
       // Hata durumunda passthrough yap
       return this.createPassthroughResponse(
@@ -166,17 +182,23 @@ export class ContextManager {
   /**
    * Context Manager'ı aç/kapat
    */
-  async toggleEnabled(enabled: boolean): Promise<{ enabled: boolean; message: string }> {
+  async toggleEnabled(enabled: boolean): Promise<any> {
     try {
       await store.toggleEnabled(enabled);
       this.isEnabled = enabled;
+      
+      // Invalidate cache after settings change
+      cacheManager.invalidate('settings:system');
+      cacheManager.invalidate('stats:system');
       
       const message = enabled 
         ? 'Context Manager etkinleştirildi'
         : 'Context Manager devre dışı bırakıldı';
       
       console.log(`🔄 ${message}`);
-      return { enabled, message };
+      
+      // Return updated stats for frontend compatibility
+      return await this.getStats();
     } catch (error) {
       console.error('❌ Context Manager toggle error:', error);
       throw error;
@@ -184,7 +206,7 @@ export class ContextManager {
   }
 
   /**
-   * Context Manager istatistikleri
+   * Context Manager istatistikleri (cache ile optimize edilmiş)
    */
   async getStats(): Promise<{
     enabled: boolean;
@@ -193,32 +215,68 @@ export class ContextManager {
     tokenizer: any;
     summarizer: any;
     optimizer: any;
-    performance: {
-      totalThreadsProcessed: number;
-      totalTokensSaved: number;
-      averageReductionPercentage: number;
+    performance: any;
+    system: {
+      cache: any;
+      circuitBreaker: any;
+      health: any;
     };
   }> {
     try {
-      const settings = await store.loadSettings();
-      const storeStats = await store.getStoreStats();
+      // Cache'den stats al (shape validation ile)
+      const cacheKey = CacheManager.keys.systemStats();
+      let cachedStats = cacheManager.get<any>(cacheKey);
       
-      return {
-        enabled: this.isEnabled && settings.enabled,
-        settings: {
-          ...settings,
-          storeStats
+      // Validate cached data has required shape
+      if (!cachedStats || typeof cachedStats.enabled === 'undefined' || !cachedStats.settings) {
+        const settings = await store.loadSettings();
+        const storeStats = await store.getStoreStats();
+        
+        cachedStats = {
+          enabled: this.isEnabled && settings.enabled,
+          settings: {
+            ...settings,
+            storeStats
+          },
+          usage: settings.usage || {},
+          tokenizer: tokenizer.getTokenizerStats(),
+          summarizer: summarizer.getSummarizerStats(),
+          optimizer: usageOptimizer.getOptimizerStats(),
+        };
+        
+        cacheManager.set(cacheKey, cachedStats, 60000); // 1 minute cache for stats
+      }
+      
+      // Real-time system stats (no cache)
+      const performanceMetrics = performanceMonitor.getMetrics('prepareThreadForRun', 24);
+      const systemHealth = performanceMonitor.getSystemHealth();
+      const cacheStats = cacheManager.getStats();
+      
+      // Add top-level fields for frontend compatibility  
+      const result = {
+        ...cachedStats,
+        // Frontend expects top-level liveBudget and hardCap
+        liveBudget: cachedStats.settings?.liveBudget || 12000,
+        hardCap: cachedStats.settings?.hardCap || 120000,
+        performance: performanceMetrics.length > 0 ? performanceMetrics[0] : {
+          operation: 'prepareThreadForRun',
+          count: 0,
+          avgDuration: 0,
+          successRate: 100,
+          p95Duration: 0,
+          totalTokens: 0
         },
-        usage: settings.usage || {},
-        tokenizer: tokenizer.getTokenizerStats(),
-        summarizer: summarizer.getSummarizerStats(),
-        optimizer: usageOptimizer.getOptimizerStats(),
-        performance: {
-          totalThreadsProcessed: 0, // Implementation'da tracking eklenebilir
-          totalTokensSaved: 0,
-          averageReductionPercentage: 0
+        system: {
+          cache: cacheStats,
+          circuitBreaker: {
+            openai: openaiCircuitBreaker.getState(),
+            summarizer: summarizerCircuitBreaker.getState()
+          },
+          health: systemHealth
         }
       };
+      
+      return result;
     } catch (error) {
       console.error('❌ Context Manager stats error:', error);
       throw error;
@@ -288,13 +346,15 @@ export class ContextManager {
   }
 
   /**
-   * Thread'deki mesajları al
+   * Thread'deki mesajları al (circuit breaker ile korumalı)
    */
   private async getThreadMessages(threadId: string): Promise<any[]> {
     try {
-      const response = await this.openai.beta.threads.messages.list(threadId, {
-        limit: 100, // Son 100 mesaj
-        order: 'asc'
+      const response = await openaiCircuitBreaker.execute(async () => {
+        return await this.openai.beta.threads.messages.list(threadId, {
+          limit: 100, // Son 100 mesaj
+          order: 'asc'
+        });
       });
       
       return response.data || [];
@@ -329,7 +389,7 @@ export class ContextManager {
   }
 
   /**
-   * Özet ile yeni thread oluştur
+   * Özet ile yeni thread oluştur (circuit breaker ile korumalı)
    */
   private async createNewThreadWithSummary(
     summary: string,
@@ -337,22 +397,28 @@ export class ContextManager {
     assistantId: string
   ): Promise<string> {
     try {
-      // Yeni thread oluştur
-      const newThread = await this.openai.beta.threads.create();
+      // Yeni thread oluştur (circuit breaker ile korumalı)
+      const newThread = await openaiCircuitBreaker.execute(async () => {
+        return await this.openai.beta.threads.create();
+      });
       
       // Özeti system message olarak ekle
       if (summary && summary.trim()) {
-        await this.openai.beta.threads.messages.create(newThread.id, {
-          role: 'user',
-          content: `[KONUŞMA ÖZETİ - Bu özeti dikkate alarak konuşmaya devam et]\n\n${summary}`
+        await openaiCircuitBreaker.execute(async () => {
+          return await this.openai.beta.threads.messages.create(newThread.id, {
+            role: 'user',
+            content: `[KONUŞMA ÖZETİ - Bu özeti dikkate alarak konuşmaya devam et]\n\n${summary}`
+          });
         });
       }
 
       // Canlı mesajları ekle
       for (const message of liveMessages) {
-        await this.openai.beta.threads.messages.create(newThread.id, {
-          role: message.role,
-          content: message.content
+        await openaiCircuitBreaker.execute(async () => {
+          return await this.openai.beta.threads.messages.create(newThread.id, {
+            role: message.role,
+            content: message.content
+          });
         });
       }
 

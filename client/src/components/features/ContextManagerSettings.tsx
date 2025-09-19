@@ -43,15 +43,24 @@ const ContextManagerSettings = () => {
 
     try {
       setAuthError(false);
-      const response = await fetch('/api/context-manager/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      } else if (response.status === 401) {
+      // Use apiRequest from queryClient to handle authentication properly
+      const data = await fetch('/api/context-manager/stats', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${user?.session?.access_token || user?.access_token || ''}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (data.ok) {
+        const stats = await data.json();
+        setStats(stats);
+      } else if (data.status === 401) {
         setAuthError(true);
         console.error('Authentication required for Context Manager stats');
       } else {
-        console.error('Failed to load Context Manager stats:', response.status);
+        console.error('Failed to load Context Manager stats:', data.status);
       }
     } catch (error: any) {
       if (error.message?.includes('Authentication required')) {
@@ -65,11 +74,18 @@ const ContextManagerSettings = () => {
 
   // Context Manager'ı aç/kapat
   const toggleContextManager = async (enabled: boolean) => {
+    if (!user) {
+      setAuthError(true);
+      return;
+    }
+    
     setToggling(true);
     try {
       const response = await fetch('/api/context-manager/toggle', {
         method: 'POST',
+        credentials: 'include',
         headers: {
+          'Authorization': `Bearer ${user?.session?.access_token || user?.access_token || ''}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ enabled }),
@@ -83,6 +99,13 @@ const ContextManagerSettings = () => {
           description: enabled 
             ? "Token optimizasyonu ve akıllı özet sistemi aktif." 
             : "Token optimizasyonu devre dışı bırakıldı.",
+        });
+      } else if (response.status === 401) {
+        setAuthError(true);
+        toast({
+          title: "Giriş Gerekli",
+          description: "Bu işlem için giriş yapmanız gerekiyor",
+          variant: "destructive",
         });
       } else {
         throw new Error('Failed to toggle Context Manager');
@@ -100,7 +123,7 @@ const ContextManagerSettings = () => {
   };
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && user) {
       loadStats();
     }
   }, [user, authLoading]);
