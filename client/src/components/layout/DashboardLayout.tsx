@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import AgentCreationWizard from "@/components/features/AgentCreationWizard";
+import AgentWizardModal from "@/components/wizard/AgentWizardModal";
 import DashboardSupport from "@/pages/dashboard/DashboardSupport";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -441,9 +441,13 @@ const DashboardLayout = () => {
       )}
 
       {/* Dijital Çalışan Oluşturma Sihirbazı */}
-      <AgentCreationWizard 
-        open={wizardOpen} 
+      <AgentWizardModal 
+        isOpen={wizardOpen} 
         onClose={() => setWizardOpen(false)} 
+        onSuccess={(agentId: string) => {
+          setWizardOpen(false);
+          navigate(`/dashboard/agents/${agentId}`);
+        }}
       />
 
       {/* Support Modal */}

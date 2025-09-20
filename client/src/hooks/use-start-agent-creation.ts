@@ -4,24 +4,22 @@ import { supabase } from "@/lib/supabase";
 
 export type StartAgentCreationOptions = {
   afterSuccessRedirect?: string; // default: "/dashboard/agents"
-  useNewWizard?: boolean; // default: true (use new wizard)
 };
 
 export function useStartAgentCreation() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
-  // Detect wizard route: new wizard by default, fallback to old wizard
-  const getWizardPath = useCallback((useNewWizard: boolean = true) => {
-    return useNewWizard ? "/?openNewWizard=1" : "/?openWizard=1";
+  // Get wizard route - always use new wizard
+  const getWizardPath = useCallback(() => {
+    return "/?openNewWizard=1";
   }, []);
 
   const start = useCallback(async (opts: StartAgentCreationOptions = {}) => {
     if (busy) return;
     setBusy(true);
     const afterSuccessRedirect = opts.afterSuccessRedirect ?? "/dashboard/agents";
-    const useNewWizard = opts.useNewWizard ?? true; // Default to new wizard
-    const wizardPath = getWizardPath(useNewWizard);
+    const wizardPath = getWizardPath();
 
     try {
       const { data: { session } } = await supabase.auth.getSession();

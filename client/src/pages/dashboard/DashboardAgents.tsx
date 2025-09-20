@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Bot, Calendar, MoreVertical, Edit, Trash2, Power, CalendarCheck, CalendarX, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 import AgentWizardModal from "@/components/wizard/AgentWizardModal";
 
 interface Agent {
@@ -26,9 +25,8 @@ interface CalendarStatus {
 }
 
 // Hoisted EmptyState component to module scope for proper memoization
-const EmptyState = memo(({ onCreateAgent, onCreateWithNewWizard }: { 
+const EmptyState = memo(({ onCreateAgent }: { 
   onCreateAgent: () => void; 
-  onCreateWithNewWizard: () => void; 
 }) => (
   <div className="text-center py-12">
     <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
@@ -38,25 +36,15 @@ const EmptyState = memo(({ onCreateAgent, onCreateWithNewWizard }: {
     <p className="text-muted-foreground mb-6 max-w-md mx-auto">
       İlk Yapay Zeka Destekli Dijital Çalışanınızı oluşturmak için aşağıdaki butona tıklayın ve işletmeniz için özel olarak tasarlanmış dijital asistanınızı yapılandırın.
     </p>
-    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-      <Button 
-        onClick={onCreateWithNewWizard} 
-        size="lg" 
-        className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-        data-testid="button-create-first-agent-new-wizard"
-      >
-        <Sparkles className="w-4 h-4" />
-        Yeni Wizard ile Oluştur (Önerilen)
-      </Button>
+    <div className="flex justify-center">
       <Button 
         onClick={onCreateAgent} 
-        variant="outline" 
         size="lg" 
-        className="gap-2"
-        data-testid="button-create-first-agent-old-wizard"
+        className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+        data-testid="button-create-first-agent"
       >
-        <Plus className="w-4 h-4" />
-        Eski Wizard ile Oluştur
+        <Sparkles className="w-4 h-4" />
+        Dijital Çalışan Oluştur
       </Button>
     </div>
   </div>
@@ -65,7 +53,6 @@ const EmptyState = memo(({ onCreateAgent, onCreateWithNewWizard }: {
 const DashboardAgents = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showWizard, setShowWizard] = useState(false);
   const [showNewWizard, setShowNewWizard] = useState(false);
   const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
   const [calendarStatuses, setCalendarStatuses] = useState<Record<string, CalendarStatus>>({});
@@ -429,34 +416,22 @@ const DashboardAgents = () => {
               Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowWizard(true)}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Eski Wizard
-            </Button>
-            <Button 
-              onClick={() => setShowNewWizard(true)}
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-              data-testid="button-open-new-wizard"
-            >
-              <Sparkles className="w-4 h-4" />
-              Yeni Wizard (Beta) [{agents.length}]
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setShowNewWizard(true)}
+            size="sm"
+            className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+            data-testid="button-create-agent"
+          >
+            <Plus className="w-4 h-4" />
+            Dijital Çalışan Oluştur
+          </Button>
         </div>
       </div>
 
       {/* Agents Grid or Empty State */}
       {agents.length === 0 ? (
         <EmptyState 
-          onCreateAgent={() => setShowWizard(true)} 
-          onCreateWithNewWizard={() => setShowNewWizard(true)}
+          onCreateAgent={() => setShowNewWizard(true)}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -549,16 +524,6 @@ const DashboardAgents = () => {
       )}
 
       {/* Agent Creation Wizard */}
-      <AgentCreationWizard 
-        open={showWizard} 
-        onClose={() => {
-          setShowWizard(false);
-          fetchAgents(); // Refresh agents list after wizard closes
-        }}
-        fromDashboard={true} // Enable auto-refresh for dashboard users
-      />
-
-      {/* New Wizard Modal */}
       <AgentWizardModal
         isOpen={showNewWizard}
         onClose={() => setShowNewWizard(false)}

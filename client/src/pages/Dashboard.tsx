@@ -13,7 +13,7 @@ import {
   Menu,
   X
 } from "lucide-react";
-import AgentCreationWizard from "@/components/features/AgentCreationWizard";
+import AgentWizardModal from "@/components/wizard/AgentWizardModal";
 import DashboardSupport from "@/pages/dashboard/DashboardSupport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -331,9 +331,13 @@ const Dashboard = () => {
       )}
 
       {/* Agent Creation Wizard */}
-      <AgentCreationWizard 
-        open={wizardOpen} 
+      <AgentWizardModal 
+        isOpen={wizardOpen} 
         onClose={() => setWizardOpen(false)} 
+        onSuccess={(agentId: string) => {
+          setWizardOpen(false);
+          // Navigate to agent detail if needed
+        }}
       />
 
       {/* Support Modal */}

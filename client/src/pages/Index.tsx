@@ -10,24 +10,18 @@ import NewsletterSection from "@/components/sections/NewsletterSection";
 import PricingSection from "@/components/sections/PricingSection";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import AgentCreationWizard from "@/components/features/AgentCreationWizard";
 import AgentWizardModal from "@/components/wizard/AgentWizardModal";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [newWizardOpen, setNewWizardOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const search = new URLSearchParams(location.search);
-    if (search.get("openWizard") === "1") {
-      setWizardOpen(true);
-      // Clean the URL
-      navigate("/", { replace: true });
-    } else if (search.get("openNewWizard") === "1") {
+    if (search.get("openNewWizard") === "1") {
       setNewWizardOpen(true);
       // Clean the URL
       navigate("/", { replace: true });
@@ -47,13 +41,7 @@ const Index = () => {
       <FAQSection />
       <Footer />
       
-      {/* Eski Dijital Çalışan Oluşturma Sihirbazı */}
-      <AgentCreationWizard
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-      />
-      
-      {/* Yeni Dijital Çalışan Oluşturma Sihirbazı */}
+      {/* Dijital Çalışan Oluşturma Sihirbazı */}
       <AgentWizardModal
         isOpen={newWizardOpen}
         onClose={() => setNewWizardOpen(false)}
