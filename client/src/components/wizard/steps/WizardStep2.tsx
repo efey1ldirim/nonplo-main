@@ -15,38 +15,42 @@ interface WizardStep2Props {
   canProceed: boolean;
 }
 
-// Mock Google Places service (in real implementation, use Google Places API)
-const mockGooglePlaces = {
+// Real address search service using Nominatim (OpenStreetMap)
+const addressSearchService = {
   searchPlaces: async (query: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Mock results
-    return [
-      {
-        placeId: 'mock_1',
-        formattedAddress: `${query} - İstanbul, Türkiye`,
-        latitude: 41.0082,
-        longitude: 28.9784,
-        components: { city: 'İstanbul', country: 'Türkiye' }
-      },
-      {
-        placeId: 'mock_2', 
-        formattedAddress: `${query} - Ankara, Türkiye`,
-        latitude: 39.9334,
-        longitude: 32.8597,
-        components: { city: 'Ankara', country: 'Türkiye' }
-      },
-      {
-        placeId: 'mock_3',
-        formattedAddress: `${query} - İzmir, Türkiye`,
-        latitude: 38.4192,
-        longitude: 27.1287,
-        components: { city: 'İzmir', country: 'Türkiye' }
+    try {
+      // Use Nominatim API for geocoding - free and no API key required
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=tr&q=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            'User-Agent': 'NonploApp/1.0' // Required by Nominatim
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Search failed');
       }
-    ].filter(place => 
-      place.formattedAddress.toLowerCase().includes(query.toLowerCase())
-    );
+
+      const data = await response.json();
+      
+      return data.map((item: any) => ({
+        placeId: item.place_id,
+        formattedAddress: item.display_name,
+        latitude: parseFloat(item.lat),
+        longitude: parseFloat(item.lon),
+        components: {
+          city: item.address?.city || item.address?.town || item.address?.village || '',
+          country: item.address?.country || 'Türkiye',
+          district: item.address?.county || item.address?.district || '',
+          neighbourhood: item.address?.neighbourhood || item.address?.suburb || ''
+        }
+      }));
+    } catch (error) {
+      console.error('Address search error:', error);
+      return [];
+    }
   }
 };
 
@@ -91,7 +95,7 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
 
     setIsSearching(true);
     try {
-      const results = await mockGooglePlaces.searchPlaces(query);
+      const results = await addressSearchService.searchPlaces(query);
       setAddressSuggestions(results);
     } catch (error) {
       console.error('Address search error:', error);
@@ -115,8 +119,9 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
   };
 
   const getTimezoneFromCoords = (lat: number, lng: number): string => {
-    // Mock timezone detection - in real implementation use timezone API
-    if (lat >= 35 && lat <= 43 && lng >= 25 && lng <= 45) {
+    // Simple timezone detection for Turkey
+    // Turkey is entirely in Europe/Istanbul timezone (UTC+3)
+    if (lat >= 35.8 && lat <= 42.1 && lng >= 25.7 && lng <= 44.8) {
       return 'Europe/Istanbul';
     }
     return 'Europe/Istanbul'; // Default to Turkey timezone
@@ -221,11 +226,11 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
                         Seçilen Konum
                       </h4>
                       <p className="text-sm text-green-800 dark:text-green-200 mt-1">
-                        {selectedPlace.formattedAddress}
+                        {(selectedPlace as any).formattedAddress}
                       </p>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-green-700 dark:text-green-300">
-                        <span>Enlem: {selectedPlace.latitude.toFixed(4)}</span>
-                        <span>Boylam: {selectedPlace.longitude.toFixed(4)}</span>
+                        <span>Enlem: {(selectedPlace as any).latitude?.toFixed(4)}</span>
+                        <span>Boylam: {(selectedPlace as any).longitude?.toFixed(4)}</span>
                       </div>
                     </div>
                   </div>
