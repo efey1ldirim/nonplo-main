@@ -93,7 +93,7 @@ export const toolsSpecialRequests = pgTable("tools_special_requests", {
 export const conversations = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
-  agentId: uuid("agent_id").notNull(),
+  agentId: uuid("agent_id").notNull().references(() => agents.id, { onDelete: 'cascade' }),
   threadId: text("thread_id"), // OpenAI thread ID - unique geçici olarak kaldırıldı
   channel: text("channel").notNull().default('web'),
   status: text("status").notNull().default('active'),
@@ -107,7 +107,7 @@ export const conversations = pgTable("conversations", {
 // Messages table
 export const messages = pgTable("messages", {
   id: uuid("id").primaryKey().defaultRandom(),
-  conversationId: uuid("conversation_id").notNull(),
+  conversationId: uuid("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   sender: text("sender").notNull(),
   content: text("content"),
   attachments: jsonb("attachments").notNull().default([]),
