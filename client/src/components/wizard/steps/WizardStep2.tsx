@@ -96,6 +96,12 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<google.maps.LatLng | null>(null);
 
+  // Custom dropdown state
+  const [suggestions, setSuggestions] = useState<google.maps.places.PlaceResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [placesService, setPlacesService] = useState<google.maps.places.PlacesService | null>(null);
+
   // Initialize selected location from existing data
   useEffect(() => {
     if (data.addressData && typeof data.addressData === 'object' && 
@@ -135,90 +141,107 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     return () => subscription.unsubscribe();
   }, [form, data, onSave]);
 
-  // Initialize geocoder when maps loads
+  // Initialize geocoder and places service when maps loads
   useEffect(() => {
     if (isLoaded && !geocoder) {
       setGeocoder(new google.maps.Geocoder());
     }
-  }, [isLoaded, geocoder]);
-
-
-  // Add effect to handle autocomplete place changed event manually
-  useEffect(() => {
-    if (!autocomplete || !isLoaded) {
-      console.log('🔧 Waiting for autocomplete and Google Maps to load...', { autocomplete: !!autocomplete, isLoaded });
-      return;
+    if (isLoaded && !placesService && map) {
+      setPlacesService(new google.maps.places.PlacesService(map));
     }
+  }, [isLoaded, geocoder, placesService, map]);
 
-    console.log('🔧 Setting up manual place_changed listener');
-    
-    const handlePlaceChanged = () => {
-      console.log('🎯 Manual place_changed event triggered!');
-      
-      try {
-        const place = autocomplete.getPlace();
-        console.log('📍 Place selected from autocomplete:', place);
 
-        if (!place || !place.geometry?.location) {
-          console.warn('⚠️ No location data in selected place');
-          return;
-        }
-
-        const addressData = mapGooglePlaceToAddressData(place);
-        if (!addressData) {
-          console.warn('⚠️ Could not map place to address data');
-          return;
-        }
-
-        console.log('✅ Mapped address data:', addressData);
-        console.log('📝 Setting input value to:', addressData.formattedAddress);
-
-        // Update input value directly
-        if (inputRef.current) {
-          inputRef.current.value = addressData.formattedAddress;
-          console.log('✅ Input value updated directly:', inputRef.current.value);
-        }
-
-        // Update form values with the full formatted address
-        setValue('address', addressData.formattedAddress, { shouldValidate: true });
-        setValue('addressData', addressData, { shouldValidate: true });
-        
-        // Update map location
-        setSelectedLocation(place.geometry.location);
-
-        // Center map on selected location
-        if (map) {
-          map.panTo(place.geometry.location);
-          map.setZoom(15);
-        }
-      } catch (error) {
-        console.error('❌ Error in place_changed handler:', error);
+  // Custom search function using Google Places Text Search
+  const searchPlaces = useCallback(
+    async (query: string) => {
+      if (!placesService || !query.trim() || query.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
       }
-    };
 
-    // Add listener with error handling
-    try {
-      const listener = autocomplete.addListener('place_changed', handlePlaceChanged);
-      console.log('✅ Event listener added successfully');
+      setIsSearching(true);
+      console.log('🔍 Searching for places:', query);
+
+      try {
+        const request: google.maps.places.TextSearchRequest = {
+          query: query + ', Turkey' // Add Turkey bias for better local results
+        };
+
+        placesService.textSearch(request, (results, status) => {
+          console.log('📍 Places search results:', { status, results });
+          
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            setSuggestions(results.slice(0, 5)); // Limit to 5 suggestions
+            setShowSuggestions(true);
+            console.log('✅ Found', results.length, 'places');
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            console.warn('⚠️ Places search failed:', status);
+          }
+          setIsSearching(false);
+        });
+      } catch (error) {
+        console.error('❌ Error searching places:', error);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setIsSearching(false);
+      }
+    },
+    [placesService]
+  );
+
+  // Handle custom suggestion selection
+  const selectSuggestion = useCallback(
+    (place: google.maps.places.PlaceResult) => {
+      console.log('🎯 Custom suggestion selected:', place);
+
+      if (!place.geometry?.location) {
+        console.warn('⚠️ No location data in selected place');
+        return;
+      }
+
+      const addressData = mapGooglePlaceToAddressData(place);
+      if (!addressData) {
+        console.warn('⚠️ Could not map place to address data');
+        return;
+      }
+
+      console.log('✅ Mapped custom address data:', addressData);
+
+      // Update input value
+      if (inputRef.current) {
+        inputRef.current.value = addressData.formattedAddress;
+        console.log('✅ Input value updated from custom dropdown:', inputRef.current.value);
+      }
+
+      // Update form values
+      setValue('address', addressData.formattedAddress, { shouldValidate: true });
+      setValue('addressData', addressData, { shouldValidate: true });
       
-      return () => {
-        try {
-          google.maps.event.removeListener(listener);
-          console.log('🧹 Event listener removed');
-        } catch (error) {
-          console.warn('⚠️ Error removing listener:', error);
-        }
-      };
-    } catch (error) {
-      console.error('❌ Error adding place_changed listener:', error);
-    }
-  }, [autocomplete, map, setValue, isLoaded]);
+      // Update map location
+      setSelectedLocation(place.geometry.location);
 
-  // Handle autocomplete load
+      // Center map on selected location
+      if (map) {
+        map.panTo(place.geometry.location);
+        map.setZoom(15);
+      }
+
+      // Hide suggestions
+      setShowSuggestions(false);
+      setSuggestions([]);
+    },
+    [map, setValue]
+  );
+
+  // Handle autocomplete load (for Google Maps API compatibility, but we'll use our custom search)
   const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
-    console.log('🗺️ Google Places Autocomplete loaded');
+    console.log('🗺️ Google Places Autocomplete loaded (will be hidden)');
     
-    // Configure autocomplete for Turkey
+    // Configure autocomplete for Turkey (but we won't use this)
     autocompleteInstance.setComponentRestrictions({ country: 'tr' });
     autocompleteInstance.setFields([
       'place_id',
@@ -230,6 +253,46 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     
     setAutocomplete(autocompleteInstance);
   }, []);
+
+  // Handle input change for custom search
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      console.log('🔤 Custom input change:', value);
+      
+      // Update form value
+      setValue('address', value, { shouldValidate: true });
+      
+      // Trigger custom search with debouncing
+      if (value.length >= 2) {
+        // Simple debouncing with timeout
+        setTimeout(() => {
+          if (inputRef.current?.value === value) {
+            searchPlaces(value);
+          }
+        }, 300);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    },
+    [setValue, searchPlaces]
+  );
+
+  // Handle input blur to hide suggestions
+  const handleInputBlur = useCallback(() => {
+    // Delay hiding to allow clicking on suggestions
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
+  }, []);
+
+  // Handle input focus to show suggestions if available
+  const handleInputFocus = useCallback(() => {
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  }, [suggestions]);
 
   // Handle map click for location selection
   const onMapClick = useCallback(async (event: google.maps.MapMouseEvent) => {
@@ -311,22 +374,56 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
       {/* Address Search Input */}
       <div className="space-y-2">
         <Label htmlFor="address">Adres Arama</Label>
-        <Autocomplete
-          onLoad={onAutocompleteLoad}
-        >
+        {/* Hidden Google Autocomplete for API compatibility */}
+        <div style={{ display: 'none' }}>
+          <Autocomplete onLoad={onAutocompleteLoad}>
+            <input type="text" />
+          </Autocomplete>
+        </div>
+
+        {/* Custom Address Input with Dropdown */}
+        <div className="relative">
           <Input
             ref={inputRef}
             id="address"
-            placeholder="Adres arayın... (örn: Taksim, İstanbul)"
+            placeholder="Adres arayın... (örn: Elif Tuhafiye)"
             defaultValue={data.address || ''}
-            onChange={(e) => {
-              console.log('🔤 Input change:', e.target.value);
-              setValue('address', e.target.value);
-            }}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            onFocus={handleInputFocus}
             data-testid="input-address-search"
             className="w-full"
+            autoComplete="off"
           />
-        </Autocomplete>
+          
+          {/* Loading indicator */}
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
+          {/* Custom Suggestions Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {suggestions.map((suggestion, index) => (
+                <div
+                  key={suggestion.place_id || index}
+                  className="px-4 py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+                  onClick={() => selectSuggestion(suggestion)}
+                  data-testid={`suggestion-${index}`}
+                >
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {suggestion.name || 'Unnamed Location'}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {suggestion.formatted_address}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Google Maps Widget */}
