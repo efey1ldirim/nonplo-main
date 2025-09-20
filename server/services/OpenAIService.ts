@@ -401,6 +401,33 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
   }
 
   /**
+   * Delete an OpenAI Assistant
+   */
+  async deleteAssistant(assistantId: string): Promise<boolean> {
+    try {
+      console.log(`🗑️ Deleting OpenAI Assistant: ${assistantId}`);
+      
+      // Delete the assistant from OpenAI
+      await this.openai.beta.assistants.del(assistantId);
+      
+      console.log(`✅ Successfully deleted OpenAI Assistant: ${assistantId}`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Error deleting OpenAI Assistant ${assistantId}:`, error);
+      
+      // If assistant doesn't exist, consider it "successfully deleted"
+      if (error.status === 404 || error.code === 'not_found') {
+        console.log(`🤷 Assistant ${assistantId} not found, considering as deleted`);
+        return true;
+      }
+      
+      // For other errors, log but don't fail the agent deletion
+      console.error(`⚠️  Warning: Could not delete OpenAI Assistant ${assistantId}, but continuing with agent deletion`);
+      return false;
+    }
+  }
+
+  /**
    * Calculate cost based on tokens and model
    */
   private calculateCost(tokens: number, model: string): number {
