@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLoadScript, GoogleMap, Autocomplete, Marker } from '@react-google-maps/api';
@@ -89,7 +89,8 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     libraries: LIBRARIES,
   });
 
-  // Component state
+  // Component state and refs
+  const inputRef = useRef<HTMLInputElement>(null);
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
@@ -178,6 +179,12 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
 
     console.log('✅ Mapped address data:', addressData);
     console.log('📝 Setting input value to:', addressData.formattedAddress);
+
+    // Update input value directly
+    if (inputRef.current) {
+      inputRef.current.value = addressData.formattedAddress;
+      console.log('✅ Input value updated directly:', inputRef.current.value);
+    }
 
     // Update form values with the full formatted address
     setValue('address', addressData.formattedAddress, { shouldValidate: true });
@@ -278,10 +285,14 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
           onPlaceChanged={onPlaceChanged}
         >
           <Input
+            ref={inputRef}
             id="address"
             placeholder="Adres arayın... (örn: Taksim, İstanbul)"
-            value={watch('address') || ''}
-            onChange={(e) => setValue('address', e.target.value)}
+            defaultValue={data.address || ''}
+            onChange={(e) => {
+              console.log('🔤 Input change:', e.target.value);
+              setValue('address', e.target.value);
+            }}
             data-testid="input-address-search"
             className="w-full"
           />
