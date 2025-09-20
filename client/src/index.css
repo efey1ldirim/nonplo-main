@@ -68,6 +68,41 @@
     height: auto;
     object-fit: cover;
   }
+
+  /* Google Maps Autocomplete Fix */
+  .pac-container {
+    z-index: 10000 !important;
+    position: absolute !important;
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+    margin-top: 1px !important;
+  }
+  
+  .pac-item {
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid #eee !important;
+    line-height: 1.4 !important;
+    font-size: 14px !important;
+  }
+  
+  .pac-item:hover {
+    background-color: #f5f5f5 !important;
+  }
+  
+  .pac-item-selected {
+    background-color: #e8f4fd !important;
+  }
+  
+  .pac-matched {
+    font-weight: bold !important;
+  }
+  
+  .pac-item:last-child {
+    border-bottom: none !important;
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
