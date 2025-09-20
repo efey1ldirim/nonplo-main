@@ -409,22 +409,11 @@ const DashboardAgents = () => {
     <div className="p-4 md:p-6 lg:p-8 max-w-full">
       {/* Header */}
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Yapay Zeka Destekli Dijital Çalışanlarım</h1>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
-            </p>
-          </div>
-          <Button 
-            onClick={() => setShowNewWizard(true)}
-            size="sm"
-            className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-            data-testid="button-create-agent"
-          >
-            <Plus className="w-4 h-4" />
-            Dijital Çalışan Oluştur
-          </Button>
+        <div className="mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Yapay Zeka Destekli Dijital Çalışanlarım</h1>
+          <p className="text-muted-foreground text-base md:text-lg">
+            Tüm dijital çalışanlarınızı görüntüleyin, yönetin ve yeni çalışanlar oluşturun
+          </p>
         </div>
       </div>
 

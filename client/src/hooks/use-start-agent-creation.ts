@@ -33,13 +33,6 @@ export function useStartAgentCreation() {
 
       // User is authenticated → open the wizard route
       navigate(wizardPath);
-
-      // Listen for wizard success once, then redirect
-      const handler = () => {
-        window.removeEventListener("agent-created-success", handler);
-        navigate(afterSuccessRedirect, { replace: true });
-      };
-      window.addEventListener("agent-created-success", handler, { once: true });
     } finally {
       setBusy(false);
     }
