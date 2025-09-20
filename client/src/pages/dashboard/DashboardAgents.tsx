@@ -348,6 +348,11 @@ const DashboardAgents = () => {
         title: "Success",
         description: result.message || "Dijital Çalışan başarıyla silindi.",
       });
+
+      // Refresh page to update left sidebar
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('Error deleting agent:', error);
       toast({
@@ -359,12 +364,17 @@ const DashboardAgents = () => {
   };
 
   const handleWizardSuccess = useCallback(() => {
-    setShowWizard(false);
+    setShowNewWizard(false);
     fetchAgents(); // Refresh the agents list
     toast({
       title: "Success",
       description: "Dijital Çalışan başarıyla oluşturuldu.",
     });
+
+    // Refresh page to update left sidebar
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   }, [fetchAgents, toast]);
 
   const formatDate = (dateString: string) => {
