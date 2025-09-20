@@ -42,6 +42,48 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Address search service
+const searchAddresses = async (query: string) => {
+  try {
+    // Enhanced Nominatim query with better parameters for Turkish addresses
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&countrycodes=tr&q=${encodedQuery}&accept-language=tr,en`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'NonploApp/1.0 (Address Search)'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return data.map((item: any) => ({
+      placeId: item.place_id,
+      formattedAddress: item.display_name,
+      latitude: parseFloat(item.lat),
+      longitude: parseFloat(item.lon),
+      components: {
+        city: item.address?.city || item.address?.town || item.address?.village || '',
+        country: item.address?.country || 'Türkiye',
+        district: item.address?.county || item.address?.district || item.address?.suburb || '',
+        neighbourhood: item.address?.neighbourhood || item.address?.hamlet || '',
+        postcode: item.address?.postcode || '',
+        road: item.address?.road || item.address?.street || '',
+        houseNumber: item.address?.house_number || ''
+      },
+      type: item.type,
+      importance: item.importance
+    }));
+  } catch (error) {
+    console.error('Address search error:', error);
+    return [];
+  }
+};
+
 // Helper function stubs
 async function checkTokenExpiry(userId: string, agentId: string): Promise<{needsRefresh: boolean, expiresIn: number | null, warning: string | null}> {
   // Stub implementation - TODO: implement actual token expiry checking
@@ -110,6 +152,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Monitoring endpoints
   app.get('/api/health', monitoring.healthCheck);
+  
+  // Address search endpoint
+  app.post('/api/address/search', async (req, res) => {
+    try {
+      const { query } = req.body;
+      
+      if (!query || query.length < 2) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Query must be at least 2 characters long' 
+        });
+      }
+
+      const results = await searchAddresses(query);
+      
+      res.json({
+        success: true,
+        data: results,
+        count: results.length
+      });
+    } catch (error) {
+      console.error('Address search endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Address search failed'
+      });
+    }
+  });
   app.get('/api/monitoring/metrics', monitoring.getMetrics);
   app.get('/api/monitoring/cache', monitoring.getCacheStats);
   app.get('/api/monitoring/cache-analytics', monitoring.getCacheAnalytics);

@@ -15,38 +15,25 @@ interface WizardStep2Props {
   canProceed: boolean;
 }
 
-// Real address search service using Nominatim (OpenStreetMap)
+// Address search service via backend proxy
 const addressSearchService = {
   searchPlaces: async (query: string) => {
     try {
-      // Use Nominatim API for geocoding - free and no API key required
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=tr&q=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            'User-Agent': 'NonploApp/1.0' // Required by Nominatim
-          }
-        }
-      );
+      // Use backend proxy to avoid CORS issues
+      const response = await fetch('/api/address/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query })
+      });
 
       if (!response.ok) {
         throw new Error('Search failed');
       }
 
-      const data = await response.json();
-      
-      return data.map((item: any) => ({
-        placeId: item.place_id,
-        formattedAddress: item.display_name,
-        latitude: parseFloat(item.lat),
-        longitude: parseFloat(item.lon),
-        components: {
-          city: item.address?.city || item.address?.town || item.address?.village || '',
-          country: item.address?.country || 'Türkiye',
-          district: item.address?.county || item.address?.district || '',
-          neighbourhood: item.address?.neighbourhood || item.address?.suburb || ''
-        }
-      }));
+      const result = await response.json();
+      return result.success ? result.data : [];
     } catch (error) {
       console.error('Address search error:', error);
       return [];
