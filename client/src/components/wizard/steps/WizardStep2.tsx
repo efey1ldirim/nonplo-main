@@ -142,50 +142,60 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     }
   }, [isLoaded, geocoder]);
 
-  // Handle place selection from autocomplete
-  const onPlaceChanged = useCallback(() => {
-    // Use current autocomplete instance from state
-    const currentAutocomplete = autocomplete;
-    if (!currentAutocomplete) {
-      console.warn('⚠️ No autocomplete instance available');
-      return;
-    }
 
-    const place = currentAutocomplete.getPlace();
-    console.log('📍 Place selected from autocomplete:', place);
+  // Add effect to handle autocomplete place changed event manually
+  useEffect(() => {
+    if (!autocomplete) return;
 
-    if (!place.geometry?.location) {
-      console.warn('⚠️ No location data in selected place');
-      return;
-    }
-
-    const addressData = mapGooglePlaceToAddressData(place);
-    if (!addressData) {
-      console.warn('⚠️ Could not map place to address data');
-      return;
-    }
-
-    console.log('✅ Mapped address data:', addressData);
-    console.log('📝 Setting input value to:', addressData.formattedAddress);
-
-    // Update input value directly
-    if (inputRef.current) {
-      inputRef.current.value = addressData.formattedAddress;
-      console.log('✅ Input value updated directly:', inputRef.current.value);
-    }
-
-    // Update form values with the full formatted address
-    setValue('address', addressData.formattedAddress, { shouldValidate: true });
-    setValue('addressData', addressData, { shouldValidate: true });
+    console.log('🔧 Setting up manual place_changed listener');
     
-    // Update map location
-    setSelectedLocation(place.geometry.location);
+    const handlePlaceChanged = () => {
+      console.log('🎯 Manual place_changed event triggered!');
+      
+      const place = autocomplete.getPlace();
+      console.log('📍 Place selected from autocomplete:', place);
 
-    // Center map on selected location
-    if (map) {
-      map.panTo(place.geometry.location);
-      map.setZoom(15);
-    }
+      if (!place.geometry?.location) {
+        console.warn('⚠️ No location data in selected place');
+        return;
+      }
+
+      const addressData = mapGooglePlaceToAddressData(place);
+      if (!addressData) {
+        console.warn('⚠️ Could not map place to address data');
+        return;
+      }
+
+      console.log('✅ Mapped address data:', addressData);
+      console.log('📝 Setting input value to:', addressData.formattedAddress);
+
+      // Update input value directly
+      if (inputRef.current) {
+        inputRef.current.value = addressData.formattedAddress;
+        console.log('✅ Input value updated directly:', inputRef.current.value);
+      }
+
+      // Update form values with the full formatted address
+      setValue('address', addressData.formattedAddress, { shouldValidate: true });
+      setValue('addressData', addressData, { shouldValidate: true });
+      
+      // Update map location
+      setSelectedLocation(place.geometry.location);
+
+      // Center map on selected location
+      if (map) {
+        map.panTo(place.geometry.location);
+        map.setZoom(15);
+      }
+    };
+
+    // Add listener
+    const listener = autocomplete.addListener('place_changed', handlePlaceChanged);
+    
+    return () => {
+      // Cleanup
+      google.maps.event.removeListener(listener);
+    };
   }, [autocomplete, map, setValue]);
 
   // Handle autocomplete load
@@ -287,10 +297,6 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
         <Label htmlFor="address">Adres Arama</Label>
         <Autocomplete
           onLoad={onAutocompleteLoad}
-          onPlaceChanged={() => {
-            console.log('🎯 Place changed event triggered via prop!');
-            onPlaceChanged();
-          }}
         >
           <Input
             ref={inputRef}
