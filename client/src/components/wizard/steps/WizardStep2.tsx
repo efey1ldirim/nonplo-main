@@ -386,7 +386,7 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
           <Input
             ref={inputRef}
             id="address"
-            placeholder="Adres arayın... (örn: Elif Tuhafiye)"
+            placeholder="Adres arayın... (örn: Nonplo İzmir)"
             defaultValue={data.address || ''}
             onChange={handleInputChange}
             onBlur={handleInputBlur}
@@ -459,49 +459,6 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
         </CardContent>
       </Card>
 
-      {/* Selected Location Info */}
-      {watch('addressData') && (
-        <Card className="bg-muted/50">
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-green-600" />
-                Seçilen Konum
-              </h3>
-              <div className="text-sm space-y-1">
-                <p data-testid="text-selected-address">
-                  <strong>Adres:</strong> {watch('addressData')?.formattedAddress}
-                </p>
-                <p data-testid="text-coordinates">
-                  <strong>Koordinatlar:</strong> {watch('addressData')?.latitude.toFixed(6)}, {watch('addressData')?.longitude.toFixed(6)}
-                </p>
-                {watch('addressData')?.components.city && (
-                  <p data-testid="text-city">
-                    <strong>Şehir:</strong> {watch('addressData')?.components.city}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Timezone Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="timezone">Saat Dilimi</Label>
-        <Input
-          id="timezone"
-          value={watch('timezone') || 'Europe/Istanbul'}
-          onChange={(e) => setValue('timezone', e.target.value)}
-          placeholder="Europe/Istanbul"
-          data-testid="input-timezone"
-          readOnly
-          className="bg-muted"
-        />
-        <p className="text-xs text-muted-foreground">
-          Türkiye için otomatik olarak Europe/Istanbul seçilmiştir.
-        </p>
-      </div>
     </div>
   );
 }
