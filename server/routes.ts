@@ -1145,6 +1145,33 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Clean up orphaned conversations (Unknown Agent)
+  app.post("/api/admin/cleanup-orphaned-conversations", authenticate, rateLimiters.api, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      console.log(`🧹 Cleanup request from user: ${userId}`);
+      const result = await storage.cleanupOrphanedConversations();
+      
+      console.log(`✅ Cleanup completed: ${result.deletedMessages} messages, ${result.deletedConversations} conversations deleted`);
+      
+      res.json({ 
+        success: true, 
+        message: "Orphaned conversations cleaned up successfully", 
+        ...result 
+      });
+    } catch (error: any) {
+      console.error(`💥 Cleanup error:`, error);
+      res.status(500).json({ 
+        error: "Failed to cleanup orphaned conversations", 
+        details: error.message 
+      });
+    }
+  });
+
   // Conversations
   app.get("/api/conversations", async (req, res) => {
     try {

@@ -298,6 +298,19 @@ export class DatabaseStorage implements IStorage {
       return; // Agent already deleted or doesn't exist
     }
 
+    // First delete all messages related to this agent's conversations
+    const agentConversations = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(and(eq(conversations.agentId, id), eq(conversations.userId, userId)));
+    
+    for (const conversation of agentConversations) {
+      await db.delete(messages).where(eq(messages.conversationId, conversation.id));
+    }
+
+    // Then delete all conversations related to this agent
+    await db.delete(conversations).where(and(eq(conversations.agentId, id), eq(conversations.userId, userId)));
+
     // Delete from database (this will also cascade delete related playbooks)
     await db.delete(agents).where(and(eq(agents.id, id), eq(agents.userId, userId)));
   }
@@ -1424,6 +1437,50 @@ export class DatabaseStorage implements IStorage {
       .from(agentWizardEvents)
       .where(eq(agentWizardEvents.sessionId, sessionId))
       .orderBy(desc(agentWizardEvents.createdAt));
+  }
+
+  // Clean up orphaned conversations (Unknown Agent)
+  async cleanupOrphanedConversations(): Promise<{ deletedMessages: number; deletedConversations: number }> {
+    console.log('🧹 Starting cleanup of orphaned conversations...');
+    
+    // Find conversations with non-existent agent IDs
+    const orphanedConversations = await db
+      .select({ id: conversations.id, agentId: conversations.agentId })
+      .from(conversations)
+      .leftJoin(agents, eq(conversations.agentId, agents.id))
+      .where(sql`${agents.id} IS NULL`);
+    
+    console.log(`Found ${orphanedConversations.length} orphaned conversations`);
+    
+    let deletedMessages = 0;
+    let deletedConversations = 0;
+    
+    // Delete messages for each orphaned conversation
+    for (const conversation of orphanedConversations) {
+      const deletedMessagesResult = await db
+        .delete(messages)
+        .where(eq(messages.conversationId, conversation.id))
+        .returning({ id: messages.id });
+      
+      deletedMessages += deletedMessagesResult.length;
+      console.log(`Deleted ${deletedMessagesResult.length} messages for conversation ${conversation.id}`);
+    }
+    
+    // Delete the orphaned conversations
+    if (orphanedConversations.length > 0) {
+      const conversationIds = orphanedConversations.map(c => c.id);
+      const deletedConversationsResult = await db
+        .delete(conversations)
+        .where(inArray(conversations.id, conversationIds))
+        .returning({ id: conversations.id });
+      
+      deletedConversations = deletedConversationsResult.length;
+      console.log(`Deleted ${deletedConversations} orphaned conversations`);
+    }
+    
+    console.log(`🧹 Cleanup completed: ${deletedMessages} messages, ${deletedConversations} conversations deleted`);
+    
+    return { deletedMessages, deletedConversations };
   }
 }
 
