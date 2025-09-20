@@ -47,13 +47,13 @@ const AppContent = () => {
             </div>
           )}
           <Button
-            className="w-24 h-24 rounded-full shadow-lg hover:scale-105 transition-all pl-[0px] pr-[0px] pt-[0px] pb-[0px]"
+            className="w-10 h-10 rounded-full shadow-lg hover:scale-105 transition-all pl-[0px] pr-[0px] pt-[0px] pb-[0px]"
             onMouseEnter={() => setShowChatTooltip(true)}
             onMouseLeave={() => setShowChatTooltip(false)}
             onClick={() => toast({ title: "Sohbet widget'ı", description: "Canlı sohbet özelliği yakında geliyor!" })}
             data-testid="button-global-chat"
           >
-            <MessageCircle className="w-3 h-3" />
+            <MessageCircle className="w-4 h-4" />
           </Button>
         </div>
       </div>
