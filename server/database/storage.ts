@@ -298,6 +298,21 @@ export class DatabaseStorage implements IStorage {
       return; // Agent already deleted or doesn't exist
     }
 
+    // Delete OpenAI Assistant if it exists
+    if (agent.openaiAssistantId) {
+      try {
+        console.log(`🤖 Attempting to delete OpenAI Assistant: ${agent.openaiAssistantId}`);
+        const { openaiService } = await import('../services/OpenAIService');
+        await openaiService.deleteAssistant(agent.openaiAssistantId);
+        console.log(`✅ OpenAI Assistant deleted successfully: ${agent.openaiAssistantId}`);
+      } catch (error: any) {
+        console.error(`⚠️  Warning: Failed to delete OpenAI Assistant ${agent.openaiAssistantId}:`, error);
+        // Continue with agent deletion even if OpenAI Assistant deletion fails
+      }
+    } else {
+      console.log(`ℹ️  No OpenAI Assistant ID found for agent ${id}, skipping OpenAI deletion`);
+    }
+
     // First delete all messages related to this agent's conversations
     const agentConversations = await db
       .select({ id: conversations.id })

@@ -408,7 +408,7 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       console.log(`🗑️ Deleting OpenAI Assistant: ${assistantId}`);
       
       // Delete the assistant from OpenAI
-      await this.openai.beta.assistants.del(assistantId);
+      await this.openai.beta.assistants.delete(assistantId);
       
       console.log(`✅ Successfully deleted OpenAI Assistant: ${assistantId}`);
       return true;
