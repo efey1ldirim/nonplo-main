@@ -97,7 +97,10 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
 
   // Initialize selected location from existing data
   useEffect(() => {
-    if (data.addressData?.latitude && data.addressData?.longitude && isLoaded) {
+    if (data.addressData && typeof data.addressData === 'object' && 
+        'latitude' in data.addressData && 'longitude' in data.addressData && 
+        typeof data.addressData.latitude === 'number' && typeof data.addressData.longitude === 'number' &&
+        isLoaded) {
       const location = new google.maps.LatLng(data.addressData.latitude, data.addressData.longitude);
       setSelectedLocation(location);
     }
@@ -174,10 +177,11 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     }
 
     console.log('✅ Mapped address data:', addressData);
+    console.log('📝 Setting input value to:', addressData.formattedAddress);
 
-    // Update form values
-    setValue('address', addressData.formattedAddress);
-    setValue('addressData', addressData);
+    // Update form values with the full formatted address
+    setValue('address', addressData.formattedAddress, { shouldValidate: true });
+    setValue('addressData', addressData, { shouldValidate: true });
     
     // Update map location
     setSelectedLocation(place.geometry.location);
