@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLoginNotifications } from "./hooks/useLoginNotifications";
 import { initGA } from "./lib/analytics";
 import RouterWrapper from "./components/RouterWrapper";
-import ContactFormDialog from "@/components/dialogs/ContactFormDialog";
 import { MessageCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 import { queryClient } from "@/lib/queryClient";
 
@@ -21,6 +21,9 @@ const AppInsideRouter = () => {
 };
 
 const AppContent = () => {
+  const [showChatTooltip, setShowChatTooltip] = useState(false);
+  const { toast } = useToast();
+
   // Initialize Google Analytics (before Router - safe)
   useEffect(() => {
     if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
@@ -34,17 +37,26 @@ const AppContent = () => {
     <BrowserRouter>
       <AppInsideRouter />
       
-      {/* Global Live Support Button - Always Visible */}
-      <ContactFormDialog>
-        <Button
-          size="lg"
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-50 bg-primary hover:bg-primary/90"
-          data-testid="button-global-live-support"
-        >
-          <MessageCircle className="h-6 w-6" />
-          <span className="sr-only">Canlı Destek</span>
-        </Button>
-      </ContactFormDialog>
+      {/* Global Live Chat Widget - Moved from DashboardSupport */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="relative">
+          {showChatTooltip && (
+            <div className="absolute bottom-full right-0 mb-2 bg-background border border-border rounded-lg shadow-lg p-3 min-w-[200px]">
+              <p className="text-sm text-foreground">Yardıma mı ihtiyacınız var? Bizimle sohbet edin.</p>
+              <div className="absolute bottom-0 right-4 transform translate-y-1/2 rotate-45 w-2 h-2 bg-background border-r border-b border-border"></div>
+            </div>
+          )}
+          <Button
+            className="w-12 h-12 rounded-full shadow-lg hover:scale-105 transition-all"
+            onMouseEnter={() => setShowChatTooltip(true)}
+            onMouseLeave={() => setShowChatTooltip(false)}
+            onClick={() => toast({ title: "Sohbet widget'ı", description: "Canlı sohbet özelliği yakında geliyor!" })}
+            data-testid="button-global-chat"
+          >
+            <MessageCircle className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
     </BrowserRouter>
   );
 };
