@@ -202,14 +202,8 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
       'types'
     ]);
     
-    // Manually bind the place_changed event
-    autocompleteInstance.addListener('place_changed', () => {
-      console.log('🎯 Place changed event triggered!');
-      onPlaceChanged();
-    });
-    
     setAutocomplete(autocompleteInstance);
-  }, [onPlaceChanged]);
+  }, []);
 
   // Handle map click for location selection
   const onMapClick = useCallback(async (event: google.maps.MapMouseEvent) => {
@@ -293,6 +287,10 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
         <Label htmlFor="address">Adres Arama</Label>
         <Autocomplete
           onLoad={onAutocompleteLoad}
+          onPlaceChanged={() => {
+            console.log('🎯 Place changed event triggered via prop!');
+            onPlaceChanged();
+          }}
         >
           <Input
             ref={inputRef}
