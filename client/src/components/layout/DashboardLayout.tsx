@@ -11,9 +11,7 @@ import {
   Wrench,
   Menu,
   ChevronDown,
-  ChevronRight,
-  MessageCircle,
-  Lightbulb
+  ChevronRight
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -22,19 +20,16 @@ import DashboardSupport from "@/pages/dashboard/DashboardSupport";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { useToast } from "@/hooks/use-toast";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useSupabaseAuth();
-  const { toast } = useToast();
   const [showAccountPopup, setShowAccountPopup] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [agentsExpanded, setAgentsExpanded] = useState(false);
-  const [showChatTooltip, setShowChatTooltip] = useState(false);
 
   const navigationItems = [
     { icon: LayoutDashboard, label: "Analizler", path: "/dashboard" },
@@ -459,40 +454,6 @@ const DashboardLayout = () => {
       {supportOpen && (
         <DashboardSupport onClose={() => setSupportOpen(false)} />
       )}
-
-      {/* Always Visible Support Widgets */}
-      {/* Live Chat Widget */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <div className="relative">
-          {showChatTooltip && (
-            <div className="absolute bottom-full right-0 mb-2 bg-background border border-border rounded-lg shadow-lg p-3 min-w-[200px]">
-              <p className="text-sm text-foreground">Yardıma mı ihtiyacınız var? Bizimle sohbet edin.</p>
-              <div className="absolute bottom-0 right-4 transform translate-y-1/2 rotate-45 w-2 h-2 bg-background border-r border-b border-border"></div>
-            </div>
-          )}
-          <Button
-            className="w-12 h-12 rounded-full shadow-lg hover:scale-105 transition-all"
-            onMouseEnter={() => setShowChatTooltip(true)}
-            onMouseLeave={() => setShowChatTooltip(false)}
-            onClick={() => toast({ title: "Sohbet widget'ı", description: "Canlı sohbet özelliği yakında geliyor!" })}
-          >
-            <MessageCircle className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Feedback Button */}
-      <div className="fixed bottom-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          className="shadow-lg hover:scale-105 transition-all"
-          onClick={() => toast({ title: "Geri bildirim", description: "Geri bildirim özelliği yakında geliyor!" })}
-        >
-          <Lightbulb className="w-4 h-4 mr-2" />
-           Geri Bildirim Gönder
-        </Button>
-      </div>
     </div>
   );
 };
