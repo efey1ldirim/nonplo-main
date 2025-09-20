@@ -156,14 +156,25 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
       'types'
     ]);
     
+    // Manually bind the place_changed event
+    autocompleteInstance.addListener('place_changed', () => {
+      console.log('🎯 Place changed event triggered!');
+      onPlaceChanged();
+    });
+    
     setAutocomplete(autocompleteInstance);
-  }, []);
+  }, [onPlaceChanged]);
 
   // Handle place selection from autocomplete
   const onPlaceChanged = useCallback(() => {
-    if (!autocomplete) return;
+    // Use current autocomplete instance from state
+    const currentAutocomplete = autocomplete;
+    if (!currentAutocomplete) {
+      console.warn('⚠️ No autocomplete instance available');
+      return;
+    }
 
-    const place = autocomplete.getPlace();
+    const place = currentAutocomplete.getPlace();
     console.log('📍 Place selected from autocomplete:', place);
 
     if (!place.geometry?.location) {
@@ -282,7 +293,6 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
         <Label htmlFor="address">Adres Arama</Label>
         <Autocomplete
           onLoad={onAutocompleteLoad}
-          onPlaceChanged={onPlaceChanged}
         >
           <Input
             ref={inputRef}
