@@ -142,29 +142,6 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
     }
   }, [isLoaded, geocoder]);
 
-  // Handle autocomplete load
-  const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
-    console.log('🗺️ Google Places Autocomplete loaded');
-    
-    // Configure autocomplete for Turkey
-    autocompleteInstance.setComponentRestrictions({ country: 'tr' });
-    autocompleteInstance.setFields([
-      'place_id',
-      'formatted_address',
-      'geometry.location',
-      'address_components',
-      'types'
-    ]);
-    
-    // Manually bind the place_changed event
-    autocompleteInstance.addListener('place_changed', () => {
-      console.log('🎯 Place changed event triggered!');
-      onPlaceChanged();
-    });
-    
-    setAutocomplete(autocompleteInstance);
-  }, [onPlaceChanged]);
-
   // Handle place selection from autocomplete
   const onPlaceChanged = useCallback(() => {
     // Use current autocomplete instance from state
@@ -210,6 +187,29 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
       map.setZoom(15);
     }
   }, [autocomplete, map, setValue]);
+
+  // Handle autocomplete load
+  const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
+    console.log('🗺️ Google Places Autocomplete loaded');
+    
+    // Configure autocomplete for Turkey
+    autocompleteInstance.setComponentRestrictions({ country: 'tr' });
+    autocompleteInstance.setFields([
+      'place_id',
+      'formatted_address',
+      'geometry.location',
+      'address_components',
+      'types'
+    ]);
+    
+    // Manually bind the place_changed event
+    autocompleteInstance.addListener('place_changed', () => {
+      console.log('🎯 Place changed event triggered!');
+      onPlaceChanged();
+    });
+    
+    setAutocomplete(autocompleteInstance);
+  }, [onPlaceChanged]);
 
   // Handle map click for location selection
   const onMapClick = useCallback(async (event: google.maps.MapMouseEvent) => {
