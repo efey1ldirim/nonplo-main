@@ -60,6 +60,7 @@ const searchAddresses = async (query: string) => {
     }
 
     const data = await response.json();
+    console.log('🔍 Nominatim raw response:', data.length, 'results for query:', query);
     
     return data.map((item: any) => ({
       placeId: item.place_id,
@@ -156,16 +157,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Address search endpoint
   app.post('/api/address/search', async (req, res) => {
     try {
+      console.log('📍 Address search request received:', req.body);
       const { query } = req.body;
       
       if (!query || query.length < 2) {
+        console.log('❌ Query too short:', query);
         return res.status(400).json({ 
           success: false, 
           error: 'Query must be at least 2 characters long' 
         });
       }
 
+      console.log('🔍 Calling searchAddresses for:', query);
       const results = await searchAddresses(query);
+      console.log('✅ Search results:', results.length, 'addresses found');
       
       res.json({
         success: true,
@@ -173,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count: results.length
       });
     } catch (error) {
-      console.error('Address search endpoint error:', error);
+      console.error('❌ Address search endpoint error:', error);
       res.status(500).json({
         success: false,
         error: 'Address search failed'

@@ -33,7 +33,15 @@ const addressSearchService = {
       }
 
       const result = await response.json();
-      return result.success ? result.data : [];
+      console.log('🔍 Address search response:', result);
+      
+      if (result.success && Array.isArray(result.data)) {
+        console.log('✅ Found addresses:', result.data.length);
+        return result.data;
+      } else {
+        console.warn('⚠️ No data in response:', result);
+        return [];
+      }
     } catch (error) {
       console.error('Address search error:', error);
       return [];
