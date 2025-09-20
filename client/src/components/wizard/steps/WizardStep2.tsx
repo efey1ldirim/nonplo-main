@@ -145,58 +145,74 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
 
   // Add effect to handle autocomplete place changed event manually
   useEffect(() => {
-    if (!autocomplete) return;
+    if (!autocomplete || !isLoaded) {
+      console.log('🔧 Waiting for autocomplete and Google Maps to load...', { autocomplete: !!autocomplete, isLoaded });
+      return;
+    }
 
     console.log('🔧 Setting up manual place_changed listener');
     
     const handlePlaceChanged = () => {
       console.log('🎯 Manual place_changed event triggered!');
       
-      const place = autocomplete.getPlace();
-      console.log('📍 Place selected from autocomplete:', place);
+      try {
+        const place = autocomplete.getPlace();
+        console.log('📍 Place selected from autocomplete:', place);
 
-      if (!place.geometry?.location) {
-        console.warn('⚠️ No location data in selected place');
-        return;
+        if (!place || !place.geometry?.location) {
+          console.warn('⚠️ No location data in selected place');
+          return;
+        }
+
+        const addressData = mapGooglePlaceToAddressData(place);
+        if (!addressData) {
+          console.warn('⚠️ Could not map place to address data');
+          return;
+        }
+
+        console.log('✅ Mapped address data:', addressData);
+        console.log('📝 Setting input value to:', addressData.formattedAddress);
+
+        // Update input value directly
+        if (inputRef.current) {
+          inputRef.current.value = addressData.formattedAddress;
+          console.log('✅ Input value updated directly:', inputRef.current.value);
+        }
+
+        // Update form values with the full formatted address
+        setValue('address', addressData.formattedAddress, { shouldValidate: true });
+        setValue('addressData', addressData, { shouldValidate: true });
+        
+        // Update map location
+        setSelectedLocation(place.geometry.location);
+
+        // Center map on selected location
+        if (map) {
+          map.panTo(place.geometry.location);
+          map.setZoom(15);
+        }
+      } catch (error) {
+        console.error('❌ Error in place_changed handler:', error);
       }
+    };
 
-      const addressData = mapGooglePlaceToAddressData(place);
-      if (!addressData) {
-        console.warn('⚠️ Could not map place to address data');
-        return;
-      }
-
-      console.log('✅ Mapped address data:', addressData);
-      console.log('📝 Setting input value to:', addressData.formattedAddress);
-
-      // Update input value directly
-      if (inputRef.current) {
-        inputRef.current.value = addressData.formattedAddress;
-        console.log('✅ Input value updated directly:', inputRef.current.value);
-      }
-
-      // Update form values with the full formatted address
-      setValue('address', addressData.formattedAddress, { shouldValidate: true });
-      setValue('addressData', addressData, { shouldValidate: true });
+    // Add listener with error handling
+    try {
+      const listener = autocomplete.addListener('place_changed', handlePlaceChanged);
+      console.log('✅ Event listener added successfully');
       
-      // Update map location
-      setSelectedLocation(place.geometry.location);
-
-      // Center map on selected location
-      if (map) {
-        map.panTo(place.geometry.location);
-        map.setZoom(15);
-      }
-    };
-
-    // Add listener
-    const listener = autocomplete.addListener('place_changed', handlePlaceChanged);
-    
-    return () => {
-      // Cleanup
-      google.maps.event.removeListener(listener);
-    };
-  }, [autocomplete, map, setValue]);
+      return () => {
+        try {
+          google.maps.event.removeListener(listener);
+          console.log('🧹 Event listener removed');
+        } catch (error) {
+          console.warn('⚠️ Error removing listener:', error);
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error adding place_changed listener:', error);
+    }
+  }, [autocomplete, map, setValue, isLoaded]);
 
   // Handle autocomplete load
   const onAutocompleteLoad = useCallback((autocompleteInstance: google.maps.places.Autocomplete) => {
