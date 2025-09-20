@@ -47,7 +47,7 @@ const AppContent = () => {
             </div>
           )}
           <Button
-            className="w-6 h-6 rounded-full shadow-lg hover:scale-105 transition-all"
+            className="w-24 h-24 rounded-full shadow-lg hover:scale-105 transition-all pl-[0px] pr-[0px] pt-[0px] pb-[0px]"
             onMouseEnter={() => setShowChatTooltip(true)}
             onMouseLeave={() => setShowChatTooltip(false)}
             onClick={() => toast({ title: "Sohbet widget'ı", description: "Canlı sohbet özelliği yakında geliyor!" })}
