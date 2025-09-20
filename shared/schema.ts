@@ -690,17 +690,37 @@ export const wizardStep1Schema = z.object({
   industry: z.string().min(1, "Sektör seçimi gerekli"),
 });
 
+// Google Maps compatible address components
+export const addressComponentsSchema = z.object({
+  city: z.string().optional(),
+  country: z.string().optional(),
+  district: z.string().optional(),
+  neighbourhood: z.string().optional(),
+  postcode: z.string().optional(),
+  road: z.string().optional(),
+  houseNumber: z.string().optional(),
+});
+
+// Google Maps compatible address data
+export const addressDataSchema = z.object({
+  placeId: z.string(),
+  formattedAddress: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  components: addressComponentsSchema,
+  type: z.string().optional(),
+  importance: z.number().nullable().optional(),
+});
+
 export const wizardStep2Schema = z.object({
   address: z.string().optional(),
-  addressData: z.object({
-    placeId: z.string(),
-    formattedAddress: z.string(),
-    latitude: z.number(),
-    longitude: z.number(),
-    components: z.record(z.string()),
-  }).optional(),
+  addressData: addressDataSchema.optional(),
   timezone: z.string().optional(),
 });
+
+// Type exports for address data
+export type AddressComponents = z.infer<typeof addressComponentsSchema>;
+export type AddressData = z.infer<typeof addressDataSchema>;
 
 export const wizardStep3Schema = z.object({
   workingHours: z.object({
