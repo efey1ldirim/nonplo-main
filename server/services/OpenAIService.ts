@@ -500,14 +500,14 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       try {
         // Debug OpenAI beta API availability
         console.log(`🔧 Debug: this.openai.beta exists:`, !!this.openai.beta);
-        console.log(`🔧 Debug: this.openai.beta.vectorStores exists:`, !!this.openai.beta?.vectorStores);
-        console.log(`🔧 Debug: this.openai.beta.vectorStores.create exists:`, !!this.openai.beta?.vectorStores?.create);
+        console.log(`🔧 Debug: this.openai.beta.vectorStores exists:`, !!(this.openai.beta as any)?.vectorStores);
+        console.log(`🔧 Debug: this.openai.beta.vectorStores.create exists:`, !!(this.openai.beta as any)?.vectorStores?.create);
         
-        if (!this.openai.beta?.vectorStores?.create) {
+        if (!(this.openai.beta as any)?.vectorStores?.create) {
           throw new Error('OpenAI beta vectorStores API not available');
         }
         
-        vectorStore = await this.openai.beta.vectorStores.create({
+        vectorStore = await (this.openai.beta as any).vectorStores.create({
           name: `banned-words-${agentData.name}`,
           file_ids: [profanityFileId]
         });

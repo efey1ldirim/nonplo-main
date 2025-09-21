@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, sql, inArray, gt } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, gt, isNull } from "drizzle-orm";
 import axios from "axios";
 import { cacheManager } from '../performance/cacheManager';
 import {
@@ -245,7 +245,7 @@ export class DatabaseStorage implements IStorage {
       tools: wizardData.tools,
       integrations: wizardData.integrations,
       messageHistoryFile: wizardData.messageHistoryFile,
-      isActive: true,
+      is_active: true,
     };
 
     const result = await db.insert(agents).values(agentData).returning();
