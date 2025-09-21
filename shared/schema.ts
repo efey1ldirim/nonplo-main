@@ -64,7 +64,9 @@ export const toolsSettings = pgTable("tools_settings", {
   enabled: boolean("enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  uniqueUserAgentTool: unique("tools_settings_user_agent_tool_unique").on(table.userId, table.agentId, table.toolKey)
+}));
 
 // Integrations connections table
 export const integrationsConnections = pgTable("integrations_connections", {
