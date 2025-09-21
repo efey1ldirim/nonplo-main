@@ -498,13 +498,23 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       // Create vector store for profanity filtering
       let vectorStore;
       try {
-        vectorStore = await (this.openai.beta as any).vectorStores.create({
+        // Debug OpenAI beta API availability
+        console.log(`🔧 Debug: this.openai.beta exists:`, !!this.openai.beta);
+        console.log(`🔧 Debug: this.openai.beta.vectorStores exists:`, !!this.openai.beta?.vectorStores);
+        console.log(`🔧 Debug: this.openai.beta.vectorStores.create exists:`, !!this.openai.beta?.vectorStores?.create);
+        
+        if (!this.openai.beta?.vectorStores?.create) {
+          throw new Error('OpenAI beta vectorStores API not available');
+        }
+        
+        vectorStore = await this.openai.beta.vectorStores.create({
           name: `banned-words-${agentData.name}`,
           file_ids: [profanityFileId]
         });
         console.log(`✅ Vector store created: ${vectorStore.id}`);
       } catch (vectorError: any) {
         console.error(`❌ Vector store creation failed: ${vectorError.message}`);
+        console.error(`❌ Vector store error stack:`, vectorError.stack);
         vectorStore = { id: 'fallback-no-vector-store' };
       }
 
