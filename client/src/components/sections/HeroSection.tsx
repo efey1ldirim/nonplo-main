@@ -70,7 +70,7 @@ const HeroSection = () => {
             </div>
 
             {/* Trust indicators */}
-            <div className="text-sm text-muted-foreground">✨ 14 günlük ücretsiz deneme </div>
+            <div className="text-sm text-muted-foreground">✨ 7 günlük ücretsiz deneme </div>
           </div>
         </div>
       </div>
