@@ -912,7 +912,7 @@ export default function DashboardAgentDetail() {
     
     // Validation: require global connection first
     if (!globalConnections[providerKey] && enabled) {
-      toast({ title: "Önce global bağlantı yapın", description: "Entegrasyonlar & Araçlar'ı açarak bağlanın.", variant: "destructive" });
+      toast({ title: "Önce global bağlantı yapın", description: "Kanallar'ı açarak bağlanın.", variant: "destructive" });
       return;
     }
     
@@ -1440,7 +1440,7 @@ export default function DashboardAgentDetail() {
             <CardHeader>
               <CardTitle>Ajana Özel Entegrasyonlar</CardTitle>
               <CardDescription>
-                Bağlantılar (OAuth) Entegrasyonlar & Araçlar'da yönetilir. Burada bu ajanın hangi bağlı servisleri kullanacağını etkinleştirirsiniz.
+                Bağlantılar (OAuth) Kanallar'da yönetilir. Burada bu ajanın hangi bağlı servisleri kullanacağını etkinleştirirsiniz.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

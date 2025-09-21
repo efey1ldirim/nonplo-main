@@ -167,7 +167,7 @@ const DashboardLayout = () => {
             onClick={() => handleNavigation("/dashboard/integrations")}
           >
             <Wrench className="mr-3 h-4 w-4" />
-            Entegrasyonlar & Araçlar
+            Kanallar
           </Button>
           
           <Button
@@ -363,7 +363,7 @@ const DashboardLayout = () => {
                       }}
                     >
                       <Wrench className="mr-3 h-4 w-4" />
-                      Entegrasyonlar & Araçlar
+                      Kanallar
                     </Button>
                     
                     <Button
