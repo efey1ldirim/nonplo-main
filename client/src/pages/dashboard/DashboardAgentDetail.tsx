@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -105,8 +105,17 @@ export default function DashboardAgentDetail() {
   const [webSearchResults, setWebSearchResults] = useState<any>(null);
   const [webSearchError, setWebSearchError] = useState<string>("");
 
-  // Settings/Knowledge draft state (unsaved guard demo)
-  const [hasUnsavedDraft, setHasUnsavedDraft] = useState(false);
+  // Settings form state
+  const [agentRole, setAgentRole] = useState<string>("");
+  const [maxResponseLength, setMaxResponseLength] = useState<string>("");
+  const [backupMessage, setBackupMessage] = useState<string>("");
+  const [language, setLanguage] = useState<string>("");
+  const [redirectRules, setRedirectRules] = useState<string>("");
+  const [personalDataMasking, setPersonalDataMasking] = useState<string>("");
+  const [autoSaving, setAutoSaving] = useState(false);
+  
+  // Debounced save timer
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Forbidden words state
   const [forbiddenWords, setForbiddenWords] = useState<string[]>([]);
@@ -272,6 +281,30 @@ export default function DashboardAgentDetail() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId]);
+
+  // Initialize form state when agent data is loaded
+  useEffect(() => {
+    if (agent) {
+      setNewName(agent.name || "");
+      setAgentRole(agent.role || "");
+      setTemperature(agent.temperature || "1.0");
+      // Initialize other form fields with existing data or empty strings
+      setMaxResponseLength("");
+      setBackupMessage("");
+      setLanguage("");
+      setRedirectRules("");
+      setPersonalDataMasking("");
+    }
+  }, [agent]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load forbidden words
   const loadForbiddenWords = async () => {
@@ -795,7 +828,67 @@ export default function DashboardAgentDetail() {
     }
   };
 
+  // Auto-save agent settings with debouncing
+  const debouncedAutoSave = useCallback(async (fieldName: string, value: string) => {
+    if (!agent || !userId) return;
+    
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced save
+    saveTimeoutRef.current = setTimeout(async () => {
+      setAutoSaving(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('No authentication token');
+        }
 
+        const updateData: any = {};
+        if (fieldName === 'name') updateData.name = value;
+        else if (fieldName === 'role') updateData.role = value;
+        // Add support for other fields when backend is ready
+        // else if (fieldName === 'maxResponseLength') updateData.maxResponseLength = value;
+        // else if (fieldName === 'backupMessage') updateData.backupMessage = value;
+        // else if (fieldName === 'language') updateData.language = value;
+        
+        const response = await fetch(`/api/agents/${agent.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            userId: userId,
+            ...updateData
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to auto-save agent settings');
+        }
+        
+        // Update local agent state using functional updates to avoid stale state
+        if (fieldName === 'name') {
+          setAgent(prev => prev ? { ...prev, name: value } : null);
+        } else if (fieldName === 'role') {
+          setAgent(prev => prev ? { ...prev, role: value } : null);
+        }
+        
+      } catch (error) {
+        console.error('Auto-save error:', error);
+        toast({ 
+          title: "Kaydetme hatası", 
+          description: "Ayarlar kaydedilemedi, lütfen tekrar deneyin.", 
+          variant: "destructive" 
+        });
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 1000); // 1 second debounce
+  }, [agent?.id, userId, toast]);
 
   const handleExport = () => {
     if (!agent) return;
@@ -1604,11 +1697,31 @@ export default function DashboardAgentDetail() {
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-1">
                 <Label htmlFor="agent-name">Ajan adı</Label>
-                <Input id="agent-name" value={newName} onChange={(e) => { setNewName(e.target.value); setHasUnsavedDraft(true); }} />
+                <Input 
+                  id="agent-name" 
+                  value={newName} 
+                  onChange={(e) => setNewName(e.target.value)}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() && e.target.value.trim() !== agent?.name) {
+                      debouncedAutoSave('name', e.target.value.trim());
+                    }
+                  }}
+                  data-testid="input-agent-name"
+                />
               </div>
               <div className="md:col-span-1">
                 <Label htmlFor="agent-role">Rol / Hedef</Label>
-                <Input id="agent-role" defaultValue={agent.role} onChange={() => setHasUnsavedDraft(true)} />
+                <Input 
+                  id="agent-role" 
+                  value={agentRole}
+                  onChange={(e) => setAgentRole(e.target.value)}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== agent?.role) {
+                      debouncedAutoSave('role', e.target.value.trim());
+                    }
+                  }}
+                  data-testid="input-agent-role"
+                />
               </div>
             </CardContent>
           </Card>
@@ -1620,7 +1733,18 @@ export default function DashboardAgentDetail() {
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
                 <Label>Maksimum yanıt uzunluğu</Label>
-                <Input type="number" placeholder="ör. 500" onChange={() => setHasUnsavedDraft(true)} />
+                <Input 
+                  type="number" 
+                  placeholder="ör. 500" 
+                  value={maxResponseLength}
+                  onChange={(e) => setMaxResponseLength(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="input-max-response-length"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
               </div>
               <div>
                 <Label>Yaratıcılık</Label>
@@ -1630,10 +1754,7 @@ export default function DashboardAgentDetail() {
                   min="0" 
                   max="2" 
                   value={temperature}
-                  onChange={(e) => {
-                    setTemperature(e.target.value);
-                    setHasUnsavedDraft(true);
-                  }}
+                  onChange={(e) => setTemperature(e.target.value)}
                   onBlur={() => {
                     if (temperature !== (agent?.temperature || "1.0")) {
                       handleTemperatureUpdate(temperature);
@@ -1649,11 +1770,28 @@ export default function DashboardAgentDetail() {
               </div>
               <div className="md:col-span-2">
                 <Label>Yedek mesaj</Label>
-                <Textarea rows={3} placeholder="Sorry, I couldn’t help with that." onChange={() => setHasUnsavedDraft(true)} />
+                <Textarea rows={3} placeholder="Sorry, I couldn’t help with that." value={backupMessage}
+                  onChange={(e) => setBackupMessage(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="textarea-backup-message" />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
               </div>
               <div className="md:col-span-2">
                 <Label>Dil</Label>
-                <Input placeholder="Otomatik / tr / en ..." onChange={() => setHasUnsavedDraft(true)} />
+                <Input 
+                  placeholder="Otomatik / tr / en ..." 
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="input-language"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1694,11 +1832,32 @@ export default function DashboardAgentDetail() {
               </div>
               <div>
                 <Label>Yönlendirme kuralları</Label>
-                <Textarea rows={3} placeholder="Eğer X ise Y'ye yönlendir" onChange={() => setHasUnsavedDraft(true)} />
+                <Textarea 
+                  rows={3} 
+                  placeholder="Eğer X ise Y'ye yönlendir" 
+                  value={redirectRules}
+                  onChange={(e) => setRedirectRules(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="textarea-redirect-rules"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
               </div>
               <div>
                 <Label>Kişisel veri maskeleme</Label>
-                <Input placeholder="Etkin / Devre dışı" onChange={() => setHasUnsavedDraft(true)} />
+                <Input 
+                  placeholder="Etkin / Devre dışı" 
+                  value={personalDataMasking}
+                  onChange={(e) => setPersonalDataMasking(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="input-personal-data-masking"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1725,9 +1884,15 @@ export default function DashboardAgentDetail() {
           </Card>
 
           <div className="flex items-center gap-2">
-            <Button onClick={() => { if (newName.trim() && newName.trim() !== agent.name) { handleRename(); } setHasUnsavedDraft(false); }}>Kaydet</Button>
-            <Button variant="outline" onClick={() => setHasUnsavedDraft(false)}>İptal</Button>
-            {hasUnsavedDraft && <span className="text-sm text-muted-foreground">Kaydedilmemiş değişiklikleriniz var.</span>}
+            {autoSaving && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <span>Otomatik kaydediliyor...</span>
+              </div>
+            )}
+            <div className="text-sm text-green-600 opacity-75">
+              ✓ Tüm değişiklikler otomatik olarak kaydedilir
+            </div>
           </div>
         </TabsContent>
 
