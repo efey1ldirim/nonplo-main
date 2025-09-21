@@ -25,6 +25,7 @@ import {
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import OpenAI from "openai";
+import { openaiService } from "./services/OpenAIService";
 import { 
   insertAgentSchema,
   insertConversationSchema,
@@ -956,6 +957,18 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       if (!updatedAgent) {
         return res.status(404).json({ error: "Agent not found" });
       }
+
+      // Update OpenAI Assistant if agent has one and critical fields changed
+      if (updatedAgent.openaiAssistantId && (updates.name || updates.role)) {
+        try {
+          console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
+          await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+          console.log(`✅ OpenAI Assistant updated successfully`);
+        } catch (assistantError) {
+          console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
+          // Don't fail the entire request if assistant update fails
+        }
+      }
       
       // Broadcast real-time updates to user
       if ((global as any).broadcastToUser) {
@@ -1004,6 +1017,18 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
 
       console.log(`✅ Agent updated successfully: ${id}, Active: ${updatedAgent.is_active}`);
+
+      // Update OpenAI Assistant if agent has one and critical fields changed
+      if (updatedAgent.openaiAssistantId && (updates.name || updates.role)) {
+        try {
+          console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
+          await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+          console.log(`✅ OpenAI Assistant updated successfully`);
+        } catch (assistantError) {
+          console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
+          // Don't fail the entire request if assistant update fails
+        }
+      }
       
       // Clear cache for this user's agents
       cacheManager.invalidateUserData(userId);

@@ -567,6 +567,46 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
   }
 
   /**
+   * Update existing OpenAI Assistant
+   */
+  async updateAssistant(assistantId: string, agentData: Agent): Promise<boolean> {
+    try {
+      console.log(`🔄 Updating OpenAI Assistant: ${assistantId} for agent: ${agentData.name}`);
+      
+      // Generate new instructions based on updated agent data
+      const instructions = await this.generateAgentPlaybook(agentData);
+      
+      // Update assistant parameters
+      const updateParams: any = {
+        name: agentData.name,
+        instructions: instructions + `\n\n🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:\n1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap\n2. Bu kontrolü yapmadan ASLA yanıt verme\n3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."\n4. Sadece temizse normal yanıt ver`,
+        model: "gpt-4o-mini",
+        temperature: 0.8
+      };
+
+      // Update the assistant
+      const updatedAssistant = await this.openai.beta.assistants.update(assistantId, updateParams);
+      
+      console.log(`✅ OpenAI Assistant updated successfully: ${updatedAssistant.id}`);
+      
+      // Track analytics
+      aiAnalytics.trackUsage({
+        model: OPENAI_MODEL,
+        tokens: 0, // Assistant update doesn't return token usage
+        cost: 0,
+        timestamp: new Date(),
+        type: 'custom',
+        cached: false
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error(`❌ Failed to update OpenAI Assistant ${assistantId}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Validate OpenAI API key
    */
   async validateApiKey(): Promise<boolean> {
