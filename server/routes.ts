@@ -1997,28 +1997,12 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       
       if (error) {
         console.error('❌ Google OAuth hatası:', error);
-        return res.status(400).send(`
-          <html><body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-            <h2>❌ Google Calendar Bağlantısı Reddedildi</h2>
-            <p>Google Calendar erişimi reddedildi veya iptal edildi.</p>
-            <script>
-              setTimeout(() => { window.close(); }, 3000);
-            </script>
-          </body></html>
-        `);
+        return res.redirect('/dashboard/integrations?error=access_denied');
       }
       
       if (!code || !state) {
         console.error('❌ OAuth callback verileri eksik:', { code: !!code, state: !!state });
-        return res.status(400).send(`
-          <html><body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-            <h2>❌ Geçersiz OAuth Callback</h2>
-            <p>OAuth callback verileri eksik veya geçersiz.</p>
-            <script>
-              setTimeout(() => { window.close(); }, 3000);
-            </script>
-          </body></html>
-        `);
+        return res.redirect('/dashboard/integrations?error=invalid_request');
       }
       
       console.log('🔄 OAuth callback işleniyor...');
@@ -2066,18 +2050,9 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         // Tool ekleme hatası olsa bile calendar bağlantısını başarılı say
       }
       
-      // Başarılı bağlantı - pencereyi kapat ve kullanıcıya bilgi ver
+      // Başarılı bağlantı - entegrasyonlar sayfasına yönlendir
       console.log('✅ Google Calendar bağlantısı tamamlandı:', result);
-      res.status(200).send(`
-        <html><body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-          <h2 style="color: green;">✅ Google Calendar Başarıyla Bağlandı!</h2>
-          <p>Google Calendar entegrasyonu aktif edildi.</p>
-          <p><strong>Email:</strong> ${result.userId}</p>
-          <script>
-            setTimeout(() => { window.close(); }, 2000);
-          </script>
-        </body></html>
-      `);
+      res.redirect('/dashboard/integrations?success=true');
     } catch (error: unknown) {
       console.error('💥 Google Calendar callback hatası:', error);
       
@@ -2091,23 +2066,41 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         userMessage = 'Geçersiz istek. Lütfen tekrar deneyin.';
       }
       
-      res.status(500).send(`
-        <html><body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
-          <h2>❌ Google Calendar Bağlantı Durumu</h2>
-          <p>${userMessage}</p>
-          <p style="font-size: 14px; color: #666;">Tekrar bağlanmak için bu pencereyi kapatın ve yeniden deneyin.</p>
-          <button onclick="window.close()" style="padding: 10px 20px; margin-top: 10px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Pencereyi Kapat
-          </button>
-          <script>
-            setTimeout(() => { window.close(); }, 8000);
-          </script>
-        </body></html>
-      `);
+      res.redirect('/dashboard/integrations?error=connection_failed');
     }
   });
 
   // ============ CALENDAR API ENDPOINTS ============
+
+  // Dashboard-specific calendar connect endpoint
+  app.post('/api/calendar/connect', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!calendarService) {
+        return res.status(503).json({ error: 'Google Calendar service not available' });
+      }
+      
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      // Get user's first agent for calendar connection
+      const userAgents = await storage.getAgentsByUserId(userId);
+      if (!userAgents || userAgents.length === 0) {
+        return res.status(400).json({ error: 'No agents found for user' });
+      }
+      
+      const agentId = userAgents[0].id;
+      const { redirectUrl } = req.body;
+      
+      // Set redirect URL in session or pass as state parameter
+      const authUrl = calendarService.generateAuthUrl(userId, agentId, redirectUrl || '/dashboard/integrations');
+      res.json({ success: true, authUrl });
+    } catch (error: any) {
+      console.error('Calendar connect error:', error);
+      res.status(500).json({ error: 'Failed to initiate calendar connection' });
+    }
+  });
 
   // Generate OAuth URL for calendar connection
   app.get('/api/calendar/auth/url', rateLimiters.calendarOAuth, authenticate, sanitizeRequest, calendarMonitoring('oauth_url'), validateCalendarRequest(['userId', 'agentId']), async (req: AuthenticatedRequest, res) => {
@@ -2139,10 +2132,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       const userId = getUserId(req);
-      const agentId = req.query.agentId as string;
+      let agentId = req.query.agentId as string;
       
-      if (!userId || !agentId) {
-        return res.status(400).json({ error: 'userId and agentId are required' });
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      // If no agentId provided, use user's first agent for dashboard
+      if (!agentId) {
+        const userAgents = await storage.getAgentsByUserId(userId);
+        if (!userAgents || userAgents.length === 0) {
+          return res.json({ connected: false });
+        }
+        agentId = userAgents[0].id;
       }
       
       const status = await calendarService.getConnectionStatus(userId, agentId);
@@ -2161,10 +2163,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       const userId = getUserId(req);
-      const { agentId } = req.body;
+      let { agentId } = req.body;
       
-      if (!userId || !agentId) {
-        return res.status(400).json({ error: 'userId and agentId are required' });
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      // If no agentId provided, use user's first agent for dashboard
+      if (!agentId) {
+        const userAgents = await storage.getAgentsByUserId(userId);
+        if (!userAgents || userAgents.length === 0) {
+          return res.status(400).json({ error: 'No agents found for user' });
+        }
+        agentId = userAgents[0].id;
       }
       
       const result = await calendarService.disconnectCalendar(userId, agentId);
