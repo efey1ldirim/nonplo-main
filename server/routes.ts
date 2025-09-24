@@ -2050,9 +2050,9 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         // Tool ekleme hatası olsa bile calendar bağlantısını başarılı say
       }
       
-      // Başarılı bağlantı - entegrasyonlar sayfasına yönlendir
+      // Başarılı bağlantı - agent ayarları entegrasyonlar tabına yönlendir
       console.log('✅ Google Calendar bağlantısı tamamlandı:', result);
-      res.redirect('/dashboard/integrations?success=true');
+      res.redirect(`/dashboard/agents/${result.agentId}#integrations`);
     } catch (error: unknown) {
       console.error('💥 Google Calendar callback hatası:', error);
       
