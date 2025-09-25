@@ -765,6 +765,23 @@ const ProductsServicesCard: React.FC<{ agent: Agent | null; onUpdate: (field: st
 
 // Embed & API Card Component
 const EmbedApiCard: React.FC<{ agent: Agent | null }> = ({ agent }) => {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(type);
+      setTimeout(() => setCopied(null), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  const embedCode = agent ? `<script src="https://nonplo.com/embed/agent/${agent.id}"></script>
+<div id="nonplo-chat-widget"></div>` : '';
+
+  const apiEndpoint = agent ? `https://api.nonplo.com/v1/chat/${agent.id}` : '';
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -779,10 +796,126 @@ const EmbedApiCard: React.FC<{ agent: Agent | null }> = ({ agent }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          <Code className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Gömme kodu ve API erişimi yakında hazır olacak</p>
-        </div>
+        {agent ? (
+          <>
+            {/* Embed Code */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Web Sitesi Gömme Kodu</Label>
+                <Badge variant="secondary" className="text-xs">HTML</Badge>
+              </div>
+              <div className="relative">
+                <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto border">
+                  <code>{embedCode}</code>
+                </pre>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(embedCode, 'embed')}
+                  className="absolute top-2 right-2"
+                  data-testid="button-copy-embed"
+                >
+                  {copied === 'embed' ? (
+                    <>
+                      <Check className="w-3 h-3 mr-1" />
+                      Kopyalandı
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3 h-3 mr-1" />
+                      Kopyala
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bu kodu web sitenizin &lt;body&gt; etiketi içine yapıştırın. Chat widget'ı sayfanızın sağ alt köşesinde görünecektir.
+              </p>
+            </div>
+
+            {/* API Information */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">API Endpoint</Label>
+                <Badge variant="secondary" className="text-xs">REST API</Badge>
+              </div>
+              <div className="relative">
+                <Input
+                  value={apiEndpoint}
+                  readOnly
+                  className="pr-20 font-mono text-xs"
+                  data-testid="input-api-endpoint"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(apiEndpoint, 'api')}
+                  className="absolute top-1 right-1 h-8"
+                  data-testid="button-copy-api"
+                >
+                  {copied === 'api' ? (
+                    <>
+                      <Check className="w-3 h-3 mr-1" />
+                      Kopyalandı
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3 h-3 mr-1" />
+                      Kopyala
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                POST isteği ile mesaj gönderebilir, çalışanınızla programatik olarak etkileşime geçebilirsiniz.
+              </p>
+            </div>
+
+            {/* Quick Setup Guide */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bot className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">Hızlı Kurulum</h4>
+                  <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+                    <li>Yukarıdaki HTML kodunu kopyalayın</li>
+                    <li>Web sitenizin &lt;body&gt; etiketi içine yapıştırın</li>
+                    <li>Sayfayı yenileyin ve chat widget'ını test edin</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            {/* Documentation Link */}
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+              <div>
+                <div className="text-sm font-medium">Detaylı Dokümantasyon</div>
+                <div className="text-xs text-muted-foreground">API kullanımı ve örnekler için rehberi inceleyin</div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                asChild
+                data-testid="button-docs"
+              >
+                <Link to="/docs" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Dokümantasyon
+                </Link>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Code className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Agent bilgileri yükleniyor...</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
