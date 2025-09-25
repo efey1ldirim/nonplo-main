@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon } from "lucide-react";
+import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit } from "lucide-react";
 import LiveTestConsole from "@/components/LiveTestConsole";
 import { AgentChat } from "@/components/features/AgentChat";
 
@@ -64,6 +64,236 @@ const providers = [
   { key: "web_embed", name: "Web Embed", desc: "Chat widget'ını web sitenize yerleştirin." },
   { key: "slack", name: "Slack", desc: "Slack'e bildirimler gönderin." },
 ];
+
+// Auto-save indicator component
+const AutoSaveIndicator: React.FC<{ fieldId: string }> = ({ fieldId }) => {
+  const [autoSaveStates] = useState<Record<string, 'idle' | 'saving' | 'success'>>({});
+  
+  const status = autoSaveStates[fieldId] || 'idle';
+  
+  if (status === 'idle') return null;
+  
+  return (
+    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+      {status === 'saving' && (
+        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+      )}
+      {status === 'success' && (
+        <Check className="w-4 h-4 text-green-500" />
+      )}
+    </div>
+  );
+};
+
+// Employee Personality Card Component
+const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+  const [personalityData, setPersonalityData] = useState({
+    tone: 'profesyonel',
+    formality: 3,
+    creativity: 0.7,
+    responseLength: 'orta',
+    useEmojis: false,
+    customInstructions: ''
+  });
+
+  const personalityPresets = [
+    { value: 'sevecen', label: 'Sevecen', icon: Heart, description: 'Sıcak ve anlayışlı', color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900 dark:text-pink-300' },
+    { value: 'profesyonel', label: 'Profesyonel', icon: Briefcase, description: 'Resmi ve ciddi', color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-300' },
+    { value: 'arkadas_canlisi', label: 'Arkadaş Canlısı', icon: Users, description: 'Samimi ve yakın', color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300' },
+    { value: 'konuskan', label: 'Konuşkan', icon: MessageCircle, description: 'Detaylı ve açıklayıcı', color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300' },
+    { value: 'ozel', label: 'Özel', icon: Settings, description: 'Kendi tarzınızı oluşturun', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900 dark:text-purple-300' }
+  ];
+
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <Heart className="w-5 h-5 text-primary" />
+          </div>
+          Çalışan Kişiliği
+        </CardTitle>
+        <CardDescription className="text-base">
+          Ton, stil ve iletişim tarzını belirleyin
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Personality Presets */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Kişilik Türü</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {personalityPresets.map((preset) => (
+              <div
+                key={preset.value}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:scale-[1.02] ${
+                  personalityData.tone === preset.value ? preset.color : 'border-muted hover:border-primary/30'
+                }`}
+                onClick={() => {
+                  setPersonalityData(prev => ({ ...prev, tone: preset.value as any }));
+                  onUpdate('personality', { ...personalityData, tone: preset.value });
+                }}
+                data-testid={`personality-${preset.value}`}
+              >
+                <div className="flex items-center space-x-3">
+                  <preset.icon className="w-5 h-5" />
+                  <div className="flex-1">
+                    <div className="font-medium">{preset.label}</div>
+                    <div className="text-sm opacity-80">{preset.description}</div>
+                  </div>
+                  {personalityData.tone === preset.value && (
+                    <div className="w-2 h-2 bg-current rounded-full"></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Instructions for "Özel" */}
+        {personalityData.tone === 'ozel' && (
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Özel Talimatlar</Label>
+            <Textarea
+              placeholder="Dijital çalışanınızın nasıl davranmasını istediğinizi açıklayın..."
+              className="min-h-[100px] resize-none"
+              value={personalityData.customInstructions}
+              onChange={(e) => {
+                setPersonalityData(prev => ({ ...prev, customInstructions: e.target.value }));
+              }}
+              onBlur={(e) => onUpdate('personality', { ...personalityData, customInstructions: e.target.value })}
+              data-testid="textarea-custom-instructions"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Working Hours Card Component
+const WorkingHoursCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <Clock className="w-5 h-5 text-primary" />
+          </div>
+          Çalışma Saatleri & Tatil Günleri
+        </CardTitle>
+        <CardDescription className="text-base">
+          Çalışanınızın aktif olduğu saatleri belirleyin
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">
+          <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Çalışma saatleri yapılandırması yakında eklenecek</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Address & Contact Card Component
+const AddressContactCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-primary" />
+          </div>
+          Adres & İletişim Bilgileri
+        </CardTitle>
+        <CardDescription className="text-base">
+          İşletmenizin konum ve iletişim bilgilerini ekleyin
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">
+          <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Adres ve iletişim ayarları yakında eklenecek</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// FAQ Card Component
+const FaqCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <HelpCircle className="w-5 h-5 text-primary" />
+          </div>
+          FAQ
+        </CardTitle>
+        <CardDescription className="text-base">
+          Sık sorulan soruları ve cevaplarını yönetin
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">
+          <HelpCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>FAQ yönetimi yakında eklenecek</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Products & Services Card Component
+const ProductsServicesCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <Package className="w-5 h-5 text-primary" />
+          </div>
+          Ürün/Hizmet Açıklaması
+        </CardTitle>
+        <CardDescription className="text-base">
+          Sunduğunuz ürün ve hizmetleri tanıtın
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">
+          <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Ürün ve hizmet tanıtımı yakında eklenecek</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Embed & API Card Component
+const EmbedApiCard: React.FC<{ agent: Agent | null }> = ({ agent }) => {
+  return (
+    <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+            <Code className="w-5 h-5 text-primary" />
+          </div>
+          Gömme & API
+        </CardTitle>
+        <CardDescription className="text-base">
+          Çalışanınızı web sitenize entegre edin
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8 text-muted-foreground">
+          <Code className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Gömme kodu ve API erişimi yakında hazır olacak</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DashboardAgentDetail() {
   const { agentId } = useParams();
@@ -126,6 +356,10 @@ export default function DashboardAgentDetail() {
   // Temperature control
   const [temperature, setTemperature] = useState<string>("1.0");
   const [temperatureLoading, setTemperatureLoading] = useState(false);
+
+  // Auto-save system states
+  const [autoSaveStates, setAutoSaveStates] = useState<Record<string, 'idle' | 'saving' | 'success'>>({});
+  const [autoSaveTimeouts, setAutoSaveTimeouts] = useState<Record<string, NodeJS.Timeout>>({});
 
   // Recent conversations state
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([]);
@@ -2038,20 +2272,31 @@ export default function DashboardAgentDetail() {
           </Card>
         </TabsContent>
 
-        {/* 4) Çalışan Ayarları - Comprehensive Employee Settings */}
-        <TabsContent value="settings" className="space-y-6">
-          {/* Top Card: Employee Name, Role, and Training Files */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>Çalışan Profil Bilgileri</span>
+        {/* 4) Çalışan Ayarları - Modern Card-Based Design */}
+        <TabsContent value="settings" className="space-y-8">
+          {/* Page Header */}
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold text-foreground">Çalışan Ayarları</h2>
+            <p className="text-muted-foreground">Dijital çalışanınızın kimliğini ve davranışlarını özelleştirin</p>
+          </div>
+
+          {/* EMPLOYEE PROFILE CARD */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                Çalışan Profil Bilgileri
               </CardTitle>
-              <CardDescription>Temel kimlik ve eğitim dosyaları</CardDescription>
+              <CardDescription className="text-base">
+                Temel kimlik bilgileri ve eğitim materyalleri
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="employee-name">Çalışan Adı</Label>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Label htmlFor="employee-name" className="text-sm font-medium">Çalışan Adı</Label>
                   <div className="relative">
                     <Input 
                       id="employee-name" 
@@ -2059,21 +2304,18 @@ export default function DashboardAgentDetail() {
                       onChange={(e) => setNewName(e.target.value)}
                       onBlur={(e) => {
                         if (e.target.value.trim() && e.target.value.trim() !== agent?.name) {
-                          debouncedAutoSave('name', e.target.value.trim());
+                          handleAutoSave('name', e.target.value.trim());
                         }
                       }}
                       data-testid="input-employee-name"
                       placeholder="Örn: Fatma Hanım"
+                      className="pr-12 h-12 text-base"
                     />
-                    {autoSaving && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
+                    <AutoSaveIndicator fieldId="name" />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="employee-role">Çalışan Görevi</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="employee-role" className="text-sm font-medium">Çalışan Görevi</Label>
                   <div className="relative">
                     <Input 
                       id="employee-role" 
@@ -2081,31 +2323,33 @@ export default function DashboardAgentDetail() {
                       onChange={(e) => setAgentRole(e.target.value)}
                       onBlur={(e) => {
                         if (e.target.value.trim() !== agent?.role) {
-                          debouncedAutoSave('role', e.target.value.trim());
+                          handleAutoSave('role', e.target.value.trim());
                         }
                       }}
                       data-testid="input-employee-role"
                       placeholder="Örn: Müşteri Hizmetleri Temsilcisi"
+                      className="pr-12 h-12 text-base"
                     />
-                    {autoSaving && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
+                    <AutoSaveIndicator fieldId="role" />
                   </div>
                 </div>
               </div>
-              <div>
-                <Label>Eğitim Dosyaları</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div className="text-muted-foreground">
-                    <svg className="mx-auto h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p>Çalışanın öğrenmesi için dosyalar yükleyin</p>
-                    <p className="text-sm">PDF, DOC, TXT formatları desteklenir</p>
+              
+              {/* Training Files Section */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Eğitim Dosyaları</Label>
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                  <div className="text-muted-foreground space-y-3">
+                    <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-medium">Çalışanın öğrenmesi için dosyalar yükleyin</p>
+                      <p className="text-sm text-muted-foreground/75">PDF, DOC, TXT formatları desteklenir • Maksimum 50MB</p>
+                    </div>
                   </div>
-                  <Button variant="outline" className="mt-2" disabled>
+                  <Button variant="outline" className="mt-4 h-11 px-6" disabled>
+                    <Upload className="w-4 h-4 mr-2" />
                     Dosya Yükle (Yakında)
                   </Button>
                 </div>
@@ -2113,41 +2357,42 @@ export default function DashboardAgentDetail() {
             </CardContent>
           </Card>
 
-          {/* SETTINGS:PERSONALITY:START */}
-          <PersonalitySettingsCard 
-            temperature={temperature}
-            setTemperature={setTemperature}
-            handleTemperatureUpdate={handleTemperatureUpdate}
-            temperatureLoading={temperatureLoading}
-          />
-          {/* SETTINGS:PERSONALITY:END */}
+          {/* PERSONALITY CARD */}
+          <EmployeePersonalityCard agent={agent} onUpdate={handleAutoSave} />
 
-          {/* SETTINGS:BUSINESS:START */}
-          {/* Business section temporarily disabled due to encoding issues */}
-          {/* SETTINGS:BUSINESS:END */}
+          {/* BUSINESS INFORMATION SECTION */}
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-bold text-foreground">İşletme Bilgi Ayarları</h3>
+              <p className="text-muted-foreground">İşletmenizin detaylarını yapılandırın</p>
+            </div>
 
-          {/* Tools Page Link */}
-          <div className="text-center py-4">
-            <Button 
-              variant="link" 
-              className="text-blue-600 hover:text-blue-800 text-base"
-              onClick={() => navigate(`/dashboard/agents/${agent.id}?tab=integrations`)}
-            >
-              Araçlar sayfasına git →
-            </Button>
+            {/* Working Hours & Holidays Card */}
+            <WorkingHoursCard agent={agent} onUpdate={handleAutoSave} />
+
+            {/* Address & Contact Card */}
+            <AddressContactCard agent={agent} onUpdate={handleAutoSave} />
+
+            {/* FAQ Card */}
+            <FaqCard agent={agent} onUpdate={handleAutoSave} />
+
+            {/* Products & Services Card */}
+            <ProductsServicesCard agent={agent} onUpdate={handleAutoSave} />
           </div>
 
-          {/* Auto-save Status */}
-          <div className="flex items-center gap-2">
-            {autoSaving && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                <span>Otomatik kaydediliyor...</span>
-              </div>
-            )}
-            <div className="text-sm text-green-600 opacity-75">
-              ✓ Tüm değişiklikler otomatik olarak kaydedilir
-            </div>
+          {/* EMBED & API CARD */}
+          <EmbedApiCard agent={agent} />
+
+          {/* Tools Link */}
+          <div className="text-center py-6">
+            <Button 
+              variant="link" 
+              className="text-blue-600 hover:text-blue-800 text-lg font-medium"
+              onClick={() => navigate(`/dashboard/agents/${agent.id}?tab=integrations`)}
+            >
+              Çalışanınızın kullanabileceği araçları görmek & düzenlemek için tıklayın
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
         </TabsContent>
 
