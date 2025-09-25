@@ -8,6 +8,9 @@ import Index from "../pages/Index";
 import Auth from "../pages/Auth";
 import NotFound from "../pages/NotFound";
 
+// Password reset component
+const ForgotPassword = lazy(() => import("../pages/ForgotPassword"));
+
 // High priority components - preload with higher priority
 const Pricing = lazy(() => import("../pages/Pricing"));
 const Account = lazy(() => 
@@ -109,6 +112,11 @@ const RouterWrapper = () => {
       {/* Critical routes - no lazy loading */}
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/forgot-password" element={
+        <Suspense fallback={<QuickLoader />}>
+          <ForgotPassword />
+        </Suspense>
+      } />
       <Route path="*" element={<NotFound />} />
 
       {/* High priority routes */}

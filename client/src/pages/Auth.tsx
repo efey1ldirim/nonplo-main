@@ -18,11 +18,13 @@ const Auth = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    fullName: ""
+    fullName: "",
+    newPassword: ""
   });
   const params = new URLSearchParams(window.location.search);
   const next = params.get("next") || "/";
   const mode = params.get("mode") || "signin";
+  const [isResetMode, setIsResetMode] = useState(mode === "reset-password");
 
   // Redirect to dashboard if user is already logged in
   useEffect(() => {
@@ -171,6 +173,129 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: "Hata!",
+        description: "Şifreler eşleşmiyor.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: "Hata!",
+        description: "Şifre en az 6 karakter olmalıdır.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Şifre güncellendi!",
+        description: "Yeni şifrenizle giriş yapabilirsiniz.",
+      });
+      
+      // Redirect to normal signin
+      window.location.href = "/auth";
+    } catch (error: any) {
+      toast({
+        title: "Şifre güncellenemedi!",
+        description: error.message || "Şifre güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  // Check if we're in password reset mode
+  if (isResetMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Yeni Şifre Belirle</h1>
+            <p className="text-muted-foreground">Yeni şifrenizi girin</p>
+          </div>
+
+          <Card className="backdrop-blur-lg bg-white/10 border-white/20 shadow-2xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl text-foreground">Şifre Sıfırlama</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Güçlü bir şifre seçin
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="text-foreground flex items-center">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Yeni Şifre
+                  </Label>
+                  <Input
+                    id="new-password"
+                    name="newPassword"
+                    type="password"
+                    placeholder="En az 6 karakter"
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    required
+                    className="bg-background/80 backdrop-blur-sm border-border/50 focus:border-primary/50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-new-password" className="text-foreground flex items-center">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Yeni Şifre Tekrar
+                  </Label>
+                  <Input
+                    id="confirm-new-password"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Şifrenizi tekrar girin"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    className="bg-background/80 backdrop-blur-sm border-border/50 focus:border-primary/50"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Güncelleniyor...
+                    </>
+                  ) : (
+                    "Şifreyi Güncelle"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex items-center justify-center p-4">
