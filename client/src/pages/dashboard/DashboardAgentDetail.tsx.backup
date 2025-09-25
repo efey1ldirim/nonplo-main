@@ -2120,10 +2120,33 @@ export default function DashboardAgentDetail() {
             handleTemperatureUpdate={handleTemperatureUpdate}
             temperatureLoading={temperatureLoading}
           />
-          {/* SETTINGS:PERSONALITY:END */}
+                <Textarea rows={3} placeholder="Sorry, I couldn’t help with that." value={backupMessage}
+                  onChange={(e) => setBackupMessage(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="textarea-backup-message" />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Dil</Label>
+                <Input 
+                  placeholder="Otomatik / tr / en ..." 
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  disabled
+                  className="opacity-50"
+                  data-testid="input-language"
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  🚧 Bu özellik yakında eklenecek
+                </div>
+              </div>
+          {/* SETTINGS:PERSONALITY:END */
 
           {/* SETTINGS:BUSINESS:START */}
-          {/* Business section temporarily disabled due to encoding issues */}
+          <BusinessInfoSection />
           {/* SETTINGS:BUSINESS:END */}
 
           {/* Tools Page Link */}
