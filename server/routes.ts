@@ -990,6 +990,150 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
     }
   });
 
+  // Specific employee settings auto-save endpoints
+  app.patch("/api/agents/:id/personality", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { personality } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updatedAgent = await storage.updateAgent(id, userId, { personality });
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.invalidateAgentData(id);
+
+      res.json({ success: true, message: "Kişilik ayarları kaydedildi" });
+    } catch (error) {
+      console.error("Update personality error:", error);
+      res.status(500).json({ error: "Kişilik ayarları kaydedilemedi" });
+    }
+  });
+
+  app.patch("/api/agents/:id/working-hours", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { workingHours, holidays } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updates: any = {};
+      if (workingHours !== undefined) updates.workingHours = workingHours;
+      if (holidays !== undefined) updates.holidays = holidays;
+
+      const updatedAgent = await storage.updateAgent(id, userId, updates);
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.invalidateAgentData(id);
+
+      res.json({ success: true, message: "Çalışma saatleri kaydedildi" });
+    } catch (error) {
+      console.error("Update working hours error:", error);
+      res.status(500).json({ error: "Çalışma saatleri kaydedilemedi" });
+    }
+  });
+
+  app.patch("/api/agents/:id/contact-info", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { address, website, socialMedia } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updates: any = {};
+      if (address !== undefined) updates.address = address;
+      if (website !== undefined) updates.website = website;
+      if (socialMedia !== undefined) updates.socialMedia = socialMedia;
+
+      const updatedAgent = await storage.updateAgent(id, userId, updates);
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.invalidateAgentData(id);
+
+      res.json({ success: true, message: "İletişim bilgileri kaydedildi" });
+    } catch (error) {
+      console.error("Update contact info error:", error);
+      res.status(500).json({ error: "İletişim bilgileri kaydedilemedi" });
+    }
+  });
+
+  app.patch("/api/agents/:id/faq", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { faq } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updatedAgent = await storage.updateAgent(id, userId, { faq });
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.invalidateAgentData(id);
+
+      res.json({ success: true, message: "Sık sorulan sorular kaydedildi" });
+    } catch (error) {
+      console.error("Update FAQ error:", error);
+      res.status(500).json({ error: "Sık sorulan sorular kaydedilemedi" });
+    }
+  });
+
+  app.patch("/api/agents/:id/products-services", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const userId = getUserId(req);
+      const { products, serviceDescription } = req.body;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const updates: any = {};
+      if (products !== undefined) updates.products = products;
+      if (serviceDescription !== undefined) updates.serviceDescription = serviceDescription;
+
+      const updatedAgent = await storage.updateAgent(id, userId, updates);
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agent not found" });
+      }
+
+      // Clear cache
+      cacheManager.invalidateUserData(userId);
+      cacheManager.invalidateAgentData(id);
+
+      res.json({ success: true, message: "Ürün/hizmet bilgileri kaydedildi" });
+    } catch (error) {
+      console.error("Update products/services error:", error);
+      res.status(500).json({ error: "Ürün/hizmet bilgileri kaydedilemedi" });
+    }
+  });
+
   app.put("/api/agents/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;
