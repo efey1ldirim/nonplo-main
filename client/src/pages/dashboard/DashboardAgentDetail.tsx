@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit, X, Plus, ExternalLink } from "lucide-react";
-import LiveTestConsole from "@/components/LiveTestConsole";
 import { AgentChat } from "@/components/features/AgentChat";
 
 interface Agent {
@@ -2095,11 +2094,11 @@ export default function DashboardAgentDetail() {
     category: '',
     target: ''
   });
-  const [autoSaveLoading, setAutoSaveLoading] = useState({});
+  const [autoSaveLoading, setAutoSaveLoading] = useState<Record<string, boolean>>({});
 
 
   // Local Settings Components
-  const PersonalitySettingsCard = ({ temperature, setTemperature, handleTemperatureUpdate, temperatureLoading }) => (
+  const PersonalitySettingsCard = ({ temperature, setTemperature, handleTemperatureUpdate, temperatureLoading }: {temperature: number, setTemperature: (temp: number) => void, handleTemperatureUpdate: (temp: number) => void, temperatureLoading: boolean}) => (
     <Card>
       <CardHeader>
         <CardTitle>Kişilik Ayarları</CardTitle>
@@ -2115,9 +2114,9 @@ export default function DashboardAgentDetail() {
               min="0" 
               max="2" 
               value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
+              onChange={(e) => setTemperature(parseFloat(e.target.value))}
               onBlur={() => {
-                if (temperature !== (agent?.temperature || "1.0")) {
+                if (temperature !== (agent?.temperature || 1.0)) {
                   handleTemperatureUpdate(temperature);
                 }
               }}
@@ -2145,7 +2144,7 @@ export default function DashboardAgentDetail() {
               onChange={(e) => {
                 const newStyle = e.target.value;
                 setPersonalityData(prev => ({ ...prev, speakingStyle: newStyle }));
-                debouncedAutoSave('personality', { speakingStyle: newStyle });
+                handleAutoSave('personality', { ...agent?.personality, tone: newStyle });
               }}
             >
               <option value="friendly">Samimi ve Arkadaşça</option>
@@ -2173,7 +2172,7 @@ export default function DashboardAgentDetail() {
                 setPersonalityData(prev => ({ ...prev, personalityDescription: newDesc }));
               }}
               onBlur={() => {
-                debouncedAutoSave('personality', { personalityDescription: personalityData.personalityDescription });
+                debouncedAutoSave('personality', JSON.stringify({ personalityDescription: personalityData.personalityDescription }));
               }}
             />
             {autoSaveLoading.personality && (
@@ -2254,7 +2253,7 @@ export default function DashboardAgentDetail() {
                     setBusinessData(prev => ({ ...prev, address: newAddress }));
                   }}
                   onBlur={() => {
-                    debouncedAutoSave('address', { address: businessData.address });
+                    debouncedAutoSave('address', businessData.address);
                   }}
                 />
                 {autoSaveLoading.address && (
@@ -2276,7 +2275,7 @@ export default function DashboardAgentDetail() {
                     setBusinessData(prev => ({ ...prev, phone: newPhone }));
                   }}
                   onBlur={() => {
-                    debouncedAutoSave('address', { phone: businessData.phone });
+                    debouncedAutoSave('address', businessData.phone);
                   }}
                 />
                 {autoSaveLoading.address && (
@@ -2298,7 +2297,7 @@ export default function DashboardAgentDetail() {
                     setBusinessData(prev => ({ ...prev, email: newEmail }));
                   }}
                   onBlur={() => {
-                    debouncedAutoSave('address', { email: businessData.email });
+                    debouncedAutoSave('address', businessData.email);
                   }}
                 />
                 {autoSaveLoading.address && (
@@ -2320,7 +2319,7 @@ export default function DashboardAgentDetail() {
                     setBusinessData(prev => ({ ...prev, website: newWebsite }));
                   }}
                   onBlur={() => {
-                    debouncedAutoSave('address', { website: businessData.website });
+                    debouncedAutoSave('address', businessData.website);
                   }}
                 />
                 {autoSaveLoading.address && (

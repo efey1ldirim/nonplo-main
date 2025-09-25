@@ -964,7 +964,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         setImmediate(async () => {
           try {
             console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
-            await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+            await openaiService.updateAssistant(updatedAgent.openaiAssistantId!, updatedAgent);
             console.log(`✅ OpenAI Assistant updated successfully`);
           } catch (assistantError) {
             console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
@@ -1170,7 +1170,7 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         setImmediate(async () => {
           try {
             console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
-            await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+            await openaiService.updateAssistant(updatedAgent.openaiAssistantId!, updatedAgent);
             console.log(`✅ OpenAI Assistant updated successfully`);
           } catch (assistantError) {
             console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
@@ -3975,8 +3975,8 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       console.log(`🔧 Fixing missing OpenAI Assistants for user: ${userId}`);
 
       // Get agents missing OpenAI Assistant IDs
-      const allAgents = await storage.getAgents(userId);
-      const agentsWithoutAssistants = allAgents.filter(agent => !agent.openaiAssistantId);
+      const allAgents = await storage.getUserAgents(userId);
+      const agentsWithoutAssistants = allAgents.filter((agent: any) => !agent.openaiAssistantId);
 
       if (agentsWithoutAssistants.length === 0) {
         return res.json({ 
