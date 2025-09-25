@@ -24,13 +24,45 @@ const AppContent = () => {
   const [showChatTooltip, setShowChatTooltip] = useState(false);
   const { toast } = useToast();
 
-  // Initialize Google Analytics (before Router - safe)
+  // Initialize Google Analytics and global error handling
   useEffect(() => {
     if (!import.meta.env.VITE_GA_MEASUREMENT_ID) {
       console.warn('Missing required Google Analytics key: VITE_GA_MEASUREMENT_ID');
     } else {
       initGA();
     }
+    
+    // Global error handling for unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const error = event.reason;
+      
+      // Handle fetch abort errors (these are expected during navigation)
+      if (error?.name === 'AbortError' || 
+          error?.message?.includes('aborted') ||
+          error?.message === 'Fetch is aborted') {
+        console.log('🔄 Fetch request was aborted (expected behavior)');
+        event.preventDefault(); // Prevent the error from showing in console
+        return;
+      }
+      
+      // Handle WebSocket DOMException errors (these are expected)
+      if (error instanceof DOMException) {
+        console.log('📡 WebSocket/DOM exception (expected behavior):', error.message);
+        event.preventDefault(); // Prevent the error from showing in console
+        return;
+      }
+      
+      // For other errors, log them but don't prevent console display
+      console.warn('🚨 Unhandled promise rejection caught by global handler:', error);
+    };
+    
+    // Add global error handler
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
   
   return (

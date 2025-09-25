@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { lazy, memo, Suspense } from 'react';
 import ProtectedRoute from "./ProtectedRoute";
 import { useAnalytics } from "../hooks/use-analytics";
+import { Button } from "@/components/ui/button";
 
 // Immediate load components (critical for initial page load)
 import Index from "../pages/Index";
@@ -252,6 +253,34 @@ const RouterWrapper = () => {
         <Suspense fallback={<QuickLoader />}>
           <DevTestLogin />
         </Suspense>
+      } />
+      
+      {/* Catch-all route for 404 errors */}
+      <Route path="*" element={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center space-y-6">
+            <div className="text-6xl font-bold text-destructive">404</div>
+            <h1 className="text-2xl font-semibold text-foreground">Sayfa Bulunamadı</h1>
+            <p className="text-muted-foreground max-w-md">
+              Aradığınız sayfa mevcut değil. URL'yi kontrol edin veya ana sayfaya geri dönün.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Button 
+                onClick={() => window.history.back()} 
+                variant="outline"
+                data-testid="button-go-back"
+              >
+                ← Geri Dön
+              </Button>
+              <Button 
+                onClick={() => window.location.href = '/dashboard'} 
+                data-testid="button-go-home"
+              >
+                Ana Sayfa
+              </Button>
+            </div>
+          </div>
+        </div>
       } />
     </Routes>
   );
