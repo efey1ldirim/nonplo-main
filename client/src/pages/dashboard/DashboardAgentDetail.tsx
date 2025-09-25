@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { debounce } from 'lodash';
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1104,6 +1105,60 @@ export default function DashboardAgentDetail() {
     </div>
   ), [agent]);
 
+  // Auto-save states for different sections
+  const [personalityData, setPersonalityData] = useState({
+    speakingStyle: 'friendly',
+    personalityDescription: ''
+  });
+  const [businessData, setBusinessData] = useState({
+    workingHours: { weekdayStart: '09:00', weekdayEnd: '18:00', weekendStart: '10:00', weekendEnd: '16:00' },
+    holidays: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    social: '',
+    faq: '',
+    products: '',
+    category: '',
+    target: ''
+  });
+  const [autoSaveLoading, setAutoSaveLoading] = useState({});
+
+  // Auto-save debounced function for different data types
+  const debouncedAutoSave = useCallback(
+    debounce(async (section: string, data: any) => {
+      if (!agentId || !userId) return;
+      
+      setAutoSaveLoading(prev => ({ ...prev, [section]: true }));
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+
+        const response = await fetch(`/api/agents/${agentId}/${section}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          // Show success feedback briefly
+          setTimeout(() => {
+            setAutoSaveLoading(prev => ({ ...prev, [section]: false }));
+          }, 500);
+        }
+      } catch (error) {
+        console.error(`Error saving ${section}:`, error);
+        setAutoSaveLoading(prev => ({ ...prev, [section]: false }));
+      }
+    }, 1000),
+    [agentId, userId]
+  );
+
   // Local Settings Components
   const PersonalitySettingsCard = ({ temperature, setTemperature, handleTemperatureUpdate, temperatureLoading }) => (
     <Card>
@@ -1143,15 +1198,28 @@ export default function DashboardAgentDetail() {
         </div>
         <div>
           <Label>Konuşma Tarzı</Label>
-          <select 
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            data-testid="select-speaking-style"
-          >
-            <option value="friendly">Samimi ve Arkadaşça</option>
-            <option value="professional">Profesyonel</option>
-            <option value="formal">Resmi</option>
-            <option value="casual">Günlük</option>
-          </select>
+          <div className="relative">
+            <select 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="select-speaking-style"
+              value={personalityData.speakingStyle}
+              onChange={(e) => {
+                const newStyle = e.target.value;
+                setPersonalityData(prev => ({ ...prev, speakingStyle: newStyle }));
+                debouncedAutoSave('personality', { speakingStyle: newStyle });
+              }}
+            >
+              <option value="friendly">Samimi ve Arkadaşça</option>
+              <option value="professional">Profesyonel</option>
+              <option value="formal">Resmi</option>
+              <option value="casual">Günlük</option>
+            </select>
+            {autoSaveLoading.personality && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="md:col-span-2">
           <Label>Kişilik Tanımı</Label>
@@ -1160,7 +1228,20 @@ export default function DashboardAgentDetail() {
               rows={3} 
               placeholder="Çalışanın nasıl davranması gerektiğini açıklayın..."
               data-testid="textarea-personality"
+              value={personalityData.personalityDescription}
+              onChange={(e) => {
+                const newDesc = e.target.value;
+                setPersonalityData(prev => ({ ...prev, personalityDescription: newDesc }));
+              }}
+              onBlur={() => {
+                debouncedAutoSave('personality', { personalityDescription: personalityData.personalityDescription });
+              }}
             />
+            {autoSaveLoading.personality && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             Örn: "Çok yardımsever, sabırlı ve her zaman gülümseyen bir tutum sergiler"
@@ -1223,23 +1304,92 @@ export default function DashboardAgentDetail() {
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <Label>Adres</Label>
-              <Textarea 
-                rows={2} 
-                placeholder="Tam adres bilgilerini yazın..."
-                data-testid="textarea-address"
-              />
+              <div className="relative">
+                <Textarea 
+                  rows={2} 
+                  placeholder="Tam adres bilgilerini yazın..."
+                  data-testid="textarea-address"
+                  value={businessData.address}
+                  onChange={(e) => {
+                    const newAddress = e.target.value;
+                    setBusinessData(prev => ({ ...prev, address: newAddress }));
+                  }}
+                  onBlur={() => {
+                    debouncedAutoSave('address', { address: businessData.address });
+                  }}
+                />
+                {autoSaveLoading.address && (
+                  <div className="absolute right-3 top-3">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label>Telefon</Label>
-              <Input placeholder="+90 XXX XXX XX XX" data-testid="input-phone" />
+              <div className="relative">
+                <Input 
+                  placeholder="+90 XXX XXX XX XX" 
+                  data-testid="input-phone"
+                  value={businessData.phone}
+                  onChange={(e) => {
+                    const newPhone = e.target.value;
+                    setBusinessData(prev => ({ ...prev, phone: newPhone }));
+                  }}
+                  onBlur={() => {
+                    debouncedAutoSave('address', { phone: businessData.phone });
+                  }}
+                />
+                {autoSaveLoading.address && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label>E-posta</Label>
-              <Input placeholder="info@sirket.com" data-testid="input-email" />
+              <div className="relative">
+                <Input 
+                  placeholder="info@sirket.com" 
+                  data-testid="input-email"
+                  value={businessData.email}
+                  onChange={(e) => {
+                    const newEmail = e.target.value;
+                    setBusinessData(prev => ({ ...prev, email: newEmail }));
+                  }}
+                  onBlur={() => {
+                    debouncedAutoSave('address', { email: businessData.email });
+                  }}
+                />
+                {autoSaveLoading.address && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label>Website</Label>
-              <Input placeholder="https://sirket.com" data-testid="input-website" />
+              <div className="relative">
+                <Input 
+                  placeholder="https://sirket.com" 
+                  data-testid="input-website"
+                  value={businessData.website}
+                  onChange={(e) => {
+                    const newWebsite = e.target.value;
+                    setBusinessData(prev => ({ ...prev, website: newWebsite }));
+                  }}
+                  onBlur={() => {
+                    debouncedAutoSave('address', { website: businessData.website });
+                  }}
+                />
+                {autoSaveLoading.address && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label>Sosyal Medya</Label>
