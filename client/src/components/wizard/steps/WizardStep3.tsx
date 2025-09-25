@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Clock, Calendar, Sun, Moon } from 'lucide-react';
+import { Clock, Calendar, Sun, Settings } from 'lucide-react';
 import { wizardStep3Schema, type WizardStep3Data, type AgentWizardSession } from '@shared/schema';
 
 interface WizardStep3Props {
@@ -49,11 +49,11 @@ const QUICK_PRESETS = [
     holidays: { nationalHolidays: true, religiousHolidays: true, customHolidays: [] }
   },
   {
-    name: 'Retail (9-21)',
-    icon: Calendar,
+    name: 'Özel',
+    icon: Settings,
     hours: DAYS.reduce((acc, day) => ({
       ...acc,
-      [day.key]: { open: '09:00', close: '21:00', closed: false }
+      [day.key]: { open: '09:00', close: '18:00', closed: false }
     }), {}),
     holidays: { nationalHolidays: true, religiousHolidays: true, customHolidays: [] }
   }
@@ -61,6 +61,7 @@ const QUICK_PRESETS = [
 
 export default function WizardStep3({ data, onSave, onNext, canProceed }: WizardStep3Props) {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [showWorkingHours, setShowWorkingHours] = useState(false);
 
   const defaultHours = DAYS.reduce((acc, day) => ({
     ...acc,
@@ -97,6 +98,9 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
     setSelectedPreset(preset.name);
     form.setValue('workingHours', preset.hours);
     form.setValue('holidaysConfig', preset.holidays);
+    
+    // "Özel" seçildiğinde haftalık çalışma saatleri bölümünü göster
+    setShowWorkingHours(preset.name === 'Özel');
   };
 
   const handleSubmit = (values: WizardStep3Data) => {
@@ -144,73 +148,75 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
             </CardContent>
           </Card>
 
-          {/* Working Hours */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="w-5 h-5" />
-                <span>Haftalık Çalışma Saatleri</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {DAYS.map((day) => (
-                  <FormField
-                    key={day.key}
-                    control={form.control}
-                    name={`workingHours.${day.key}` as any}
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                          <div className="w-20 font-medium">{day.label}</div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={!field.value?.closed}
-                              onCheckedChange={(checked) => {
-                                field.onChange({
-                                  ...field.value,
-                                  closed: !checked
-                                });
-                              }}
-                              data-testid={`switch-${day.key}`}
-                            />
-                            <span className="text-sm text-gray-500">
-                              {field.value?.closed ? 'Kapalı' : 'Açık'}
-                            </span>
-                          </div>
-                          {!field.value?.closed && (
-                            <div className="flex items-center space-x-2 ml-auto">
-                              <Input
-                                type="time"
-                                value={field.value?.open || '09:00'}
-                                onChange={(e) => field.onChange({
-                                  ...field.value,
-                                  open: e.target.value
-                                })}
-                                className="w-32"
-                                data-testid={`time-open-${day.key}`}
+          {/* Working Hours - Only show when "Özel" is selected */}
+          {showWorkingHours && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Clock className="w-5 h-5" />
+                  <span>Haftalık Çalışma Saatleri</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {DAYS.map((day) => (
+                    <FormField
+                      key={day.key}
+                      control={form.control}
+                      name={`workingHours.${day.key}` as any}
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center space-x-4 p-4 border rounded-lg">
+                            <div className="w-20 font-medium">{day.label}</div>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={!field.value?.closed}
+                                onCheckedChange={(checked) => {
+                                  field.onChange({
+                                    ...field.value,
+                                    closed: !checked
+                                  });
+                                }}
+                                data-testid={`switch-${day.key}`}
                               />
-                              <span>-</span>
-                              <Input
-                                type="time"
-                                value={field.value?.close || '18:00'}
-                                onChange={(e) => field.onChange({
-                                  ...field.value,
-                                  close: e.target.value
-                                })}
-                                className="w-32"
-                                data-testid={`time-close-${day.key}`}
-                              />
+                              <span className="text-sm text-gray-500">
+                                {field.value?.closed ? 'Kapalı' : 'Açık'}
+                              </span>
                             </div>
-                          )}
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                            {!field.value?.closed && (
+                              <div className="flex items-center space-x-2 ml-auto">
+                                <Input
+                                  type="time"
+                                  value={field.value?.open || '09:00'}
+                                  onChange={(e) => field.onChange({
+                                    ...field.value,
+                                    open: e.target.value
+                                  })}
+                                  className="w-32"
+                                  data-testid={`time-open-${day.key}`}
+                                />
+                                <span>-</span>
+                                <Input
+                                  type="time"
+                                  value={field.value?.close || '18:00'}
+                                  onChange={(e) => field.onChange({
+                                    ...field.value,
+                                    close: e.target.value
+                                  })}
+                                  className="w-32"
+                                  data-testid={`time-close-${day.key}`}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Holidays Configuration */}
           <Card>
