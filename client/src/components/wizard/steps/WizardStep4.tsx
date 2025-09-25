@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Globe, Instagram, Twitter, Facebook, Youtube, Linkedin, Video, Check, X, Loader2 } from 'lucide-react';
+import { Globe, Instagram, Twitter, Facebook, Youtube, Linkedin, Video } from 'lucide-react';
 import { wizardStep4Schema, type WizardStep4Data, type AgentWizardSession } from '@shared/schema';
 
 interface WizardStep4Props {
@@ -60,13 +60,7 @@ const SOCIAL_PLATFORMS = [
   }
 ];
 
-// Validasyon durumları için tip tanımları
-type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
-type ValidationResults = Record<string, ValidationStatus>;
-
 export default function WizardStep4({ data, onSave, onNext, canProceed }: WizardStep4Props) {
-  const [validationResults, setValidationResults] = useState<ValidationResults>({});
-  
   const form = useForm<WizardStep4Data>({
     resolver: zodResolver(wizardStep4Schema),
     defaultValues: {
@@ -126,149 +120,6 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
     
     return cleanUrl;
   };
-
-  // Gelişmiş sosyal medya hesap validasyonu
-  const validateSocialAccount = async (url: string, platform: string): Promise<boolean> => {
-    if (!url || url.trim() === '') return true; // Boş URL'ler geçerli kabul edilir
-    
-    try {
-      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-      const urlObj = new URL(fullUrl);
-      
-      // Platform-specific validation patterns
-      const validationRules: Record<string, { 
-        domains: string[], 
-        pattern: RegExp,
-        minLength: number,
-        maxLength: number 
-      }> = {
-        instagram: {
-          domains: ['instagram.com', 'www.instagram.com'],
-          pattern: /^\/([a-zA-Z0-9._]{1,30})$/,
-          minLength: 1,
-          maxLength: 30
-        },
-        facebook: {
-          domains: ['facebook.com', 'www.facebook.com', 'fb.com'],
-          pattern: /^\/([a-zA-Z0-9.]{1,50})$/,
-          minLength: 5,
-          maxLength: 50
-        },
-        twitter: {
-          domains: ['twitter.com', 'www.twitter.com', 'x.com', 'www.x.com'],
-          pattern: /^\/([a-zA-Z0-9_]{1,15})$/,
-          minLength: 1,
-          maxLength: 15
-        },
-        tiktok: {
-          domains: ['tiktok.com', 'www.tiktok.com'],
-          pattern: /^\/@([a-zA-Z0-9._]{1,24})$/,
-          minLength: 2,
-          maxLength: 24
-        },
-        youtube: {
-          domains: ['youtube.com', 'www.youtube.com', 'youtu.be'],
-          pattern: /^\/(c\/|channel\/|user\/|@)?([a-zA-Z0-9_-]{1,100})$/,
-          minLength: 1,
-          maxLength: 100
-        },
-        linkedin: {
-          domains: ['linkedin.com', 'www.linkedin.com'],
-          pattern: /^\/(company|in)\/([a-zA-Z0-9-]{1,100})$/,
-          minLength: 3,
-          maxLength: 100
-        }
-      };
-
-      const rules = validationRules[platform];
-      if (!rules) return false;
-
-      // Check domain
-      if (!rules.domains.includes(urlObj.hostname)) {
-        return false;
-      }
-
-      // Extract username from path
-      const match = urlObj.pathname.match(rules.pattern);
-      if (!match) return false;
-
-      const username = match[match.length - 1]; // Get the last capture group (username)
-      
-      // Length validation
-      if (username.length < rules.minLength || username.length > rules.maxLength) {
-        return false;
-      }
-
-      // Check for invalid patterns
-      const invalidPatterns = [
-        /^[._]/,        // Starts with dot or underscore
-        /[._]$/,        // Ends with dot or underscore  
-        /\.\./,         // Double dots
-        /__/,           // Double underscores
-        /^\d+$/,        // Only numbers
-      ];
-      
-      for (const invalidPattern of invalidPatterns) {
-        if (invalidPattern.test(username)) {
-          return false;
-        }
-      }
-
-      // Check for inappropriate content
-      const inappropriateWords = [
-        'yarrak', 'sik', 'amk', 'orospu', 'pezevenk', 'kahpe', 'sürtük',
-        'fuck', 'shit', 'dick', 'cock', 'pussy', 'bitch', 'damn', 'hell',
-        'admin', 'support', 'help', 'official', 'test', 'null', 'undefined'
-      ];
-      
-      const lowerUsername = username.toLowerCase();
-      for (const word of inappropriateWords) {
-        if (lowerUsername.includes(word)) {
-          return false;
-        }
-      }
-
-      // Check for too many consecutive characters
-      if (/(.)\1{4,}/.test(username)) { // 5 or more same chars in a row
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      return false;
-    }
-  };
-
-  // Debounced validasyon
-  const debounceValidation = (callback: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => callback(...args), delay);
-    };
-  };
-
-  // Validasyon tetikleyici
-  const handleValidation = async (url: string, platform: string) => {
-    if (!url || url.trim() === '') {
-      setValidationResults(prev => ({ ...prev, [platform]: 'idle' }));
-      return;
-    }
-
-    setValidationResults(prev => ({ ...prev, [platform]: 'validating' }));
-    
-    try {
-      const isValid = await validateSocialAccount(url, platform);
-      setValidationResults(prev => ({ 
-        ...prev, 
-        [platform]: isValid ? 'valid' : 'invalid' 
-      }));
-    } catch (error) {
-      setValidationResults(prev => ({ ...prev, [platform]: 'invalid' }));
-    }
-  };
-
-  const debouncedValidation = debounceValidation(handleValidation, 1000);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -342,47 +193,16 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
                         <span>{platform.name}</span>
                       </FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input
-                            placeholder={platform.placeholder}
-                            {...field}
-                            data-testid={`input-${platform.key}`}
-                            onChange={(e) => {
-                              const formatted = formatUrl(e.target.value, platform.key);
-                              field.onChange(formatted);
-                              
-                              // Validasyonu tetikle
-                              debouncedValidation(formatted, platform.key);
-                            }}
-                            className="pr-10"
-                          />
-                          
-                          {/* Validasyon durum ikonu */}
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            {validationResults[platform.key] === 'validating' && (
-                              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                            )}
-                            {validationResults[platform.key] === 'valid' && (
-                              <Check className="w-4 h-4 text-green-500" />
-                            )}
-                            {validationResults[platform.key] === 'invalid' && (
-                              <X className="w-4 h-4 text-red-500" />
-                            )}
-                          </div>
-                        </div>
+                        <Input
+                          placeholder={platform.placeholder}
+                          {...field}
+                          data-testid={`input-${platform.key}`}
+                          onChange={(e) => {
+                            const formatted = formatUrl(e.target.value, platform.key);
+                            field.onChange(formatted);
+                          }}
+                        />
                       </FormControl>
-                      
-                      {/* Validasyon mesajları */}
-                      {validationResults[platform.key] === 'invalid' && (
-                        <p className="text-sm text-red-500 mt-1">
-                          Bu {platform.name} hesabı geçerli değil veya bulunamadı
-                        </p>
-                      )}
-                      {validationResults[platform.key] === 'valid' && (
-                        <p className="text-sm text-green-500 mt-1">
-                          ✓ Hesap doğrulandı
-                        </p>
-                      )}
                       <FormMessage />
                     </FormItem>
                   )}
