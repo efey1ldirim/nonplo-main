@@ -84,15 +84,36 @@ const AutoSaveIndicator: React.FC<{ fieldId: string; autoSaveStates: Record<stri
 };
 
 // Employee Personality Card Component
-const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
-  const [personalityData, setPersonalityData] = useState({
-    tone: 'profesyonel',
-    formality: 3,
-    creativity: 0.7,
-    responseLength: 'orta',
-    useEmojis: false,
-    customInstructions: ''
-  });
+const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ agent, onUpdate, autoSaveStates }) => {
+  // Initialize personality data from agent or use defaults
+  const getInitialPersonality = () => {
+    if (agent?.personality && typeof agent.personality === 'object') {
+      const p = agent.personality as any;
+      return {
+        tone: p.tone || 'profesyonel',
+        formality: p.formality || 3,
+        creativity: p.creativity || 0.7,
+        responseLength: p.responseLength || 'orta',
+        useEmojis: p.useEmojis || false,
+        customInstructions: p.customInstructions || ''
+      };
+    }
+    return {
+      tone: 'profesyonel',
+      formality: 3,
+      creativity: 0.7,
+      responseLength: 'orta',
+      useEmojis: false,
+      customInstructions: ''
+    };
+  };
+
+  const [personalityData, setPersonalityData] = useState(getInitialPersonality);
+
+  // Update local state when agent data changes
+  useEffect(() => {
+    setPersonalityData(getInitialPersonality());
+  }, [agent]);
 
   const personalityPresets = [
     { value: 'sevecen', label: 'Sevecen', icon: Heart, description: 'Sıcak ve anlayışlı', color: 'bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900 dark:text-pink-300' },
@@ -102,6 +123,12 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
     { value: 'ozel', label: 'Özel', icon: Settings, description: 'Kendi tarzınızı oluşturun', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900 dark:text-purple-300' }
   ];
 
+  const handlePersonalityUpdate = (field: string, value: any) => {
+    const newPersonalityData = { ...personalityData, [field]: value };
+    setPersonalityData(newPersonalityData);
+    onUpdate('personality', newPersonalityData);
+  };
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -110,6 +137,12 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
             <Heart className="w-5 h-5 text-primary" />
           </div>
           Çalışan Kişiliği
+          {autoSaveStates.personality === 'saving' && (
+            <Loader2 className="w-5 h-5 text-primary animate-spin ml-2" />
+          )}
+          {autoSaveStates.personality === 'success' && (
+            <Check className="w-5 h-5 text-green-500 ml-2" />
+          )}
         </CardTitle>
         <CardDescription className="text-base">
           Ton, stil ve iletişim tarzını belirleyin
@@ -126,10 +159,7 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
                 className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:scale-[1.02] ${
                   personalityData.tone === preset.value ? preset.color : 'border-muted hover:border-primary/30'
                 }`}
-                onClick={() => {
-                  setPersonalityData(prev => ({ ...prev, tone: preset.value as any }));
-                  onUpdate('personality', { ...personalityData, tone: preset.value });
-                }}
+                onClick={() => handlePersonalityUpdate('tone', preset.value)}
                 data-testid={`personality-${preset.value}`}
               >
                 <div className="flex items-center space-x-3">
@@ -147,6 +177,70 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
           </div>
         </div>
 
+        {/* Advanced Settings */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Formality Level */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium flex justify-between">
+              <span>Resmilik Düzeyi</span>
+              <span className="text-xs text-muted-foreground">
+                {personalityData.formality === 1 && 'Çok Samimi'}
+                {personalityData.formality === 2 && 'Samimi'}
+                {personalityData.formality === 3 && 'Dengeli'}
+                {personalityData.formality === 4 && 'Resmi'}
+                {personalityData.formality === 5 && 'Çok Resmi'}
+              </span>
+            </Label>
+            <div className="px-3">
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                value={personalityData.formality}
+                onChange={(e) => handlePersonalityUpdate('formality', parseInt(e.target.value))}
+                className="w-full"
+                data-testid="slider-formality"
+              />
+            </div>
+          </div>
+
+          {/* Response Length */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Yanıt Uzunluğu</Label>
+            <div className="flex space-x-2">
+              {['kisa', 'orta', 'uzun'].map((length) => (
+                <Button
+                  key={length}
+                  type="button"
+                  variant={personalityData.responseLength === length ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePersonalityUpdate('responseLength', length)}
+                  data-testid={`button-length-${length}`}
+                  className="flex-1"
+                >
+                  {length === 'kisa' && 'Kısa'}
+                  {length === 'orta' && 'Orta'}
+                  {length === 'uzun' && 'Uzun'}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Emoji Usage */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <div>
+            <Label className="text-sm font-medium">Emoji Kullanımı</Label>
+            <p className="text-xs text-muted-foreground mt-1">Mesajlarda emoji kullanılsın mı?</p>
+          </div>
+          <Switch
+            checked={personalityData.useEmojis}
+            onCheckedChange={(checked) => handlePersonalityUpdate('useEmojis', checked)}
+            data-testid="switch-emojis"
+          />
+        </div>
+
         {/* Custom Instructions for "Özel" */}
         {personalityData.tone === 'ozel' && (
           <div className="space-y-3">
@@ -158,7 +252,7 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
               onChange={(e) => {
                 setPersonalityData(prev => ({ ...prev, customInstructions: e.target.value }));
               }}
-              onBlur={(e) => onUpdate('personality', { ...personalityData, customInstructions: e.target.value })}
+              onBlur={(e) => handlePersonalityUpdate('customInstructions', e.target.value)}
               data-testid="textarea-custom-instructions"
             />
           </div>
@@ -2458,7 +2552,7 @@ export default function DashboardAgentDetail() {
           </Card>
 
           {/* PERSONALITY CARD */}
-          <EmployeePersonalityCard agent={agent} onUpdate={handleAutoSave} />
+          <EmployeePersonalityCard agent={agent} onUpdate={handleAutoSave} autoSaveStates={autoSaveStates} />
 
           {/* BUSINESS INFORMATION SECTION */}
           <div className="space-y-6">
