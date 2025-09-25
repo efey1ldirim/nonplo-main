@@ -1575,15 +1575,18 @@ export default function DashboardAgentDetail() {
           payload = { faq: value };
           break;
         case 'products':
-          endpoint = `/api/agents/${agent.id}/products`;
+          endpoint = `/api/agents/${agent.id}/products-services`;
           payload = { products: value };
           break;
         default:
           throw new Error(`Unknown field: ${field}`);
       }
       
+      // Determine HTTP method based on field
+      const method = (field === 'name' || field === 'role') ? 'PUT' : 'PATCH';
+      
       const response = await fetch(endpoint, {
-        method: 'PATCH',
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
