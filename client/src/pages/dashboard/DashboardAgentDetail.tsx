@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit, X, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit, X, Plus, ExternalLink } from "lucide-react";
 import LiveTestConsole from "@/components/LiveTestConsole";
 import { AgentChat } from "@/components/features/AgentChat";
 
@@ -29,6 +29,13 @@ interface Agent {
   updated_at: string;
   openaiAssistantId?: string;
   temperature?: string;
+  personality?: any;
+  workingHours?: any;
+  address?: string;
+  website?: string;
+  socialMedia?: any;
+  faq?: any;
+  products?: string;
 }
 
 interface IntegrationConn {
