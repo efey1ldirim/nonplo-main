@@ -66,9 +66,7 @@ const providers = [
 ];
 
 // Auto-save indicator component
-const AutoSaveIndicator: React.FC<{ fieldId: string }> = ({ fieldId }) => {
-  const [autoSaveStates] = useState<Record<string, 'idle' | 'saving' | 'success'>>({});
-  
+const AutoSaveIndicator: React.FC<{ fieldId: string; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ fieldId, autoSaveStates }) => {
   const status = autoSaveStates[fieldId] || 'idle';
   
   if (status === 'idle') return null;
@@ -890,6 +888,108 @@ export default function DashboardAgentDetail() {
       toast({
         title: "Bağlantı Başlatılamadı",
         description: error.message || "Google Calendar bağlantısı başlatılamadı. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Auto-save handler
+  const handleAutoSave = async (field: string, value: any) => {
+    if (!agent || !userId) return;
+    
+    // Set saving state
+    setAutoSaveStates(prev => ({ ...prev, [field]: 'saving' }));
+    
+    // Clear any existing timeout for this field
+    if (autoSaveTimeouts[field]) {
+      clearTimeout(autoSaveTimeouts[field]);
+    }
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session found');
+      }
+      
+      let endpoint = '';
+      let payload = {};
+      
+      // Determine endpoint and payload based on field
+      switch (field) {
+        case 'name':
+        case 'role':
+          endpoint = `/api/agents/${agent.id}`;
+          payload = { [field]: value };
+          break;
+        case 'personality':
+          endpoint = `/api/agents/${agent.id}/personality`;
+          payload = { personality: value };
+          break;
+        case 'workingHours':
+          endpoint = `/api/agents/${agent.id}/working-hours`;
+          payload = { workingHours: value };
+          break;
+        case 'address':
+        case 'website':
+        case 'socialMedia':
+          endpoint = `/api/agents/${agent.id}/contact-info`;
+          payload = { [field]: value };
+          break;
+        case 'faq':
+          endpoint = `/api/agents/${agent.id}/faq`;
+          payload = { faq: value };
+          break;
+        case 'products':
+          endpoint = `/api/agents/${agent.id}/products`;
+          payload = { products: value };
+          break;
+        default:
+          throw new Error(`Unknown field: ${field}`);
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save changes');
+      }
+      
+      // Update local state if it's a basic field
+      if (field === 'name') {
+        setAgent(prev => prev ? { ...prev, name: value } : null);
+        setNewName(value);
+      } else if (field === 'role') {
+        setAgent(prev => prev ? { ...prev, role: value } : null);
+        setAgentRole(value);
+      }
+      
+      // Set success state
+      setAutoSaveStates(prev => ({ ...prev, [field]: 'success' }));
+      
+      // Clear success state after 2 seconds
+      const timeout = setTimeout(() => {
+        setAutoSaveStates(prev => ({ ...prev, [field]: 'idle' }));
+        setAutoSaveTimeouts(prev => {
+          const newTimeouts = { ...prev };
+          delete newTimeouts[field];
+          return newTimeouts;
+        });
+      }, 2000);
+      
+      setAutoSaveTimeouts(prev => ({ ...prev, [field]: timeout }));
+      
+    } catch (error: any) {
+      console.error('Auto-save error:', error);
+      setAutoSaveStates(prev => ({ ...prev, [field]: 'idle' }));
+      toast({
+        title: "Kayıt hatası",
+        description: error.message || "Değişiklikler kaydedilemedi.",
         variant: "destructive",
       });
     }
@@ -2311,7 +2411,7 @@ export default function DashboardAgentDetail() {
                       placeholder="Örn: Fatma Hanım"
                       className="pr-12 h-12 text-base"
                     />
-                    <AutoSaveIndicator fieldId="name" />
+                    <AutoSaveIndicator fieldId="name" autoSaveStates={autoSaveStates} />
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -2330,7 +2430,7 @@ export default function DashboardAgentDetail() {
                       placeholder="Örn: Müşteri Hizmetleri Temsilcisi"
                       className="pr-12 h-12 text-base"
                     />
-                    <AutoSaveIndicator fieldId="role" />
+                    <AutoSaveIndicator fieldId="role" autoSaveStates={autoSaveStates} />
                   </div>
                 </div>
               </div>
