@@ -1860,7 +1860,7 @@ export default function DashboardAgentDetail() {
       } finally {
         setAutoSaving(false);
       }
-    }, 1000); // 1 second debounce
+    }, 200); // 200ms debounce for faster response
   }, [agent?.id, userId, toast]);
 
   const handleExport = () => {

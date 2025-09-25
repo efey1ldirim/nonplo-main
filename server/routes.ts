@@ -958,16 +958,18 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         return res.status(404).json({ error: "Agent not found" });
       }
 
-      // Update OpenAI Assistant if agent has one and critical fields changed
+      // Update OpenAI Assistant in background (don't await to speed up response)
       if (updatedAgent.openaiAssistantId && (updates.name || updates.role)) {
-        try {
-          console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
-          await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
-          console.log(`✅ OpenAI Assistant updated successfully`);
-        } catch (assistantError) {
-          console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
-          // Don't fail the entire request if assistant update fails
-        }
+        // Background task - don't await
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
+            await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+            console.log(`✅ OpenAI Assistant updated successfully`);
+          } catch (assistantError) {
+            console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
+          }
+        });
       }
       
       // Broadcast real-time updates to user
@@ -1162,16 +1164,18 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
 
       console.log(`✅ Agent updated successfully: ${id}, Active: ${updatedAgent.is_active}`);
 
-      // Update OpenAI Assistant if agent has one and critical fields changed
+      // Update OpenAI Assistant in background (don't await to speed up response)
       if (updatedAgent.openaiAssistantId && (updates.name || updates.role)) {
-        try {
-          console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
-          await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
-          console.log(`✅ OpenAI Assistant updated successfully`);
-        } catch (assistantError) {
-          console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
-          // Don't fail the entire request if assistant update fails
-        }
+        // Background task - don't await
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Updating OpenAI Assistant for agent: ${updatedAgent.name}`);
+            await openaiService.updateAssistant(updatedAgent.openaiAssistantId, updatedAgent);
+            console.log(`✅ OpenAI Assistant updated successfully`);
+          } catch (assistantError) {
+            console.error(`❌ Failed to update OpenAI Assistant:`, assistantError);
+          }
+        });
       }
       
       // Clear cache for this user's agents
