@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit } from "lucide-react";
+import { Calendar as CalendarIcon, MoreVertical, Trash2, Download, Pencil, Bot, ChevronRight, MessageSquare, Search as SearchIcon, User, FileText, Upload, ArrowRight, Check, Loader2, Clock, MapPin, HelpCircle, Package, Code, Heart, Briefcase, Users, MessageCircle, Settings, BarChart, MoreHorizontal, Edit, X, Plus } from "lucide-react";
 import LiveTestConsole from "@/components/LiveTestConsole";
 import { AgentChat } from "@/components/features/AgentChat";
 
@@ -263,7 +263,63 @@ const EmployeePersonalityCard: React.FC<{ agent: Agent | null; onUpdate: (field:
 };
 
 // Working Hours Card Component
-const WorkingHoursCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+const WorkingHoursCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ agent, onUpdate, autoSaveStates }) => {
+  const getInitialWorkingHours = () => {
+    if (agent?.workingHours && typeof agent.workingHours === 'object') {
+      const wh = agent.workingHours as any;
+      return {
+        monday: { enabled: wh.monday?.enabled || false, start: wh.monday?.start || '09:00', end: wh.monday?.end || '18:00' },
+        tuesday: { enabled: wh.tuesday?.enabled || false, start: wh.tuesday?.start || '09:00', end: wh.tuesday?.end || '18:00' },
+        wednesday: { enabled: wh.wednesday?.enabled || false, start: wh.wednesday?.start || '09:00', end: wh.wednesday?.end || '18:00' },
+        thursday: { enabled: wh.thursday?.enabled || false, start: wh.thursday?.start || '09:00', end: wh.thursday?.end || '18:00' },
+        friday: { enabled: wh.friday?.enabled || false, start: wh.friday?.start || '09:00', end: wh.friday?.end || '18:00' },
+        saturday: { enabled: wh.saturday?.enabled || false, start: wh.saturday?.start || '09:00', end: wh.saturday?.end || '18:00' },
+        sunday: { enabled: wh.sunday?.enabled || false, start: wh.sunday?.start || '09:00', end: wh.sunday?.end || '18:00' },
+        timezone: wh.timezone || 'Europe/Istanbul',
+        holidays: wh.holidays || []
+      };
+    }
+    return {
+      monday: { enabled: true, start: '09:00', end: '18:00' },
+      tuesday: { enabled: true, start: '09:00', end: '18:00' },
+      wednesday: { enabled: true, start: '09:00', end: '18:00' },
+      thursday: { enabled: true, start: '09:00', end: '18:00' },
+      friday: { enabled: true, start: '09:00', end: '18:00' },
+      saturday: { enabled: false, start: '09:00', end: '18:00' },
+      sunday: { enabled: false, start: '09:00', end: '18:00' },
+      timezone: 'Europe/Istanbul',
+      holidays: []
+    };
+  };
+
+  const [workingHours, setWorkingHours] = useState(getInitialWorkingHours);
+
+  useEffect(() => {
+    setWorkingHours(getInitialWorkingHours());
+  }, [agent]);
+
+  const weekDays = [
+    { key: 'monday', label: 'Pazartesi' },
+    { key: 'tuesday', label: 'Salı' },
+    { key: 'wednesday', label: 'Çarşamba' },
+    { key: 'thursday', label: 'Perşembe' },
+    { key: 'friday', label: 'Cuma' },
+    { key: 'saturday', label: 'Cumartesi' },
+    { key: 'sunday', label: 'Pazar' }
+  ];
+
+  const handleWorkingHoursUpdate = (dayKey: string, field: string, value: any) => {
+    const newWorkingHours = {
+      ...workingHours,
+      [dayKey]: {
+        ...workingHours[dayKey as keyof typeof workingHours],
+        [field]: value
+      }
+    };
+    setWorkingHours(newWorkingHours);
+    onUpdate('workingHours', newWorkingHours);
+  };
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -272,15 +328,95 @@ const WorkingHoursCard: React.FC<{ agent: Agent | null; onUpdate: (field: string
             <Clock className="w-5 h-5 text-primary" />
           </div>
           Çalışma Saatleri & Tatil Günleri
+          {autoSaveStates.workingHours === 'saving' && (
+            <Loader2 className="w-5 h-5 text-primary animate-spin ml-2" />
+          )}
+          {autoSaveStates.workingHours === 'success' && (
+            <Check className="w-5 h-5 text-green-500 ml-2" />
+          )}
         </CardTitle>
         <CardDescription className="text-base">
           Çalışanınızın aktif olduğu saatleri belirleyin
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Çalışma saatleri yapılandırması yakında eklenecek</p>
+        {/* Working Days */}
+        <div className="space-y-4">
+          {weekDays.map((day) => {
+            const dayData = workingHours[day.key as keyof typeof workingHours] as any;
+            return (
+              <div key={day.key} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <Switch
+                    checked={dayData.enabled}
+                    onCheckedChange={(checked) => handleWorkingHoursUpdate(day.key, 'enabled', checked)}
+                    data-testid={`switch-${day.key}`}
+                  />
+                  <Label className="text-sm font-medium min-w-[80px]">{day.label}</Label>
+                </div>
+                {dayData.enabled && (
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="time"
+                      value={dayData.start}
+                      onChange={(e) => handleWorkingHoursUpdate(day.key, 'start', e.target.value)}
+                      className="w-24 h-8 text-xs"
+                      data-testid={`time-start-${day.key}`}
+                    />
+                    <span className="text-xs text-muted-foreground">-</span>
+                    <Input
+                      type="time"
+                      value={dayData.end}
+                      onChange={(e) => handleWorkingHoursUpdate(day.key, 'end', e.target.value)}
+                      className="w-24 h-8 text-xs"
+                      data-testid={`time-end-${day.key}`}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newHours = { ...workingHours };
+              ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].forEach(day => {
+                (newHours[day as keyof typeof newHours] as any).enabled = true;
+              });
+              ['saturday', 'sunday'].forEach(day => {
+                (newHours[day as keyof typeof newHours] as any).enabled = false;
+              });
+              setWorkingHours(newHours);
+              onUpdate('workingHours', newHours);
+            }}
+            data-testid="button-weekdays-only"
+          >
+            Sadece Hafta İçi
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newHours = { ...workingHours };
+              Object.keys(newHours).forEach(day => {
+                if (day !== 'timezone' && day !== 'holidays') {
+                  (newHours[day as keyof typeof newHours] as any).enabled = true;
+                }
+              });
+              setWorkingHours(newHours);
+              onUpdate('workingHours', newHours);
+            }}
+            data-testid="button-all-days"
+          >
+            Tüm Günler
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -288,7 +424,34 @@ const WorkingHoursCard: React.FC<{ agent: Agent | null; onUpdate: (field: string
 };
 
 // Address & Contact Card Component
-const AddressContactCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+const AddressContactCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ agent, onUpdate, autoSaveStates }) => {
+  const [contactInfo, setContactInfo] = useState({
+    address: agent?.address || '',
+    website: agent?.website || '',
+    socialMedia: agent?.socialMedia || {}
+  });
+
+  useEffect(() => {
+    setContactInfo({
+      address: agent?.address || '',
+      website: agent?.website || '',
+      socialMedia: agent?.socialMedia || {}
+    });
+  }, [agent]);
+
+  const handleContactUpdate = (field: string, value: any) => {
+    const newContactInfo = { ...contactInfo, [field]: value };
+    setContactInfo(newContactInfo);
+    onUpdate(field, value);
+  };
+
+  const handleSocialMediaUpdate = (platform: string, value: string) => {
+    const newSocialMedia = { ...contactInfo.socialMedia, [platform]: value };
+    const newContactInfo = { ...contactInfo, socialMedia: newSocialMedia };
+    setContactInfo(newContactInfo);
+    onUpdate('socialMedia', newSocialMedia);
+  };
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -297,15 +460,77 @@ const AddressContactCard: React.FC<{ agent: Agent | null; onUpdate: (field: stri
             <MapPin className="w-5 h-5 text-primary" />
           </div>
           Adres & İletişim Bilgileri
+          {(autoSaveStates.address === 'saving' || autoSaveStates.website === 'saving' || autoSaveStates.socialMedia === 'saving') && (
+            <Loader2 className="w-5 h-5 text-primary animate-spin ml-2" />
+          )}
+          {(autoSaveStates.address === 'success' || autoSaveStates.website === 'success' || autoSaveStates.socialMedia === 'success') && (
+            <Check className="w-5 h-5 text-green-500 ml-2" />
+          )}
         </CardTitle>
         <CardDescription className="text-base">
           İşletmenizin konum ve iletişim bilgilerini ekleyin
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Adres ve iletişim ayarları yakında eklenecek</p>
+        {/* Address */}
+        <div className="space-y-3">
+          <Label htmlFor="business-address" className="text-sm font-medium">İşletme Adresi</Label>
+          <div className="relative">
+            <Textarea
+              id="business-address"
+              value={contactInfo.address}
+              onChange={(e) => setContactInfo(prev => ({ ...prev, address: e.target.value }))}
+              onBlur={(e) => handleContactUpdate('address', e.target.value)}
+              placeholder="Örn: Konak Mah. Cumhuriyet Cad. No:123 Konak/İzmir"
+              className="min-h-[80px] resize-none pr-12"
+              data-testid="textarea-address"
+            />
+            <AutoSaveIndicator fieldId="address" autoSaveStates={autoSaveStates} />
+          </div>
+        </div>
+
+        {/* Website */}
+        <div className="space-y-3">
+          <Label htmlFor="business-website" className="text-sm font-medium">Website</Label>
+          <div className="relative">
+            <Input
+              id="business-website"
+              value={contactInfo.website}
+              onChange={(e) => setContactInfo(prev => ({ ...prev, website: e.target.value }))}
+              onBlur={(e) => handleContactUpdate('website', e.target.value)}
+              placeholder="https://www.ornek.com"
+              className="pr-12"
+              data-testid="input-website"
+            />
+            <AutoSaveIndicator fieldId="website" autoSaveStates={autoSaveStates} />
+          </div>
+        </div>
+
+        {/* Social Media */}
+        <div className="space-y-4">
+          <Label className="text-sm font-medium">Sosyal Medya Hesapları</Label>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              { key: 'instagram', label: 'Instagram', placeholder: '@ornek_hesap', icon: '📷' },
+              { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/ornek', icon: '📘' },
+              { key: 'twitter', label: 'Twitter', placeholder: '@ornek_hesap', icon: '🐦' },
+              { key: 'linkedin', label: 'LinkedIn', placeholder: 'linkedin.com/company/ornek', icon: '💼' }
+            ].map((social) => (
+              <div key={social.key} className="space-y-2">
+                <Label className="text-xs font-medium flex items-center gap-2">
+                  <span>{social.icon}</span>
+                  {social.label}
+                </Label>
+                <Input
+                  value={(contactInfo.socialMedia as any)?.[social.key] || ''}
+                  onChange={(e) => handleSocialMediaUpdate(social.key, e.target.value)}
+                  placeholder={social.placeholder}
+                  className="text-sm"
+                  data-testid={`input-social-${social.key}`}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -313,7 +538,41 @@ const AddressContactCard: React.FC<{ agent: Agent | null; onUpdate: (field: stri
 };
 
 // FAQ Card Component
-const FaqCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+const FaqCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ agent, onUpdate, autoSaveStates }) => {
+  const [faqList, setFaqList] = useState<Array<{question: string, answer: string}>>([]);
+  const [newFaq, setNewFaq] = useState({ question: '', answer: '' });
+  
+  useEffect(() => {
+    if (agent?.faq && Array.isArray(agent.faq)) {
+      setFaqList(agent.faq);
+    } else {
+      setFaqList([]);
+    }
+  }, [agent]);
+
+  const addFaq = () => {
+    if (newFaq.question.trim() && newFaq.answer.trim()) {
+      const updatedList = [...faqList, { ...newFaq }];
+      setFaqList(updatedList);
+      onUpdate('faq', updatedList);
+      setNewFaq({ question: '', answer: '' });
+    }
+  };
+
+  const removeFaq = (index: number) => {
+    const updatedList = faqList.filter((_, i) => i !== index);
+    setFaqList(updatedList);
+    onUpdate('faq', updatedList);
+  };
+
+  const updateFaq = (index: number, field: 'question' | 'answer', value: string) => {
+    const updatedList = faqList.map((faq, i) => 
+      i === index ? { ...faq, [field]: value } : faq
+    );
+    setFaqList(updatedList);
+    onUpdate('faq', updatedList);
+  };
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -322,15 +581,81 @@ const FaqCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: 
             <HelpCircle className="w-5 h-5 text-primary" />
           </div>
           FAQ
+          {autoSaveStates.faq === 'saving' && (
+            <Loader2 className="w-5 h-5 text-primary animate-spin ml-2" />
+          )}
+          {autoSaveStates.faq === 'success' && (
+            <Check className="w-5 h-5 text-green-500 ml-2" />
+          )}
         </CardTitle>
         <CardDescription className="text-base">
           Sık sorulan soruları ve cevaplarını yönetin
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          <HelpCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>FAQ yönetimi yakında eklenecek</p>
+        {/* Existing FAQs */}
+        {faqList.length > 0 && (
+          <div className="space-y-4">
+            {faqList.map((faq, index) => (
+              <div key={index} className="p-4 bg-muted/30 rounded-lg space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      value={faq.question}
+                      onChange={(e) => updateFaq(index, 'question', e.target.value)}
+                      placeholder="Soru"
+                      className="font-medium"
+                      data-testid={`input-faq-question-${index}`}
+                    />
+                    <Textarea
+                      value={faq.answer}
+                      onChange={(e) => updateFaq(index, 'answer', e.target.value)}
+                      placeholder="Cevap"
+                      className="min-h-[60px] resize-none"
+                      data-testid={`textarea-faq-answer-${index}`}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFaq(index)}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                    data-testid={`button-remove-faq-${index}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add New FAQ */}
+        <div className="p-4 border-2 border-dashed border-muted rounded-lg space-y-3">
+          <Input
+            value={newFaq.question}
+            onChange={(e) => setNewFaq(prev => ({ ...prev, question: e.target.value }))}
+            placeholder="Yeni soru ekleyin..."
+            data-testid="input-new-faq-question"
+          />
+          <Textarea
+            value={newFaq.answer}
+            onChange={(e) => setNewFaq(prev => ({ ...prev, answer: e.target.value }))}
+            placeholder="Cevabı yazın..."
+            className="min-h-[80px] resize-none"
+            data-testid="textarea-new-faq-answer"
+          />
+          <Button
+            type="button"
+            onClick={addFaq}
+            disabled={!newFaq.question.trim() || !newFaq.answer.trim()}
+            className="w-full"
+            data-testid="button-add-faq"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            FAQ Ekle
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -338,7 +663,18 @@ const FaqCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: 
 };
 
 // Products & Services Card Component
-const ProductsServicesCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void }> = ({ agent, onUpdate }) => {
+const ProductsServicesCard: React.FC<{ agent: Agent | null; onUpdate: (field: string, value: any) => void; autoSaveStates: Record<string, 'idle' | 'saving' | 'success'> }> = ({ agent, onUpdate, autoSaveStates }) => {
+  const [productsText, setProductsText] = useState('');
+
+  useEffect(() => {
+    setProductsText(agent?.products || '');
+  }, [agent]);
+
+  const handleProductsUpdate = (value: string) => {
+    setProductsText(value);
+    onUpdate('products', value);
+  };
+
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-card via-card to-muted/20">
       <CardHeader className="pb-4">
@@ -347,15 +683,80 @@ const ProductsServicesCard: React.FC<{ agent: Agent | null; onUpdate: (field: st
             <Package className="w-5 h-5 text-primary" />
           </div>
           Ürün/Hizmet Açıklaması
+          {autoSaveStates.products === 'saving' && (
+            <Loader2 className="w-5 h-5 text-primary animate-spin ml-2" />
+          )}
+          {autoSaveStates.products === 'success' && (
+            <Check className="w-5 h-5 text-green-500 ml-2" />
+          )}
         </CardTitle>
         <CardDescription className="text-base">
           Sunduğunuz ürün ve hizmetleri tanıtın
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="text-center py-8 text-muted-foreground">
-          <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Ürün ve hizmet tanıtımı yakında eklenecek</p>
+        {/* Products Description */}
+        <div className="space-y-3">
+          <Label htmlFor="products-description" className="text-sm font-medium">Ürün ve Hizmetleriniz</Label>
+          <div className="relative">
+            <Textarea
+              id="products-description"
+              value={productsText}
+              onChange={(e) => setProductsText(e.target.value)}
+              onBlur={(e) => handleProductsUpdate(e.target.value)}
+              placeholder="Sunduğunuz ürün ve hizmetleri detaylı bir şekilde açıklayın...\n\nÖrnek:\n• Kahve çeşitleri (Americano, Latte, Cappuccino)\n• Taze pişmiş hamur işleri\n• Özel kahve karışımları\n• Oturma alanları ve WiFi"
+              className="min-h-[200px] resize-none pr-12"
+              data-testid="textarea-products"
+            />
+            <AutoSaveIndicator fieldId="products" autoSaveStates={autoSaveStates} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Bu bilgiler çalışanınızın müşterilere ürün ve hizmetleriniz hakkında doğru bilgi vermesini sağlar.
+          </p>
+        </div>
+
+        {/* Quick Templates */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Hızlı Şablonlar</Label>
+          <div className="grid gap-2 md:grid-cols-2">
+            {[
+              {
+                label: 'Restoran',
+                template: '• Ana yemekler ve mezeler\n• İçecek çeşitleri\n• Özel menüler ve kampanyalar\n• Rezervasyon imkanları'
+              },
+              {
+                label: 'Mağaza',
+                template: '• Ürün kategorileri\n• Marka çeşitliliği\n• Fiyat aralıkları\n• Özel indirimler'
+              },
+              {
+                label: 'Hizmet',
+                template: '• Sunulan hizmet türleri\n• Uzman kadro\n• Çalışma saatleri\n• Randevu sistemi'
+              },
+              {
+                label: 'E-ticaret',
+                template: '• Kargo seçenekleri\n• Ödeme yöntemleri\n• İade politikası\n• Müşteri desteği'
+              }
+            ].map((template) => (
+              <Button
+                key={template.label}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newText = productsText ? `${productsText}\n\n${template.template}` : template.template;
+                  setProductsText(newText);
+                  handleProductsUpdate(newText);
+                }}
+                data-testid={`button-template-${template.label.toLowerCase()}`}
+                className="justify-start h-auto p-3"
+              >
+                <div className="text-left">
+                  <div className="font-medium">{template.label}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Şablon ekle</div>
+                </div>
+              </Button>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -2562,16 +2963,16 @@ export default function DashboardAgentDetail() {
             </div>
 
             {/* Working Hours & Holidays Card */}
-            <WorkingHoursCard agent={agent} onUpdate={handleAutoSave} />
+            <WorkingHoursCard agent={agent} onUpdate={handleAutoSave} autoSaveStates={autoSaveStates} />
 
             {/* Address & Contact Card */}
-            <AddressContactCard agent={agent} onUpdate={handleAutoSave} />
+            <AddressContactCard agent={agent} onUpdate={handleAutoSave} autoSaveStates={autoSaveStates} />
 
             {/* FAQ Card */}
-            <FaqCard agent={agent} onUpdate={handleAutoSave} />
+            <FaqCard agent={agent} onUpdate={handleAutoSave} autoSaveStates={autoSaveStates} />
 
             {/* Products & Services Card */}
-            <ProductsServicesCard agent={agent} onUpdate={handleAutoSave} />
+            <ProductsServicesCard agent={agent} onUpdate={handleAutoSave} autoSaveStates={autoSaveStates} />
           </div>
 
           {/* EMBED & API CARD */}
