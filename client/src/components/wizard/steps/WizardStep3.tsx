@@ -46,7 +46,7 @@ const QUICK_PRESETS = [
         ? { open: '09:00', close: '18:00', closed: true }
         : { open: '09:00', close: '18:00', closed: false }
     }), {}),
-    holidays: { nationalHolidays: true, religiousHolidays: true, customHolidays: [] }
+    holidays: { nationalHolidays: false, religiousHolidays: false, customHolidays: [] }
   },
   {
     name: 'Özel',
