@@ -127,27 +127,113 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
     return cleanUrl;
   };
 
-  // Sosyal medya hesap validasyonu
+  // Gelişmiş sosyal medya hesap validasyonu
   const validateSocialAccount = async (url: string, platform: string): Promise<boolean> => {
     if (!url || url.trim() === '') return true; // Boş URL'ler geçerli kabul edilir
     
     try {
       const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-      
-      // CORS sınırlamaları nedeniyle gerçek validasyon yapmak yerine,
-      // URL formatını kontrol edelim
       const urlObj = new URL(fullUrl);
-      const validDomains: Record<string, string[]> = {
-        instagram: ['instagram.com', 'www.instagram.com'],
-        facebook: ['facebook.com', 'www.facebook.com', 'fb.com'],
-        twitter: ['twitter.com', 'www.twitter.com', 'x.com', 'www.x.com'],
-        tiktok: ['tiktok.com', 'www.tiktok.com'],
-        youtube: ['youtube.com', 'www.youtube.com', 'youtu.be'],
-        linkedin: ['linkedin.com', 'www.linkedin.com']
-      };
       
-      const platformDomains = validDomains[platform] || [];
-      return platformDomains.includes(urlObj.hostname);
+      // Platform-specific validation patterns
+      const validationRules: Record<string, { 
+        domains: string[], 
+        pattern: RegExp,
+        minLength: number,
+        maxLength: number 
+      }> = {
+        instagram: {
+          domains: ['instagram.com', 'www.instagram.com'],
+          pattern: /^\/([a-zA-Z0-9._]{1,30})$/,
+          minLength: 1,
+          maxLength: 30
+        },
+        facebook: {
+          domains: ['facebook.com', 'www.facebook.com', 'fb.com'],
+          pattern: /^\/([a-zA-Z0-9.]{1,50})$/,
+          minLength: 5,
+          maxLength: 50
+        },
+        twitter: {
+          domains: ['twitter.com', 'www.twitter.com', 'x.com', 'www.x.com'],
+          pattern: /^\/([a-zA-Z0-9_]{1,15})$/,
+          minLength: 1,
+          maxLength: 15
+        },
+        tiktok: {
+          domains: ['tiktok.com', 'www.tiktok.com'],
+          pattern: /^\/@([a-zA-Z0-9._]{1,24})$/,
+          minLength: 2,
+          maxLength: 24
+        },
+        youtube: {
+          domains: ['youtube.com', 'www.youtube.com', 'youtu.be'],
+          pattern: /^\/(c\/|channel\/|user\/|@)?([a-zA-Z0-9_-]{1,100})$/,
+          minLength: 1,
+          maxLength: 100
+        },
+        linkedin: {
+          domains: ['linkedin.com', 'www.linkedin.com'],
+          pattern: /^\/(company|in)\/([a-zA-Z0-9-]{1,100})$/,
+          minLength: 3,
+          maxLength: 100
+        }
+      };
+
+      const rules = validationRules[platform];
+      if (!rules) return false;
+
+      // Check domain
+      if (!rules.domains.includes(urlObj.hostname)) {
+        return false;
+      }
+
+      // Extract username from path
+      const match = urlObj.pathname.match(rules.pattern);
+      if (!match) return false;
+
+      const username = match[match.length - 1]; // Get the last capture group (username)
+      
+      // Length validation
+      if (username.length < rules.minLength || username.length > rules.maxLength) {
+        return false;
+      }
+
+      // Check for invalid patterns
+      const invalidPatterns = [
+        /^[._]/,        // Starts with dot or underscore
+        /[._]$/,        // Ends with dot or underscore  
+        /\.\./,         // Double dots
+        /__/,           // Double underscores
+        /^\d+$/,        // Only numbers
+      ];
+      
+      for (const invalidPattern of invalidPatterns) {
+        if (invalidPattern.test(username)) {
+          return false;
+        }
+      }
+
+      // Check for inappropriate content
+      const inappropriateWords = [
+        'yarrak', 'sik', 'amk', 'orospu', 'pezevenk', 'kahpe', 'sürtük',
+        'fuck', 'shit', 'dick', 'cock', 'pussy', 'bitch', 'damn', 'hell',
+        'admin', 'support', 'help', 'official', 'test', 'null', 'undefined'
+      ];
+      
+      const lowerUsername = username.toLowerCase();
+      for (const word of inappropriateWords) {
+        if (lowerUsername.includes(word)) {
+          return false;
+        }
+      }
+
+      // Check for too many consecutive characters
+      if (/(.)\1{4,}/.test(username)) { // 5 or more same chars in a row
+        return false;
+      }
+
+      return true;
     } catch (error) {
       return false;
     }
