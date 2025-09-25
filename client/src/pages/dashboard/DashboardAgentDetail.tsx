@@ -1125,39 +1125,6 @@ export default function DashboardAgentDetail() {
   });
   const [autoSaveLoading, setAutoSaveLoading] = useState({});
 
-  // Auto-save debounced function for different data types
-  const debouncedAutoSave = useCallback(
-    debounce(async (section: string, data: any) => {
-      if (!agentId || !userId) return;
-      
-      setAutoSaveLoading(prev => ({ ...prev, [section]: true }));
-      
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
-
-        const response = await fetch(`/api/agents/${agentId}/${section}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(data),
-        });
-
-        if (response.ok) {
-          // Show success feedback briefly
-          setTimeout(() => {
-            setAutoSaveLoading(prev => ({ ...prev, [section]: false }));
-          }, 500);
-        }
-      } catch (error) {
-        console.error(`Error saving ${section}:`, error);
-        setAutoSaveLoading(prev => ({ ...prev, [section]: false }));
-      }
-    }, 1000),
-    [agentId, userId]
-  );
 
   // Local Settings Components
   const PersonalitySettingsCard = ({ temperature, setTemperature, handleTemperatureUpdate, temperatureLoading }) => (
@@ -2153,7 +2120,6 @@ export default function DashboardAgentDetail() {
             handleTemperatureUpdate={handleTemperatureUpdate}
             temperatureLoading={temperatureLoading}
           />
-            <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
                 <Label>Maksimum yanıt uzunluğu</Label>
                 <Input 
@@ -2220,87 +2186,6 @@ export default function DashboardAgentDetail() {
 
           {/* SETTINGS:BUSINESS:START */}
           <BusinessInfoSection />
-            <CardContent className="grid gap-4">
-              <div>
-                <Label>Engellenmiş anahtar kelimeler</Label>
-                <Textarea 
-                  rows={3} 
-                  placeholder="virgül,ile,ayrılmış,kelimeler" 
-                  value={forbiddenWords.join(', ')}
-                  onChange={(e) => {
-                    const words = e.target.value
-                      .split(',')
-                      .map(word => word.trim())
-                      .filter(word => word.length > 0);
-                    setForbiddenWords(words);
-                  }}
-                  onBlur={() => {
-                    saveForbiddenWords(forbiddenWords);
-                  }}
-                  disabled={loadingForbiddenWords || savingForbiddenWords}
-                  data-testid="textarea-forbidden-words"
-                />
-                {loadingForbiddenWords && (
-                  <div className="text-xs text-muted-foreground mt-1">Yasaklı kelimeler yükleniyor...</div>
-                )}
-                {savingForbiddenWords && (
-                  <div className="text-xs text-muted-foreground mt-1">Kaydediliyor...</div>
-                )}
-                <div className="text-xs text-muted-foreground mt-1">
-                  Ajanın kullanmaması gereken kelimeleri virgülle ayırarak yazın. (Örn: şiddet, hakaret, küfür)
-                </div>
-              </div>
-              <div>
-                <Label>Yönlendirme kuralları</Label>
-                <Textarea 
-                  rows={3} 
-                  placeholder="Eğer X ise Y'ye yönlendir" 
-                  value={redirectRules}
-                  onChange={(e) => setRedirectRules(e.target.value)}
-                  disabled
-                  className="opacity-50"
-                  data-testid="textarea-redirect-rules"
-                />
-                <div className="text-xs text-muted-foreground mt-1">
-                  🚧 Bu özellik yakında eklenecek
-                </div>
-              </div>
-              <div>
-                <Label>Kişisel veri maskeleme</Label>
-                <Input 
-                  placeholder="Etkin / Devre dışı" 
-                  value={personalDataMasking}
-                  onChange={(e) => setPersonalDataMasking(e.target.value)}
-                  disabled
-                  className="opacity-50"
-                  data-testid="input-personal-data-masking"
-                />
-                <div className="text-xs text-muted-foreground mt-1">
-                  🚧 Bu özellik yakında eklenecek
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Gömme & API</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label>Gömme kodu</Label>
-                <Textarea readOnly value={`<script src="https://cdn.example.com/embed.js" data-agent-id="${agent.id}"></script>`} />
-                <div className="mt-2"><Button variant="outline" onClick={() => navigator.clipboard.writeText(`<script src=\"https://cdn.example.com/embed.js\" data-agent-id=\"${agent.id}\"></script>`) }>Kopyala</Button></div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="min-w-24">Herkese açık paylaşım</Label>
-                <Switch />
-              </div>
-              <div>
-                <Label>API Key/ID</Label>
-                <Input readOnly value={`${agent.id.substring(0,8)}••••••••`} />
-              </div>
-            </CardContent>
           {/* SETTINGS:BUSINESS:END */}
 
           {/* Tools Page Link */}
