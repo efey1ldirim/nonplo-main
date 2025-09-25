@@ -1687,48 +1687,86 @@ export default function DashboardAgentDetail() {
           </Card>
         </TabsContent>
 
-        {/* 4) Settings */}
+        {/* 4) Çalışan Ayarları - Comprehensive Employee Settings */}
         <TabsContent value="settings" className="space-y-6">
+          {/* Top Card: Employee Name, Role, and Training Files */}
           <Card>
             <CardHeader>
-              <CardTitle>Profil</CardTitle>
-              <CardDescription>Ajan kimliği ve görünümü</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <span>Çalışan Profil Bilgileri</span>
+              </CardTitle>
+              <CardDescription>Temel kimlik ve eğitim dosyaları</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-1">
-                <Label htmlFor="agent-name">Ajan adı</Label>
-                <Input 
-                  id="agent-name" 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)}
-                  onBlur={(e) => {
-                    if (e.target.value.trim() && e.target.value.trim() !== agent?.name) {
-                      debouncedAutoSave('name', e.target.value.trim());
-                    }
-                  }}
-                  data-testid="input-agent-name"
-                />
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="employee-name">Çalışan Adı</Label>
+                  <div className="relative">
+                    <Input 
+                      id="employee-name" 
+                      value={newName} 
+                      onChange={(e) => setNewName(e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value.trim() && e.target.value.trim() !== agent?.name) {
+                          debouncedAutoSave('name', e.target.value.trim());
+                        }
+                      }}
+                      data-testid="input-employee-name"
+                      placeholder="Örn: Fatma Hanım"
+                    />
+                    {autoSaving && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="employee-role">Çalışan Görevi</Label>
+                  <div className="relative">
+                    <Input 
+                      id="employee-role" 
+                      value={agentRole}
+                      onChange={(e) => setAgentRole(e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value.trim() !== agent?.role) {
+                          debouncedAutoSave('role', e.target.value.trim());
+                        }
+                      }}
+                      data-testid="input-employee-role"
+                      placeholder="Örn: Müşteri Hizmetleri Temsilcisi"
+                    />
+                    {autoSaving && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="md:col-span-1">
-                <Label htmlFor="agent-role">Rol / Hedef</Label>
-                <Input 
-                  id="agent-role" 
-                  value={agentRole}
-                  onChange={(e) => setAgentRole(e.target.value)}
-                  onBlur={(e) => {
-                    if (e.target.value.trim() !== agent?.role) {
-                      debouncedAutoSave('role', e.target.value.trim());
-                    }
-                  }}
-                  data-testid="input-agent-role"
-                />
+              <div>
+                <Label>Eğitim Dosyaları</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div className="text-muted-foreground">
+                    <svg className="mx-auto h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p>Çalışanın öğrenmesi için dosyalar yükleyin</p>
+                    <p className="text-sm">PDF, DOC, TXT formatları desteklenir</p>
+                  </div>
+                  <Button variant="outline" className="mt-2" disabled>
+                    Dosya Yükle (Yakında)
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* SETTINGS:PERSONALITY:START */}
           <Card>
             <CardHeader>
-              <CardTitle>Davranış</CardTitle>
+              <CardTitle>Kişilik Ayarları</CardTitle>
+              <CardDescription>Çalışanın konuşma tarzı ve karakteri</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
@@ -1795,7 +1833,9 @@ export default function DashboardAgentDetail() {
               </div>
             </CardContent>
           </Card>
+          {/* SETTINGS:PERSONALITY:END */}
 
+          {/* SETTINGS:BUSINESS:START */}
           <Card>
             <CardHeader>
               <CardTitle>Güvenlik</CardTitle>
@@ -1882,7 +1922,20 @@ export default function DashboardAgentDetail() {
               </div>
             </CardContent>
           </Card>
+          {/* SETTINGS:BUSINESS:END */}
 
+          {/* Tools Page Link */}
+          <div className="text-center py-4">
+            <Button 
+              variant="link" 
+              className="text-blue-600 hover:text-blue-800 text-base"
+              onClick={() => navigate(`/dashboard/agents/${agent.id}?tab=integrations`)}
+            >
+              Araçlar sayfasına git →
+            </Button>
+          </div>
+
+          {/* Auto-save Status */}
           <div className="flex items-center gap-2">
             {autoSaving && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
