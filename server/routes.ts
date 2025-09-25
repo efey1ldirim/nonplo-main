@@ -1766,9 +1766,43 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
         return res.status(500).json({ error: "E-posta değiştirme başarısız oldu" });
       }
 
+      // SECURITY FIX: Remove old Google OAuth identities to prevent login with old email
+      try {
+        // Fetch user with identities
+        const { data: userWithIdentities, error: fetchError } = await adminClient.auth.admin.getUserById(userId);
+        
+        if (!fetchError && userWithIdentities?.user?.identities) {
+          // Remove any Google identities that don't match the new email
+          for (const identity of userWithIdentities.user.identities) {
+            if (identity.provider === 'google' && identity.identity_data?.email !== newEmail) {
+              console.log(`🔐 Removing outdated Google identity for user ${userId}: ${identity.identity_data?.email}`);
+              
+              const { error: deleteIdentityError } = await adminClient.auth.admin.deleteUserIdentity(
+                userId,
+                identity.id
+              );
+              
+              if (deleteIdentityError) {
+                console.error('Failed to delete outdated identity:', deleteIdentityError);
+              } else {
+                console.log(`✅ Successfully removed outdated Google identity: ${identity.identity_data?.email}`);
+              }
+            }
+          }
+        }
+
+        // Invalidate all refresh tokens to terminate old sessions
+        await adminClient.auth.admin.invalidateAllUserRefreshTokens(userId);
+        console.log(`✅ Invalidated all refresh tokens for user ${userId}`);
+
+      } catch (identityError) {
+        console.error('Error handling identity cleanup:', identityError);
+        // Don't fail the request if identity cleanup fails
+      }
+
       res.json({ 
         success: true, 
-        message: "E-posta adresiniz başarıyla değiştirildi" 
+        message: "E-posta adresiniz başarıyla değiştirildi. Eski Google hesabınızla artık giriş yapamazsınız." 
       });
 
     } catch (error: any) {
