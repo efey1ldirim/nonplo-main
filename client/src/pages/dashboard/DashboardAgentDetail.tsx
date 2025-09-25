@@ -1104,6 +1104,240 @@ export default function DashboardAgentDetail() {
     </div>
   ), [agent]);
 
+  // Local Settings Components
+  const PersonalitySettingsCard = ({ temperature, setTemperature, handleTemperatureUpdate, temperatureLoading }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Kişilik Ayarları</CardTitle>
+        <CardDescription>Çalışanın konuşma tarzı ve karakteri</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Yaratıcılık Seviyesi</Label>
+          <div className="relative">
+            <Input 
+              type="number" 
+              step="0.1" 
+              min="0" 
+              max="2" 
+              value={temperature}
+              onChange={(e) => setTemperature(e.target.value)}
+              onBlur={() => {
+                if (temperature !== (agent?.temperature || "1.0")) {
+                  handleTemperatureUpdate(temperature);
+                }
+              }}
+              disabled={temperatureLoading}
+              placeholder="1.0" 
+              data-testid="input-creativity"
+            />
+            {temperatureLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Düşük (0.0-1.0): Tutarlı • Yüksek (1.0-2.0): Yaratıcı
+          </div>
+        </div>
+        <div>
+          <Label>Konuşma Tarzı</Label>
+          <select 
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="select-speaking-style"
+          >
+            <option value="friendly">Samimi ve Arkadaşça</option>
+            <option value="professional">Profesyonel</option>
+            <option value="formal">Resmi</option>
+            <option value="casual">Günlük</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <Label>Kişilik Tanımı</Label>
+          <div className="relative">
+            <Textarea 
+              rows={3} 
+              placeholder="Çalışanın nasıl davranması gerektiğini açıklayın..."
+              data-testid="textarea-personality"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Örn: "Çok yardımsever, sabırlı ve her zaman gülümseyen bir tutum sergiler"
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const BusinessInfoSection = () => (
+    <>
+      {/* Business Information Settings Section */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">İşletme Bilgi Ayarları</h3>
+        </div>
+        
+        {/* Working Hours & Holidays Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Çalışma Saatleri & Tatiller</CardTitle>
+            <CardDescription>İş saatleri ve tatil günleri ayarları</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Pazartesi-Cuma</Label>
+                <div className="flex gap-2 items-center">
+                  <Input placeholder="09:00" data-testid="input-weekday-start" />
+                  <span>-</span>
+                  <Input placeholder="18:00" data-testid="input-weekday-end" />
+                </div>
+              </div>
+              <div>
+                <Label>Cumartesi-Pazar</Label>
+                <div className="flex gap-2 items-center">
+                  <Input placeholder="10:00" data-testid="input-weekend-start" />
+                  <span>-</span>
+                  <Input placeholder="16:00" data-testid="input-weekend-end" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Tatil Günleri</Label>
+              <Textarea 
+                rows={2} 
+                placeholder="Resmi tatil günlerini yazın (örn: 1 Ocak, 23 Nisan...)"
+                data-testid="textarea-holidays"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Address & Contact Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Adres & İletişim Bilgileri</CardTitle>
+            <CardDescription>Konum ve iletişim detayları</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <Label>Adres</Label>
+              <Textarea 
+                rows={2} 
+                placeholder="Tam adres bilgilerini yazın..."
+                data-testid="textarea-address"
+              />
+            </div>
+            <div>
+              <Label>Telefon</Label>
+              <Input placeholder="+90 XXX XXX XX XX" data-testid="input-phone" />
+            </div>
+            <div>
+              <Label>E-posta</Label>
+              <Input placeholder="info@sirket.com" data-testid="input-email" />
+            </div>
+            <div>
+              <Label>Website</Label>
+              <Input placeholder="https://sirket.com" data-testid="input-website" />
+            </div>
+            <div>
+              <Label>Sosyal Medya</Label>
+              <Input placeholder="@sirket" data-testid="input-social" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* FAQ Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sık Sorulan Sorular (FAQ)</CardTitle>
+            <CardDescription>Müşterilerin sık sorduğu sorular ve cevapları</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>FAQ Listesi</Label>
+              <Textarea 
+                rows={6} 
+                placeholder="S: Teslimat süresi nedir?&#10;C: Teslimat süresi 2-3 iş günüdür.&#10;&#10;S: İade politikanız nedir?&#10;C: 14 gün içinde ücretsiz iade hakkınız bulunmaktadır."
+                data-testid="textarea-faq"
+              />
+              <div className="text-xs text-muted-foreground mt-1">
+                Her soru-cevap çiftini "S:" ve "C:" ile başlatın
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products & Services Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ürün/Hizmet Açıklamaları</CardTitle>
+            <CardDescription>Sunduğunuz ürün ve hizmetlerin detayları</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Ürün/Hizmet Listesi</Label>
+              <Textarea 
+                rows={5} 
+                placeholder="• Ana ürünlerinizi listeleyin&#10;• Her ürün için kısa açıklama ekleyin&#10;• Fiyat bilgilerini belirtin"
+                data-testid="textarea-products"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Ana Kategori</Label>
+                <Input placeholder="örn: Gıda, Teknoloji, Hizmet" data-testid="input-category" />
+              </div>
+              <div>
+                <Label>Hedef Kitle</Label>
+                <Input placeholder="örn: Bireysel, Kurumsal" data-testid="input-target" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Embed & API Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Gömme & API</CardTitle>
+          <CardDescription>Web sitenize entegrasyon ve API erişimi</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Gömme Kodu</Label>
+            <Textarea 
+              readOnly 
+              value={`<script src="https://cdn.nonplo.com/embed.js" data-agent-id="${agent.id}"></script>`} 
+              data-testid="textarea-embed-code"
+            />
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => navigator.clipboard.writeText(`<script src="https://cdn.nonplo.com/embed.js" data-agent-id="${agent.id}"></script>`)}
+                data-testid="button-copy-embed"
+              >
+                Kopyala
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="min-w-24">Herkese Açık Paylaşım</Label>
+            <Switch data-testid="switch-public-sharing" />
+          </div>
+          <div>
+            <Label>API Key/ID</Label>
+            <Input readOnly value={`${agent.id.substring(0,8)}••••••••`} data-testid="input-api-key" />
+            <div className="text-xs text-muted-foreground mt-1">
+              API dokümantasyonu için destek ekibiyle iletişime geçin
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+
   if (loading) {
     return (
       <div className="p-4 md:p-6 lg:p-8 max-w-full">
@@ -1763,11 +1997,12 @@ export default function DashboardAgentDetail() {
           </Card>
 
           {/* SETTINGS:PERSONALITY:START */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Kişilik Ayarları</CardTitle>
-              <CardDescription>Çalışanın konuşma tarzı ve karakteri</CardDescription>
-            </CardHeader>
+          <PersonalitySettingsCard 
+            temperature={temperature}
+            setTemperature={setTemperature}
+            handleTemperatureUpdate={handleTemperatureUpdate}
+            temperatureLoading={temperatureLoading}
+          />
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div>
                 <Label>Maksimum yanıt uzunluğu</Label>
@@ -1831,15 +2066,10 @@ export default function DashboardAgentDetail() {
                   🚧 Bu özellik yakında eklenecek
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          {/* SETTINGS:PERSONALITY:END */}
+          {/* SETTINGS:PERSONALITY:END */
 
           {/* SETTINGS:BUSINESS:START */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Güvenlik</CardTitle>
-            </CardHeader>
+          <BusinessInfoSection />
             <CardContent className="grid gap-4">
               <div>
                 <Label>Engellenmiş anahtar kelimeler</Label>
@@ -1921,7 +2151,6 @@ export default function DashboardAgentDetail() {
                 <Input readOnly value={`${agent.id.substring(0,8)}••••••••`} />
               </div>
             </CardContent>
-          </Card>
           {/* SETTINGS:BUSINESS:END */}
 
           {/* Tools Page Link */}
