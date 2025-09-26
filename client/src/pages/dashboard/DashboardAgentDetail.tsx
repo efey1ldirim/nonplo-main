@@ -1597,13 +1597,27 @@ export default function DashboardAgentDetail() {
         throw new Error('Failed to save changes');
       }
       
-      // Update local state if it's a basic field
+      // Update local state for all fields
       if (field === 'name') {
         setAgent(prev => prev ? { ...prev, name: value } : null);
         setNewName(value);
       } else if (field === 'role') {
         setAgent(prev => prev ? { ...prev, role: value } : null);
         setAgentRole(value);
+      } else if (field === 'personality') {
+        setAgent(prev => prev ? { ...prev, personality: value } : null);
+      } else if (field === 'workingHours') {
+        setAgent(prev => prev ? { ...prev, workingHours: value } : null);
+      } else if (field === 'address') {
+        setAgent(prev => prev ? { ...prev, address: value } : null);
+      } else if (field === 'website') {
+        setAgent(prev => prev ? { ...prev, website: value } : null);
+      } else if (field === 'socialMedia') {
+        setAgent(prev => prev ? { ...prev, socialMedia: value } : null);
+      } else if (field === 'faq') {
+        setAgent(prev => prev ? { ...prev, faq: value } : null);
+      } else if (field === 'products') {
+        setAgent(prev => prev ? { ...prev, products: value } : null);
       }
       
       // Set success state

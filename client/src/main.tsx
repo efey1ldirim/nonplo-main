@@ -33,6 +33,15 @@ window.addEventListener('unhandledrejection', (event) => {
       event.preventDefault();
       return;
     }
+    
+    // Handle DOMException errors from Eruda devtools
+    if (reason instanceof DOMException || 
+        (reason.name === 'DOMException') ||
+        (reason.constructor && reason.constructor.name === 'DOMException')) {
+      // Completely suppress DOMException errors from devtools
+      event.preventDefault();
+      return;
+    }
 
     // Handle API fetch errors gracefully
     if (reason.message && (
