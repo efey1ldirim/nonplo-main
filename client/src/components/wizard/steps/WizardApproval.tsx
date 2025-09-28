@@ -152,161 +152,313 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto">
-          <Sparkles className="w-8 h-8 text-green-600 dark:text-green-400" />
-        </div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Özet & Onay
-        </h3>
-        <p className="text-gray-600 dark:text-gray-300">
-          Dijital çalışanınızın özetini inceleyin ve oluşturmayı onaylayın
-        </p>
-      </div>
-
-      {/* Completeness Indicator */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-gray-900 dark:text-white">
-              Tamamlanma Oranı
-            </h4>
-            <Badge 
-              variant={summary.completeness === 100 ? "default" : "secondary"}
-              className="text-sm"
-            >
-              %{Math.round(summary.completeness)}
-            </Badge>
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Hero Header */}
+      <div className="text-center space-y-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-purple-50/50 to-pink-50/50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20 rounded-3xl -m-8" />
+        <div className="relative z-10 space-y-4 p-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
+            <Sparkles className="w-10 h-10 text-white" />
           </div>
-          <Progress value={summary.completeness} className="h-2" />
-          {summary.completeness < 100 && (
-            <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-              Bazı zorunlu alanlar eksik. Yine de devam edebilirsiniz.
+          <div className="space-y-3">
+            <h3 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-purple-900 to-blue-900 dark:from-white dark:via-purple-100 dark:to-blue-100 bg-clip-text text-transparent">
+              Dijital Çalışanınız Hazır!
+            </h3>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              Son kontrolü yapın ve hayalinizdeki AI asistanını hayata geçirin
             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Required Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Building2 className="w-5 h-5" />
-              <span>Temel Bilgiler</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.required.map((field, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {field.label}
-                </span>
-                <div className="flex items-center space-x-2">
-                  {field.value ? (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {field.value ? (
-                      typeof field.value === 'string' && field.value.length > 20 
-                        ? `${field.value.substring(0, 20)}...` 
-                        : field.value
-                    ) : 'Eksik'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Optional Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="w-5 h-5" />
-              <span>Ek Bilgiler</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.optional.map((field, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {field.label}
-                </span>
-                <span className="text-sm">
-                  {field.value || 'Yok'}
-                </span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                Sosyal Medya
-              </span>
-              <span className="text-sm">
-                {summary.socialConnections} platform
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                Etkin Araçlar
-              </span>
-              <span className="text-sm">
-                {summary.toolsEnabled} araç
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Agent Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <User className="w-5 h-5" />
-            <span>Dijital Çalışan Önizlemesi</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg p-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-lg text-gray-900 dark:text-white">
-                  {session.employeeName || 'Dijital Çalışan'}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {session.businessName} - {session.industry}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {session.employeeRole && session.employeeRole.length > 100 
-                    ? `${session.employeeRole.substring(0, 100)}...`
-                    : session.employeeRole || 'Görev tanımı belirtilmemiş'
-                  }
-                </p>
-              </div>
-            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Create Button */}
-      <div className="flex justify-center pt-4">
-        <Button
-          onClick={onCreateAgent}
-          size="lg"
-          className="min-w-48 h-12 text-lg"
-          data-testid="button-create-agent"
-        >
-          <Sparkles className="w-5 h-5 mr-2" />
-          Dijital Çalışanı Oluştur
-        </Button>
+        </div>
       </div>
 
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        
+        {/* Left Column - Agent Preview (Takes 2 columns on XL) */}
+        <div className="xl:col-span-2 space-y-6">
+          
+          {/* Digital Employee Hero Card */}
+          <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-blue-950/30 dark:to-purple-950/30">
+            <div className="relative">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.1),transparent_50%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.1),transparent_50%)]" />
+              
+              <CardContent className="relative z-10 p-8">
+                <div className="flex flex-col lg:flex-row items-center lg:items-start space-y-6 lg:space-y-0 lg:space-x-8">
+                  
+                  {/* Avatar Section */}
+                  <div className="flex-shrink-0">
+                    <div className="relative">
+                      <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-all duration-300">
+                        <User className="w-16 h-16 text-white" />
+                      </div>
+                      {/* Status Indicator */}
+                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                        <CheckCircle className="w-6 h-6 text-white" />
+                      </div>
+                      {/* Completion Ring */}
+                      <div className="absolute inset-0 rounded-3xl border-4 border-transparent" 
+                           style={{
+                             background: `conic-gradient(from 0deg, #10b981 ${summary.completeness * 3.6}deg, transparent ${summary.completeness * 3.6}deg)`,
+                             mask: 'radial-gradient(circle, transparent 70px, black 72px)',
+                           }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Employee Info */}
+                  <div className="flex-1 text-center lg:text-left space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent">
+                        {session.employeeName || 'Dijital Çalışan'}
+                      </h4>
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-4 space-y-2 lg:space-y-0">
+                        <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 text-base px-4 py-2 w-fit">
+                          {session.businessName || 'İşletme'}
+                        </Badge>
+                        <span className="text-lg text-gray-600 dark:text-gray-300">
+                          {session.industry || 'Sektör belirtilmemiş'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 space-y-3">
+                      <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                        <FileText className="w-4 h-4" />
+                        <span className="font-medium">Görev Tanımı</span>
+                      </div>
+                      <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {session.employeeRole && session.employeeRole.length > 200 
+                          ? `${session.employeeRole.substring(0, 200)}...`
+                          : session.employeeRole || 'Görev tanımı henüz belirlenmemiş'
+                        }
+                      </p>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {summary.socialConnections}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">Sosyal Medya</div>
+                      </div>
+                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                          {summary.toolsEnabled}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">Araç</div>
+                      </div>
+                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
+                        <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+                          %{Math.round(summary.completeness)}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">Tamamlanma</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </div>
+          </Card>
+
+          {/* Information Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Essential Information */}
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50/50 dark:from-gray-900 dark:to-blue-950/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-blue-900 to-purple-900 dark:from-blue-100 dark:to-purple-100 bg-clip-text text-transparent">
+                    Temel Bilgiler
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {summary.required.map((field, index) => (
+                  <div key={index} className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {field.label}
+                      </span>
+                      <div className="flex items-center space-x-3">
+                        {field.value ? (
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                        )}
+                        <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate" title={field.value || 'Eksik'}>
+                          {field.value ? (
+                            typeof field.value === 'string' && field.value.length > 25 
+                              ? `${field.value.substring(0, 25)}...` 
+                              : field.value
+                          ) : 'Eksik'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Additional Information */}
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50/50 dark:from-gray-900 dark:to-purple-950/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center space-x-3 text-xl">
+                  <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-purple-900 to-pink-900 dark:from-purple-100 dark:to-pink-100 bg-clip-text text-transparent">
+                    Ek Bilgiler
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {summary.optional.map((field, index) => (
+                  <div key={index} className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {field.label}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate" title={field.value || 'Belirtilmemiş'}>
+                        {field.value || 'Belirtilmemiş'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Sosyal Medya
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {summary.socialConnections} platform
+                    </span>
+                  </div>
+                </div>
+                <div className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Etkin Araçlar
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {summary.toolsEnabled} araç
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right Column - Progress & Action */}
+        <div className="space-y-6">
+          
+          {/* Completion Status */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-green-50/50 dark:from-gray-900 dark:to-green-950/50">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-6">
+                <div className="relative">
+                  <div className="w-32 h-32 mx-auto">
+                    {/* Progress Circle */}
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="none"
+                        className="text-gray-200 dark:text-gray-700"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        stroke="url(#gradient)"
+                        strokeWidth="8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 50}`}
+                        strokeDashoffset={`${2 * Math.PI * 50 * (1 - summary.completeness / 100)}`}
+                        className="transition-all duration-1000 ease-out"
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#10b981" />
+                          <stop offset="50%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#8b5cf6" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          {Math.round(summary.completeness)}%
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Hazır
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h4 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {summary.completeness === 100 ? 'Mükemmel!' : 'Neredeyse Hazır!'}
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {summary.completeness === 100 
+                      ? 'Tüm bilgiler tamamlandı. Dijital çalışanınız oluşturulmaya hazır!'
+                      : `${7 - summary.required.filter(f => f.value).length} zorunlu alan eksik, ancak yine de devam edebilirsiniz.`
+                    }
+                  </p>
+                </div>
+
+                {summary.completeness < 100 && (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Eksik alanlar var</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Button */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.2),transparent_70%)]" />
+            <CardContent className="relative z-10 p-8 text-center space-y-6">
+              <Sparkles className="w-12 h-12 mx-auto" />
+              <div className="space-y-3">
+                <h4 className="text-xl font-bold">
+                  Son Adım!
+                </h4>
+                <p className="text-blue-100 text-sm leading-relaxed">
+                  Dijital çalışanınızı oluşturmak için hazırsınız. Bu işlem 1-2 dakika sürebilir.
+                </p>
+              </div>
+              <Button
+                onClick={onCreateAgent}
+                size="lg"
+                className="w-full h-14 text-lg font-semibold bg-white text-blue-600 hover:bg-gray-50 border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                data-testid="button-create-agent"
+              >
+                <Sparkles className="w-6 h-6 mr-3" />
+                Dijital Çalışanı Oluştur
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
