@@ -211,7 +211,11 @@ const DashboardLayout = () => {
                   variant="outline" 
                   size="sm" 
                   className="w-full"
-                  onClick={() => navigate('/account')}
+                  onClick={() => {
+                    navigate('/account');
+                    setShowAccountPopup(false);
+                  }}
+                  data-testid="button-manage-account"
                 >
                   Hesabı Yönet
                 </Button>
