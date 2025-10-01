@@ -6,8 +6,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { User, UserCheck, Sparkles } from 'lucide-react';
+import { User, UserCheck, Sparkles, Loader2 } from 'lucide-react';
 import { wizardStep8Schema, type WizardStep8Data, type AgentWizardSession } from '@shared/schema';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface WizardStep8Props {
   data: AgentWizardSession;
@@ -17,6 +20,7 @@ interface WizardStep8Props {
 }
 
 export default function WizardStep8({ data, onSave, onNext, canProceed }: WizardStep8Props) {
+  const { toast } = useToast();
   const form = useForm<WizardStep8Data>({
     resolver: zodResolver(wizardStep8Schema),
     defaultValues: {
@@ -40,6 +44,47 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
   const handleSubmit = (values: WizardStep8Data) => {
     onSave(values);
     onNext();
+  };
+
+  const optimizeMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const response = await apiRequest('/api/wizard/optimize-text', {
+        method: 'POST',
+        body: JSON.stringify({ text, fieldType: 'role' }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      if (data.optimizedText) {
+        form.setValue('employeeRole', data.optimizedText);
+        onSave({ employeeRole: data.optimizedText });
+        toast({
+          title: 'Başarılı!',
+          description: 'Görev tanımı AI ile optimize edildi.',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Optimizasyon sırasında bir hata oluştu.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const handleOptimize = () => {
+    const currentText = form.getValues('employeeRole');
+    if (!currentText || currentText.trim().length === 0) {
+      toast({
+        title: 'Uyarı',
+        description: 'Lütfen önce bir görev tanımı girin.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    optimizeMutation.mutate(currentText);
   };
 
   return (
@@ -124,9 +169,20 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
               variant="outline"
               className="flex items-center space-x-2"
               data-testid="button-optimize-role"
+              onClick={handleOptimize}
+              disabled={optimizeMutation.isPending}
             >
-              <Sparkles className="w-4 h-4" />
-              <span>AI ile Optimize Et</span>
+              {optimizeMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Optimize ediliyor...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>AI ile Optimize Et</span>
+                </>
+              )}
             </Button>
           </div>
         </form>

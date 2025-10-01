@@ -3589,6 +3589,106 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
   // WIZARD API ENDPOINTS
   // ==========================================
 
+  // Optimize text using OpenAI assistant
+  app.post('/api/wizard/optimize-text', rateLimiters.api, authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { text, fieldType } = req.body;
+      
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+
+      if (!fieldType || !['faq', 'product', 'role'].includes(fieldType)) {
+        return res.status(400).json({ error: 'Field type must be faq, product, or role' });
+      }
+
+      console.log(`🔧 Optimizing ${fieldType} text with AI assistant`);
+
+      const OPTIMIZER_ASSISTANT_ID = 'asst_nkq3flzK1QGy8bEKxsTPNngR';
+
+      // Create a new thread for this optimization
+      const thread = await openai.beta.threads.create();
+      console.log(`📝 Created thread: ${thread.id}`);
+
+      // Create context-specific prompts
+      let userPrompt = '';
+      switch (fieldType) {
+        case 'faq':
+          userPrompt = `Lütfen aşağıdaki sık sorulan sorular metnini optimize et. Metni daha profesyonel, anlaşılır ve müşteri dostu hale getir:\n\n${text}`;
+          break;
+        case 'product':
+          userPrompt = `Lütfen aşağıdaki ürün/hizmet açıklamasını optimize et. Metni daha çekici, profesyonel ve bilgilendirici hale getir:\n\n${text}`;
+          break;
+        case 'role':
+          userPrompt = `Lütfen aşağıdaki görev tanımını optimize et. Metni daha net, profesyonel ve yapılandırılmış hale getir:\n\n${text}`;
+          break;
+      }
+
+      // Add message to thread
+      await openai.beta.threads.messages.create(thread.id, {
+        role: 'user',
+        content: userPrompt
+      });
+
+      // Run the assistant
+      let run = await openai.beta.threads.runs.create(thread.id, {
+        assistant_id: OPTIMIZER_ASSISTANT_ID
+      });
+
+      console.log(`🏃 Run started: ${run.id}`);
+
+      // Wait for completion
+      const MAX_ATTEMPTS = 30;
+      for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        run = await openai.beta.threads.runs.retrieve(run.id, {
+          thread_id: thread.id
+        });
+        console.log(`🔄 Run status (attempt ${attempts + 1}): ${run.status}`);
+
+        if (run.status === 'completed') {
+          // Get the assistant's response
+          const messages = await openai.beta.threads.messages.list(thread.id);
+          const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+          
+          if (assistantMessage && assistantMessage.content[0].type === 'text') {
+            const optimizedText = assistantMessage.content[0].text.value;
+            console.log(`✅ Optimization complete`);
+            
+            return res.json({ 
+              success: true, 
+              optimizedText 
+            });
+          } else {
+            console.error(`❌ Run completed but no assistant text found`);
+            return res.status(500).json({ 
+              error: 'Optimization failed', 
+              details: 'No optimized text produced by the assistant' 
+            });
+          }
+        }
+
+        if (run.status === 'failed' || run.status === 'cancelled' || run.status === 'expired') {
+          console.error(`❌ Run failed with status: ${run.status}`);
+          return res.status(500).json({ 
+            error: 'Optimization failed', 
+            details: run.last_error?.message 
+          });
+        }
+      }
+
+      return res.status(408).json({ error: 'Optimization timed out' });
+
+    } catch (error: any) {
+      console.error('Optimization error:', error);
+      res.status(500).json({ 
+        error: 'Failed to optimize text', 
+        details: error.message 
+      });
+    }
+  });
+
   // Create new wizard session
   app.post('/api/wizard/sessions', authenticate, async (req: AuthenticatedRequest, res) => {
     try {

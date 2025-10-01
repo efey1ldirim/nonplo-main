@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Package, Sparkles } from 'lucide-react';
+import { Package, Sparkles, Loader2 } from 'lucide-react';
 import { wizardStep6Schema, type WizardStep6Data, type AgentWizardSession } from '@shared/schema';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface WizardStep6Props {
   data: AgentWizardSession;
@@ -16,6 +19,7 @@ interface WizardStep6Props {
 }
 
 export default function WizardStep6({ data, onSave, onNext, canProceed }: WizardStep6Props) {
+  const { toast } = useToast();
   const form = useForm<WizardStep6Data>({
     resolver: zodResolver(wizardStep6Schema),
     defaultValues: {
@@ -37,6 +41,47 @@ export default function WizardStep6({ data, onSave, onNext, canProceed }: Wizard
   const handleSubmit = (values: WizardStep6Data) => {
     onSave(values);
     onNext();
+  };
+
+  const optimizeMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const response = await apiRequest('/api/wizard/optimize-text', {
+        method: 'POST',
+        body: JSON.stringify({ text, fieldType: 'product' }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      if (data.optimizedText) {
+        form.setValue('productServiceRaw', data.optimizedText);
+        onSave({ productServiceRaw: data.optimizedText });
+        toast({
+          title: 'Başarılı!',
+          description: 'Ürün/hizmet açıklamanız AI ile optimize edildi.',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Optimizasyon sırasında bir hata oluştu.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const handleOptimize = () => {
+    const currentText = form.getValues('productServiceRaw');
+    if (!currentText || currentText.trim().length === 0) {
+      toast({
+        title: 'Uyarı',
+        description: 'Lütfen önce bir metin girin.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    optimizeMutation.mutate(currentText);
   };
 
   return (
@@ -104,9 +149,20 @@ Kaliteli ürünler kullanarak saçlarınızı sağlıklı tutmaya özen gösteri
               variant="outline"
               className="flex items-center space-x-2"
               data-testid="button-optimize-product"
+              onClick={handleOptimize}
+              disabled={optimizeMutation.isPending}
             >
-              <Sparkles className="w-4 h-4" />
-              <span>AI ile Optimize Et</span>
+              {optimizeMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Optimize ediliyor...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>AI ile Optimize Et</span>
+                </>
+              )}
             </Button>
           </div>
         </form>

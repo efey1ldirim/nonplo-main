@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Sparkles } from 'lucide-react';
+import { HelpCircle, Sparkles, Loader2 } from 'lucide-react';
 import { wizardStep5Schema, type WizardStep5Data, type AgentWizardSession } from '@shared/schema';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface WizardStep5Props {
   data: AgentWizardSession;
@@ -16,6 +19,7 @@ interface WizardStep5Props {
 }
 
 export default function WizardStep5({ data, onSave, onNext }: WizardStep5Props) {
+  const { toast } = useToast();
   const form = useForm<WizardStep5Data>({
     resolver: zodResolver(wizardStep5Schema),
     defaultValues: {
@@ -37,6 +41,47 @@ export default function WizardStep5({ data, onSave, onNext }: WizardStep5Props) 
   const handleSubmit = (values: WizardStep5Data) => {
     onSave(values);
     onNext();
+  };
+
+  const optimizeMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const response = await apiRequest('/api/wizard/optimize-text', {
+        method: 'POST',
+        body: JSON.stringify({ text, fieldType: 'faq' }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      if (data.optimizedText) {
+        form.setValue('faqRaw', data.optimizedText);
+        onSave({ faqRaw: data.optimizedText });
+        toast({
+          title: 'Başarılı!',
+          description: 'FAQ metniniz AI ile optimize edildi.',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Optimizasyon sırasında bir hata oluştu.',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const handleOptimize = () => {
+    const currentText = form.getValues('faqRaw');
+    if (!currentText || currentText.trim().length === 0) {
+      toast({
+        title: 'Uyarı',
+        description: 'Lütfen önce bir metin girin.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    optimizeMutation.mutate(currentText);
   };
 
   return (
@@ -98,9 +143,20 @@ C: Pazartesi-Cuma 09:00-18:00, Cumartesi 10:00-17:00 saatleri arasında hizmet v
               variant="outline"
               className="flex items-center space-x-2"
               data-testid="button-optimize-faq"
+              onClick={handleOptimize}
+              disabled={optimizeMutation.isPending}
             >
-              <Sparkles className="w-4 h-4" />
-              <span>AI ile Optimize Et</span>
+              {optimizeMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Optimize ediliyor...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>AI ile Optimize Et</span>
+                </>
+              )}
             </Button>
           </div>
         </form>
