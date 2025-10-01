@@ -3628,9 +3628,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        run = await openai.beta.threads.runs.retrieve(run.id, {
-          thread_id: thread.id
-        });
+        run = await openai.beta.threads.runs.retrieve(thread.id, run.id);
         console.log(`🔄 Run status (attempt ${attempts + 1}): ${run.status}`);
 
         if (run.status === 'completed') {
