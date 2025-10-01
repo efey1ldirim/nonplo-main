@@ -34,14 +34,18 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
 
   // Load files from API into local state
   useEffect(() => {
-    if (filesData?.data) {
-      const files: UploadedFile[] = (filesData.data as AgentWizardFile[]).map((file) => ({
-        id: file.id,
-        name: file.originalName,
-        size: file.fileSize,
-        status: file.status as UploadedFile['status'],
-      }));
+    if (filesData?.data && Array.isArray(filesData.data)) {
+      const files: UploadedFile[] = (filesData.data as AgentWizardFile[])
+        .filter((file) => file && file.id && file.originalName && typeof file.fileSize === 'number')
+        .map((file) => ({
+          id: file.id,
+          name: file.originalName,
+          size: file.fileSize,
+          status: (file.status as UploadedFile['status']) || 'uploaded',
+        }));
       setUploadedFiles(files);
+    } else {
+      setUploadedFiles([]);
     }
   }, [filesData]);
 
