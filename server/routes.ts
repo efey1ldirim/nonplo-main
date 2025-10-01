@@ -3610,24 +3610,10 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       const thread = await openai.beta.threads.create();
       console.log(`📝 Created thread: ${thread.id}`);
 
-      // Create context-specific prompts
-      let userPrompt = '';
-      switch (fieldType) {
-        case 'faq':
-          userPrompt = `Lütfen aşağıdaki sık sorulan sorular metnini optimize et. Metni daha profesyonel, anlaşılır ve müşteri dostu hale getir:\n\n${text}`;
-          break;
-        case 'product':
-          userPrompt = `Lütfen aşağıdaki ürün/hizmet açıklamasını optimize et. Metni daha çekici, profesyonel ve bilgilendirici hale getir:\n\n${text}`;
-          break;
-        case 'role':
-          userPrompt = `Lütfen aşağıdaki görev tanımını optimize et. Metni daha net, profesyonel ve yapılandırılmış hale getir:\n\n${text}`;
-          break;
-      }
-
-      // Add message to thread
+      // Send user's text directly as a chat message to the assistant
       await openai.beta.threads.messages.create(thread.id, {
         role: 'user',
-        content: userPrompt
+        content: text
       });
 
       // Run the assistant
