@@ -4028,7 +4028,7 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
       }
 
       // Create file record in database
-      const fileRecord = await storage.createWizardFile({
+      const fileRecord = await storage.addWizardFile({
         sessionId,
         fileName: storedFileName,
         originalName: fileName,
