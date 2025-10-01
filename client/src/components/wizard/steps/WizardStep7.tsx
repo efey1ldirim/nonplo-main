@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Upload, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
-import { type AgentWizardSession } from '@shared/schema';
+import { type AgentWizardSession, type AgentWizardFile } from '@shared/schema';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface WizardStep7Props {
   data: AgentWizardSession;
@@ -24,46 +26,94 @@ interface UploadedFile {
 export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardStep7Props) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    acceptedFiles.forEach((file) => {
-      const fileId = Math.random().toString(36).substr(2, 9);
-      const uploadFile: UploadedFile = {
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        status: 'uploading'
-      };
+  // Fetch existing files from API
+  const { data: filesData } = useQuery({
+    queryKey: ['/api/wizard/sessions', sessionId, 'files'],
+    enabled: !!sessionId,
+  });
 
-      setUploadedFiles(prev => [...prev, uploadFile]);
+  // Load files from API into local state
+  useEffect(() => {
+    if (filesData?.data) {
+      const files: UploadedFile[] = (filesData.data as AgentWizardFile[]).map((file) => ({
+        id: file.id,
+        name: file.originalName,
+        size: file.fileSize,
+        status: file.status as UploadedFile['status'],
+      }));
+      setUploadedFiles(files);
+    }
+  }, [filesData]);
 
-      // Simulate file upload
-      setTimeout(() => {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'uploaded' } : f
-        ));
-      }, 1000);
+  // Upload file mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async ({ fileName, fileSize }: { fileName: string; fileSize: number }) => {
+      if (!sessionId) throw new Error('No session ID');
+      return apiRequest(`/api/wizard/sessions/${sessionId}/files`, {
+        method: 'POST',
+        body: { fileName, fileSize }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+    },
+  });
 
-      // Simulate processing
-      setTimeout(() => {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'processing' } : f
-        ));
-      }, 2000);
+  // Update file status mutation
+  const updateFileMutation = useMutation({
+    mutationFn: async ({ fileId, status }: { fileId: string; status: string }) => {
+      if (!sessionId) throw new Error('No session ID');
+      return apiRequest(`/api/wizard/sessions/${sessionId}/files/${fileId}`, {
+        method: 'PATCH',
+        body: { status }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+    },
+  });
 
-      // Simulate indexing complete
-      setTimeout(() => {
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'indexed' } : f
-        ));
-      }, 4000);
-    });
+  // Delete file mutation
+  const deleteFileMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      if (!sessionId) throw new Error('No session ID');
+      return apiRequest(`/api/wizard/sessions/${sessionId}/files/${fileId}`, {
+        method: 'DELETE'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+    },
+  });
 
-    // Update session data
-    onSave({
-      trainingFilesCount: data.trainingFilesCount || 0 + acceptedFiles.length,
-      filesIndexStatus: 'processing'
-    });
-  }, [data.trainingFilesCount, onSave]);
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    for (const file of acceptedFiles) {
+      try {
+        // Create file record in database
+        const response = await uploadFileMutation.mutateAsync({
+          fileName: file.name,
+          fileSize: file.size,
+        });
+
+        const fileId = response.data.id;
+
+        // Simulate upload progress with status updates
+        setTimeout(async () => {
+          await updateFileMutation.mutateAsync({ fileId, status: 'uploaded' });
+        }, 1000);
+
+        setTimeout(async () => {
+          await updateFileMutation.mutateAsync({ fileId, status: 'processing' });
+        }, 2000);
+
+        setTimeout(async () => {
+          await updateFileMutation.mutateAsync({ fileId, status: 'indexed' });
+        }, 4000);
+      } catch (error) {
+        console.error('Failed to upload file:', error);
+      }
+    }
+  }, [sessionId, uploadFileMutation, updateFileMutation]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -80,8 +130,12 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
     maxSize: 10 * 1024 * 1024 // 10MB
   });
 
-  const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  const removeFile = async (fileId: string) => {
+    try {
+      await deleteFileMutation.mutateAsync(fileId);
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+    }
   };
 
   const getStatusIcon = (status: UploadedFile['status']) => {

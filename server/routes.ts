@@ -3992,19 +3992,62 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     try {
       const userId = getUserId(req);
       const { sessionId } = req.params;
+      const { fileName, fileSize } = req.body;
       
-      // Check if session exists
+      // Validate input
+      if (!fileName || typeof fileName !== 'string') {
+        return res.status(400).json({ error: 'Invalid fileName' });
+      }
+      if (!fileSize || typeof fileSize !== 'number' || fileSize <= 0) {
+        return res.status(400).json({ error: 'Invalid fileSize' });
+      }
+      
+      // Validate file size (max 10MB)
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      if (fileSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: 'File size exceeds maximum limit of 10MB' });
+      }
+      
+      // Extract and validate file extension from filename
+      const fileExtension = fileName.split('.').pop()?.toLowerCase();
+      const ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'txt', 'csv', 'xls', 'xlsx', 'md'];
+      
+      if (!fileExtension || !ALLOWED_FILE_TYPES.includes(fileExtension)) {
+        return res.status(400).json({ error: 'Unsupported file type' });
+      }
+      
+      // Sanitize filename to prevent path traversal - remove path separators but keep extension
+      const baseFileName = fileName.substring(0, fileName.lastIndexOf('.'));
+      const sanitizedBaseName = baseFileName.replace(/[\/\\]/g, '_').replace(/\.\./g, '');
+      const storedFileName = `${Date.now()}_${sanitizedBaseName}.${fileExtension}`;
+      
+      // Check if session exists and belongs to user
       const session = await storage.getWizardSession(sessionId, userId);
       if (!session) {
         return res.status(404).json({ error: 'Session not found' });
       }
 
-      // TODO: Implement file upload logic here
-      // For now, return mock response
+      // Create file record in database
+      const fileRecord = await storage.createWizardFile({
+        sessionId,
+        fileName: storedFileName,
+        originalName: fileName,
+        fileSize,
+        fileType: fileExtension,
+        filePath: `/uploads/wizard/${sessionId}/${storedFileName}`,
+        status: 'uploading'
+      });
+
+      // Update session file count
+      const currentFiles = await storage.getWizardFiles(sessionId);
+      await storage.updateWizardSession(sessionId, userId, {
+        trainingFilesCount: currentFiles.length,
+        filesIndexStatus: 'processing'
+      });
+
       res.json({ 
         success: true, 
-        message: 'File upload endpoint - implementation needed',
-        data: { sessionId }
+        data: fileRecord
       });
     } catch (error: any) {
       console.error('Failed to upload wizard file:', error);
@@ -4029,6 +4072,82 @@ Kullanıcıdan gelen mesajları incelemeli ve aşağıdaki kurallara göre harek
     } catch (error: any) {
       console.error('Failed to get wizard files:', error);
       res.status(500).json({ error: 'Failed to get files' });
+    }
+  });
+
+  // Update wizard file status
+  app.patch('/api/wizard/sessions/:sessionId/files/:fileId', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId, fileId } = req.params;
+      const { status } = req.body;
+      
+      // Validate status input
+      if (!status || !['uploading', 'uploaded', 'processing', 'indexed', 'error'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      
+      // Check if session exists and belongs to user
+      const session = await storage.getWizardSession(sessionId, userId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Get all files for this session to verify ownership
+      const sessionFiles = await storage.getWizardFiles(sessionId);
+      const fileExists = sessionFiles.some(f => f.id === fileId);
+      
+      if (!fileExists) {
+        return res.status(404).json({ error: 'File not found or does not belong to this session' });
+      }
+
+      // Update file status
+      const updatedFile = await storage.updateWizardFile(fileId, { status });
+      if (!updatedFile) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+
+      res.json({ success: true, data: updatedFile });
+    } catch (error: any) {
+      console.error('Failed to update wizard file:', error);
+      res.status(500).json({ error: 'Failed to update file' });
+    }
+  });
+
+  // Delete wizard file
+  app.delete('/api/wizard/sessions/:sessionId/files/:fileId', authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionId, fileId } = req.params;
+      
+      // Check if session exists and belongs to user
+      const session = await storage.getWizardSession(sessionId, userId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Get all files for this session to verify ownership
+      const sessionFiles = await storage.getWizardFiles(sessionId);
+      const fileExists = sessionFiles.some(f => f.id === fileId);
+      
+      if (!fileExists) {
+        return res.status(404).json({ error: 'File not found or does not belong to this session' });
+      }
+
+      // Delete file
+      await storage.deleteWizardFile(fileId);
+
+      // Update session file count
+      const currentFiles = await storage.getWizardFiles(sessionId);
+      await storage.updateWizardSession(sessionId, userId, {
+        trainingFilesCount: currentFiles.length,
+        filesIndexStatus: currentFiles.length > 0 ? 'processing' : 'pending'
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to delete wizard file:', error);
+      res.status(500).json({ error: 'Failed to delete file' });
     }
   });
 
