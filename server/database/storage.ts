@@ -1408,10 +1408,7 @@ export class DatabaseStorage implements IStorage {
 
   // Wizard files
   async addWizardFile(file: InsertAgentWizardFile): Promise<AgentWizardFile> {
-    const result = await db.insert(agentWizardFiles).values({
-      ...file,
-      id: sql`gen_random_uuid()`,
-    }).returning();
+    const result = await db.insert(agentWizardFiles).values(file).returning();
     return result[0];
   }
 
