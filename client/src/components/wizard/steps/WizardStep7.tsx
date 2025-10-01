@@ -28,7 +28,7 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
 
   // Fetch existing files from API
   const { data: filesData } = useQuery({
-    queryKey: ['/api/wizard/sessions', sessionId, 'files'],
+    queryKey: [`/api/wizard/sessions/${sessionId}/files`],
     enabled: !!sessionId,
   });
 
@@ -59,7 +59,7 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wizard/sessions/${sessionId}/files`] });
     },
   });
 
@@ -73,7 +73,7 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wizard/sessions/${sessionId}/files`] });
     },
   });
 
@@ -86,7 +86,7 @@ export default function WizardStep7({ data, onSave, onNext, sessionId }: WizardS
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/wizard/sessions', sessionId, 'files'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/wizard/sessions/${sessionId}/files`] });
     },
   });
 
