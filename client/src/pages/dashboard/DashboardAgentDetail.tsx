@@ -1044,9 +1044,13 @@ export default function DashboardAgentDetail() {
     
     const tabIndex = tabValueToIndex[tabFromUrl] || 0;
     
-    // Use requestAnimationFrame to ensure DOM is ready
+    // Use double requestAnimationFrame and small delay to ensure DOM is fully rendered
     requestAnimationFrame(() => {
-      updateIndicatorPosition(tabIndex);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          updateIndicatorPosition(tabIndex);
+        }, 50);
+      });
     });
   }, [tabFromUrl]);
 
