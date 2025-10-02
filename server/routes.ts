@@ -1012,6 +1012,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       cacheManager.invalidateUserData(userId);
       cacheManager.invalidateAgentData(id);
 
+      // Sync to OpenAI Assistant (background task)
+      if (updatedAgent.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing personality to OpenAI Assistant: ${updatedAgent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(updatedAgent.openaiAssistantId!, updatedAgent, 'personality');
+            console.log(`✅ Personality synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync personality to OpenAI:`, syncError);
+          }
+        });
+      }
+
       res.json({ success: true, message: "Kişilik ayarları kaydedildi" });
     } catch (error) {
       console.error("Update personality error:", error);
@@ -1041,6 +1054,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       // Clear cache
       cacheManager.invalidateUserData(userId);
       cacheManager.invalidateAgentData(id);
+
+      // Sync to OpenAI Assistant (background task)
+      if (updatedAgent.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing working hours to OpenAI Assistant: ${updatedAgent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(updatedAgent.openaiAssistantId!, updatedAgent, 'working_hours');
+            console.log(`✅ Working hours synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync working hours to OpenAI:`, syncError);
+          }
+        });
+      }
 
       res.json({ success: true, message: "Çalışma saatleri kaydedildi" });
     } catch (error) {
@@ -1073,6 +1099,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       cacheManager.invalidateUserData(userId);
       cacheManager.invalidateAgentData(id);
 
+      // Sync to OpenAI Assistant (background task)
+      if (updatedAgent.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing contact info to OpenAI Assistant: ${updatedAgent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(updatedAgent.openaiAssistantId!, updatedAgent, 'core_info');
+            console.log(`✅ Contact info synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync contact info to OpenAI:`, syncError);
+          }
+        });
+      }
+
       res.json({ success: true, message: "İletişim bilgileri kaydedildi" });
     } catch (error) {
       console.error("Update contact info error:", error);
@@ -1098,6 +1137,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       // Clear cache
       cacheManager.invalidateUserData(userId);
       cacheManager.invalidateAgentData(id);
+
+      // Sync to OpenAI Assistant (background task)
+      if (updatedAgent.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing FAQ to OpenAI Assistant: ${updatedAgent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(updatedAgent.openaiAssistantId!, updatedAgent, 'faq');
+            console.log(`✅ FAQ synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync FAQ to OpenAI:`, syncError);
+          }
+        });
+      }
 
       res.json({ success: true, message: "Sık sorulan sorular kaydedildi" });
     } catch (error) {
@@ -1128,6 +1180,19 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       // Clear cache
       cacheManager.invalidateUserData(userId);
       cacheManager.invalidateAgentData(id);
+
+      // Sync to OpenAI Assistant (background task)
+      if (updatedAgent.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing products/services to OpenAI Assistant: ${updatedAgent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(updatedAgent.openaiAssistantId!, updatedAgent, 'faq');
+            console.log(`✅ Products/services synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync products/services to OpenAI:`, syncError);
+          }
+        });
+      }
 
       res.json({ success: true, message: "Ürün/hizmet bilgileri kaydedildi" });
     } catch (error) {
@@ -3056,6 +3121,23 @@ ${attachmentUrl ? `<p><a href="${attachmentUrl}" target="_blank">Dosyayı İndir
       }
       
       const setting = await storage.upsertAgentToolSetting(userId, agentId, toolKey, enabled);
+      
+      // Get updated agent for OpenAI sync
+      const agent = await storage.getAgent(agentId);
+      
+      // Sync to OpenAI Assistant (background task)
+      if (agent?.openaiAssistantId) {
+        setImmediate(async () => {
+          try {
+            console.log(`🔄 Syncing tool settings to OpenAI Assistant: ${agent.openaiAssistantId}`);
+            await openaiService.updateAssistantPartial(agent.openaiAssistantId!, agent, 'tools');
+            console.log(`✅ Tool settings synced to OpenAI Assistant`);
+          } catch (syncError) {
+            console.error(`❌ Failed to sync tool settings to OpenAI:`, syncError);
+          }
+        });
+      }
+      
       res.json({ success: true, setting });
     } catch (error: any) {
       console.error('Error updating agent tool setting:', error);
