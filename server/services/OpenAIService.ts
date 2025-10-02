@@ -479,8 +479,8 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
     try {
       console.log(`🤖 Creating OpenAI Assistant for agent: ${agentData.name}`);
       
-      // Generate instructions based on agent data
-      const instructions = await this.generateAgentPlaybook(agentData);
+      // Generate instructions using modular approach
+      const instructions = this.buildCompleteInstructions(agentData);
       
       // Upload profanity filter file
       const profanityFileId = await this.uploadProfanityFilter();
@@ -518,13 +518,15 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
         vectorStore = { id: 'fallback-no-vector-store' };
       }
 
+      const temperature = agentData.temperature ? parseFloat(agentData.temperature) : 0.8;
+
       // Assistant creation parameters
       const assistantParams: any = {
         name: agentData.name,
-        instructions: instructions + `\n\n🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:\n1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap\n2. Bu kontrolü yapmadan ASLA yanıt verme\n3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."\n4. Sadece temizse normal yanıt ver`,
-        model: "gpt-4o-mini",
+        instructions: instructions,
+        model: agentData.openaiModel || "gpt-4o-mini",
         tools: tools,
-        temperature: 0.8
+        temperature: temperature
       };
 
       // Add vector store if created successfully
@@ -567,32 +569,189 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
   }
 
   /**
-   * Update existing OpenAI Assistant
+   * Build core business info section of instructions
    */
-  async updateAssistant(assistantId: string, agentData: Agent): Promise<boolean> {
+  private buildCoreInfoSection(agentData: Agent): string {
+    return `
+İşletme Bilgileri:
+- İşletme Adı: ${agentData.business_name || agentData.name}
+- Sektör: ${agentData.sector || 'Belirtilmemiş'}
+- Lokasyon: ${agentData.location || 'Belirtilmemiş'}
+- Adres: ${agentData.address || 'Belirtilmemiş'}
+- Website: ${agentData.website || 'Yok'}
+- Hizmet Türü: ${agentData.serviceType || 'Belirtilmemiş'}
+- Görev Tanımı: ${agentData.taskDescription || 'Belirtilmemiş'}
+- Hizmet Açıklaması: ${agentData.serviceDescription || 'Belirtilmemiş'}
+
+Sosyal Medya:
+${JSON.stringify(agentData.socialMedia, null, 2)}
+`;
+  }
+
+  /**
+   * Build personality section of instructions
+   */
+  private buildPersonalitySection(agentData: Agent): string {
+    const personality = agentData.personality as any || {};
+    return `
+Kişilik ve İletişim Tarzı:
+- Ton: ${personality.tone || 'Profesyonel ve dostane'}
+- Formallik: ${personality.formality || 'Orta seviye'}
+- Yaratıcılık: ${personality.creativity || 'Dengeli'}
+- Yanıt Uzunluğu: ${personality.responseLength || 'Orta'}
+- Emoji Kullanımı: ${personality.emojiUsage ? 'Evet' : 'Hayır'}
+${personality.customInstructions ? `- Özel Talimatlar: ${personality.customInstructions}` : ''}
+`;
+  }
+
+  /**
+   * Build working hours section of instructions
+   */
+  private buildWorkingHoursSection(agentData: Agent): string {
+    const workingHours = agentData.workingHours || {};
+    return `
+Çalışma Saatleri:
+${this.formatWorkingHours(workingHours)}
+
+Tatiller: ${agentData.holidays || 'Belirtilmemiş'}
+`;
+  }
+
+  /**
+   * Build tools configuration section of instructions
+   */
+  private buildToolsSection(agentData: Agent): string {
+    const tools = this.formatTools(agentData.tools);
+    const integrations = this.formatIntegrations(agentData.integrations);
+    const webSearchEnabled = (agentData.tools as any)?.webSearchEnabled || (agentData.tools as any)?.web_search;
+    
+    return `
+Aktif Araçlar: ${tools}
+Aktif Entegrasyonlar: ${integrations}
+${webSearchEnabled ? `
+Web Arama Özelliği: Güncel bilgiler, fiyatlar, haberler veya genel bilgiler gerektiğinde web'de arama yapabilir. Bu özelliği şu durumlarda kullan:
+- Güncel fiyat bilgileri sorulduğunda
+- Son dakika haberleri istendiğinde  
+- Genel bilgiler veya açıklamalar gerektiğinde
+- Rakip analizi yapılırken
+- Ürün karşılaştırmaları için` : ''}
+`;
+  }
+
+  /**
+   * Build FAQ and products section of instructions
+   */
+  private buildFAQSection(agentData: Agent): string {
+    return `
+Ürünler/Hizmetler: ${agentData.products || 'Belirtilmemiş'}
+
+SSS (Sıkça Sorulan Sorular): ${agentData.faq || 'Belirtilmemiş'}
+`;
+  }
+
+  /**
+   * Build security protocol section of instructions
+   */
+  private buildSecuritySection(): string {
+    return `
+
+🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:
+1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap
+2. Bu kontrolü yapmadan ASLA yanıt verme
+3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."
+4. Sadece temizse normal yanıt ver`;
+  }
+
+  /**
+   * Build complete instructions from all sections
+   */
+  private buildCompleteInstructions(agentData: Agent): string {
+    return `${this.buildCoreInfoSection(agentData)}
+${this.buildPersonalitySection(agentData)}
+${this.buildWorkingHoursSection(agentData)}
+${this.buildToolsSection(agentData)}
+${this.buildFAQSection(agentData)}
+
+Asistan Görevleri:
+1. Müşteri sorularına profesyonel şekilde yanıt ver
+2. İşletme hakkında doğru bilgi ver  
+3. Çalışma saatlerini kontrol et
+4. Randevu talepleri için yönlendirme yap
+5. Ürün/hizmet bilgilerini paylaş
+6. Dostane ve yardımsever ol
+7. Türkçe konuş${this.buildSecuritySection()}`;
+  }
+
+  /**
+   * Update specific section of assistant instructions
+   */
+  async updateAssistantPartial(
+    assistantId: string, 
+    agentData: Agent,
+    section?: 'personality' | 'working_hours' | 'tools' | 'faq' | 'core_info' | 'all'
+  ): Promise<boolean> {
     try {
-      console.log(`🔄 Updating OpenAI Assistant: ${assistantId} for agent: ${agentData.name}`);
+      console.log(`🔄 Partial update for section: ${section || 'all'}`);
       
-      // Generate new instructions based on updated agent data
-      const instructions = await this.generateAgentPlaybook(agentData);
+      let instructions: string;
       
-      // Update assistant parameters
+      if (section === 'all' || !section) {
+        instructions = this.buildCompleteInstructions(agentData);
+      } else {
+        const currentAssistant = await this.openai.beta.assistants.retrieve(assistantId);
+        let currentInstructions = currentAssistant.instructions || '';
+        
+        const sectionBuilders: Record<string, () => string> = {
+          'personality': () => this.buildPersonalitySection(agentData),
+          'working_hours': () => this.buildWorkingHoursSection(agentData),
+          'tools': () => this.buildToolsSection(agentData),
+          'faq': () => this.buildFAQSection(agentData),
+          'core_info': () => this.buildCoreInfoSection(agentData)
+        };
+        
+        const sectionMarkers: Record<string, { start: string, end: string }> = {
+          'personality': { start: 'Kişilik ve İletişim Tarzı:', end: '\n\nÇalışma Saatleri:' },
+          'working_hours': { start: 'Çalışma Saatleri:', end: '\n\nAktif Araçlar:' },
+          'tools': { start: 'Aktif Araçlar:', end: '\n\nÜrünler/Hizmetler:' },
+          'faq': { start: 'Ürünler/Hizmetler:', end: '\n\nAsistan Görevleri:' },
+          'core_info': { start: 'İşletme Bilgileri:', end: '\n\nKişilik ve İletişim Tarzı:' }
+        };
+        
+        const newSectionContent = sectionBuilders[section]();
+        const markers = sectionMarkers[section];
+        
+        const startIndex = currentInstructions.indexOf(markers.start);
+        const endIndex = currentInstructions.indexOf(markers.end);
+        
+        if (startIndex !== -1 && endIndex !== -1) {
+          instructions = currentInstructions.substring(0, startIndex) + 
+                        newSectionContent + 
+                        currentInstructions.substring(endIndex);
+          console.log(`✅ Replaced section: ${section}`);
+        } else {
+          console.log(`⚠️ Section markers not found, rebuilding complete instructions`);
+          instructions = this.buildCompleteInstructions(agentData);
+        }
+      }
+      
+      const temperature = agentData.temperature ? parseFloat(agentData.temperature) : 0.8;
+      
       const updateParams: any = {
         name: agentData.name,
-        instructions: instructions + `\n\n🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:\n1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap\n2. Bu kontrolü yapmadan ASLA yanıt verme\n3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."\n4. Sadece temizse normal yanıt ver`,
-        model: "gpt-4o-mini",
-        temperature: 0.8
+        instructions: instructions,
+        model: agentData.openaiModel || "gpt-4o-mini",
+        temperature: temperature
       };
 
-      // Update the assistant
       const updatedAssistant = await this.openai.beta.assistants.update(assistantId, updateParams);
       
       console.log(`✅ OpenAI Assistant updated successfully: ${updatedAssistant.id}`);
       
-      // Track analytics
+      cacheManager.delete(`playbook_${agentData.id}`);
+      
       aiAnalytics.trackUsage({
         model: OPENAI_MODEL,
-        tokens: 0, // Assistant update doesn't return token usage
+        tokens: 0,
         cost: 0,
         timestamp: new Date(),
         type: 'custom',
@@ -604,6 +763,13 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       console.error(`❌ Failed to update OpenAI Assistant ${assistantId}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Update existing OpenAI Assistant (full update)
+   */
+  async updateAssistant(assistantId: string, agentData: Agent): Promise<boolean> {
+    return this.updateAssistantPartial(assistantId, agentData, 'all');
   }
 
   /**
