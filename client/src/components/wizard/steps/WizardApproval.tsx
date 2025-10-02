@@ -190,21 +190,14 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                   
                   {/* Avatar Section */}
                   <div className="flex-shrink-0">
-                    <div className="relative">
-                      <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-all duration-300">
+                    <div className="relative w-32 h-32">
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-all duration-300">
                         <User className="w-16 h-16 text-white" />
                       </div>
                       {/* Status Indicator */}
                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
-                      {/* Completion Ring */}
-                      <div className="absolute inset-0 rounded-3xl border-4 border-transparent" 
-                           style={{
-                             background: `conic-gradient(from 0deg, #10b981 ${summary.completeness * 3.6}deg, transparent ${summary.completeness * 3.6}deg)`,
-                             mask: 'radial-gradient(circle, transparent 70px, black 72px)',
-                           }}
-                      />
                     </div>
                   </div>
 
@@ -225,8 +218,7 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                     </div>
                     
                     <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 space-y-3">
-                      <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
-                        <FileText className="w-4 h-4" />
+                      <div className="text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Görev Tanımı</span>
                       </div>
                       <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -238,19 +230,7 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                     </div>
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {summary.socialConnections}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Sosyal Medya</div>
-                      </div>
-                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                          {summary.toolsEnabled}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Araç</div>
-                      </div>
+                    <div className="grid grid-cols-1 gap-4">
                       <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
                         <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
                           %{Math.round(summary.completeness)}
@@ -287,11 +267,6 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                         {field.label}
                       </span>
                       <div className="flex items-center space-x-3">
-                        {field.value ? (
-                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                        )}
                         <span className="text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate" title={field.value || 'Eksik'}>
                           {field.value ? (
                             typeof field.value === 'string' && field.value.length > 25 
@@ -299,6 +274,11 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                               : field.value
                           ) : 'Eksik'}
                         </span>
+                        {field.value ? (
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -331,26 +311,6 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                     </div>
                   </div>
                 ))}
-                <div className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Sosyal Medya
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {summary.socialConnections} platform
-                    </span>
-                  </div>
-                </div>
-                <div className="group p-3 rounded-lg hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Etkin Araçlar
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {summary.toolsEnabled} araç
-                    </span>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
