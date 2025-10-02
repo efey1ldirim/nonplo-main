@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { debounce } from 'lodash';
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -930,7 +930,12 @@ const EmbedApiCard: React.FC<{ agent: Agent | null }> = ({ agent }) => {
 export default function DashboardAgentDetail() {
   const { agentId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Get tab from URL query parameter
+  const searchParams = new URLSearchParams(location.search);
+  const tabFromUrl = searchParams.get('tab') || 'overview';
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -2523,7 +2528,7 @@ export default function DashboardAgentDetail() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={tabFromUrl} onValueChange={(value) => navigate(`/dashboard/agents/${agentId}?tab=${value}`)} className="space-y-6">
         <div className="sticky top-0 z-10 mb-6">
           <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-1 sm:p-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/95 dark:supports-[backdrop-filter]:bg-gray-900/95">
             <TabsList className="relative h-auto w-full bg-transparent p-0 overflow-x-auto scrollbar-hide">
