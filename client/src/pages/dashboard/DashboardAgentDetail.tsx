@@ -1044,14 +1044,16 @@ export default function DashboardAgentDetail() {
     
     const tabIndex = tabValueToIndex[tabFromUrl] || 0;
     
-    // Scroll to top when tab changes
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to top immediately when tab changes
+    window.scrollTo(0, 0);
     
     // Use double requestAnimationFrame and small delay to ensure DOM is fully rendered
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setTimeout(() => {
           updateIndicatorPosition(tabIndex);
+          // Scroll again after render to ensure it's at top
+          window.scrollTo(0, 0);
         }, 50);
       });
     });
