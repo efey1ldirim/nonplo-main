@@ -105,6 +105,10 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
   const summary = getSummaryData();
 
   if (isCreating) {
+    const currentStepText = currentStep > 0 && currentStep <= CREATION_STEPS.length 
+      ? CREATION_STEPS[currentStep - 1].title 
+      : 'Başlatılıyor...';
+
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center space-y-4">
@@ -121,38 +125,16 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
 
         <Card>
           <CardContent className="pt-6">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                 <span>İlerleme</span>
                 <span>%{Math.round(progress)}</span>
               </div>
               <Progress value={progress} className="h-3" />
-              
-              <div className="space-y-3">
-                {CREATION_STEPS.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg transition-all
-                      ${index < currentStep ? 'bg-green-50 dark:bg-green-950' : 
-                        index === currentStep - 1 ? 'bg-blue-50 dark:bg-blue-950' : 
-                        'bg-gray-50 dark:bg-gray-800'}`}
-                  >
-                    {index < currentStep ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : index === currentStep - 1 ? (
-                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                    ) : (
-                      <Clock className="w-5 h-5 text-gray-400" />
-                    )}
-                    <span className={`font-medium ${
-                      index < currentStep ? 'text-green-700 dark:text-green-300' :
-                      index === currentStep - 1 ? 'text-blue-700 dark:text-blue-300' :
-                      'text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {step.title}
-                    </span>
-                  </div>
-                ))}
+              <div className="text-center">
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  {currentStepText}
+                </p>
               </div>
             </div>
           </CardContent>
