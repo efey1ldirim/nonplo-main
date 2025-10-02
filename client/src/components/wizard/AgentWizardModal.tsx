@@ -164,18 +164,22 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
       return response;
     },
     onSuccess: (data) => {
+      // Keep showing loading state while we display success message
       toast({
         title: "Başarılı!",
         description: "Dijital çalışanınız başarıyla oluşturuldu",
         variant: "default"
       });
       
-      // Wait 2 seconds to show the success state before closing
+      // Wait 3 seconds to show the success animation, then close modal
       setTimeout(() => {
         setIsCreating(false);
-        onSuccess?.(data.data.agentId);
         onClose();
-      }, 2000);
+        // Call onSuccess AFTER modal is closed to prevent immediate re-closing
+        setTimeout(() => {
+          onSuccess?.(data.data.agentId);
+        }, 100);
+      }, 3000);
     },
     onError: (error: any) => {
       setIsCreating(false);
