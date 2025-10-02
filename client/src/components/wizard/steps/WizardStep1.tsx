@@ -6,8 +6,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Briefcase, Search } from 'lucide-react';
+import { Building2, Briefcase, Search, Loader2, Check, X } from 'lucide-react';
 import { wizardStep1Schema, type WizardStep1Data, type AgentWizardSession } from '@shared/schema';
+import { useQuery } from '@tanstack/react-query';
 
 interface WizardStep1Props {
   data: AgentWizardSession;
@@ -43,6 +44,8 @@ const POPULAR_INDUSTRIES = [
 export default function WizardStep1({ data, onSave, onNext, canProceed }: WizardStep1Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState(data.industry || '');
+  const [businessNameToValidate, setBusinessNameToValidate] = useState('');
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
 
   const form = useForm<WizardStep1Data>({
     resolver: zodResolver(wizardStep1Schema),
@@ -54,6 +57,51 @@ export default function WizardStep1({ data, onSave, onNext, canProceed }: Wizard
 
   const { watch, setValue } = form;
   const watchedValues = watch();
+
+  // Fetch forbidden words
+  const { data: forbiddenWordsData } = useQuery({
+    queryKey: ['/api/tools/forbidden-words'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const forbiddenWords: string[] = forbiddenWordsData?.words || [];
+
+  // Validate business name for forbidden words
+  useEffect(() => {
+    const businessName = watchedValues.businessName?.trim() || '';
+    
+    if (businessName.length === 0) {
+      setValidationStatus('idle');
+      return;
+    }
+
+    if (businessName.length < 2) {
+      setValidationStatus('idle');
+      return;
+    }
+
+    // Debounce validation
+    const timer = setTimeout(() => {
+      setValidationStatus('validating');
+      setBusinessNameToValidate(businessName);
+      
+      // Check for forbidden words
+      const lowerName = businessName.toLowerCase();
+      const hasForbiddenWord = forbiddenWords.some(word => 
+        lowerName.includes(word.toLowerCase())
+      );
+
+      setTimeout(() => {
+        if (hasForbiddenWord) {
+          setValidationStatus('invalid');
+        } else {
+          setValidationStatus('valid');
+        }
+      }, 500);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [watchedValues.businessName, forbiddenWords]);
 
   // Auto-save when form values change
   useEffect(() => {
@@ -116,13 +164,31 @@ export default function WizardStep1({ data, onSave, onNext, canProceed }: Wizard
                       İşletme Adınız <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Örn: Güzel Saç Kuaförü, Lezzet Restaurant"
-                        {...field}
-                        data-testid="input-business-name"
-                        className="text-lg"
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Örn: Güzel Saç Kuaförü, Lezzet Restaurant"
+                          {...field}
+                          data-testid="input-business-name"
+                          className="text-lg pr-10"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {validationStatus === 'validating' && (
+                            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                          )}
+                          {validationStatus === 'valid' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                          {validationStatus === 'invalid' && (
+                            <X className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      </div>
                     </FormControl>
+                    {validationStatus === 'invalid' && (
+                      <p className="text-sm text-red-500 mt-2">
+                        ⚠️ İşletme adı uygun değil. Lütfen daha profesyonel bir isim seçin.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
