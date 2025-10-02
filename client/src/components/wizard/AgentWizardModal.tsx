@@ -171,7 +171,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
         variant: "default"
       });
       
-      // Wait 3 seconds to show the success animation, then close modal
+      // Wait 15.5 seconds for progress bar animation to complete (14.5s steps + 1s buffer), then close modal
       setTimeout(() => {
         setIsCreating(false);
         onClose();
@@ -179,7 +179,7 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
         setTimeout(() => {
           onSuccess?.(data.data.agentId);
         }, 100);
-      }, 3000);
+      }, 15500);
     },
     onError: (error: any) => {
       setIsCreating(false);
