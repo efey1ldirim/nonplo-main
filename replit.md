@@ -7,7 +7,21 @@ Nonplo is a Turkish SaaS platform enabling businesses to create, customize, and 
 Preferred communication style: Simple, everyday language.
 Remove legacy Firebase code automatically when provided - all functionality migrated to Supabase.
 
-## Recent Critical Fixes (September 8, 2025)
+## Recent Critical Fixes (October 2, 2025)
+- **WIZARD DATA MAPPING FIX**: Fixed critical field mapping issue in agent creation from wizard
+  - Corrected wizard session field mappings: `industry → sector`, `productServiceRaw → products`, `faqRaw → faq`, `holidaysConfig → holidays`, `selectedTools → tools`, `workingHours → workingHours`
+  - Added intelligent location extraction from addressData (city, country components)
+  - Implemented smart role generation from industry and employeeRole
+  - Used employeeName as agent name when provided, fallback to businessName
+  - Prioritized optimized AI-generated content (faqOptimized, productServiceOptimized) over raw user input
+  - Fixed "Belirtilmemiş" (Unspecified) fields appearing in agent creation by using correct wizard session field names
+- **OPENAI ASSISTANT AUTO-SYNC SYSTEM**: Implemented automatic synchronization between Agent Settings UI and OpenAI Assistant configuration
+  - Created modular instruction builder system with 6 separate section builders (core info, personality, working hours, tools, FAQ, security)
+  - Added `updateAssistantPartial()` function for incremental updates of only changed sections (faster and more cost-effective)
+  - Integrated OpenAI synchronization hooks into 7 agent update endpoints (personality, working hours, contact info, FAQ, products-services, tool-settings, temperature)
+  - System now automatically updates OpenAI Assistant in background when agent settings are modified (no manual intervention required)
+
+## Previous Critical Fixes (September 8, 2025)
 - **PRODUCTION-LEVEL GOOGLE CALENDAR INTEGRATION COMPLETE**: Comprehensive Google Calendar system with security, monitoring, and production configuration
   - **Phase 1B:** Complete CRUD operations (create, read, update, delete events, availability check)
   - **Phase 2A:** Enhanced Calendar Connection UI with real-time status, OAuth management, agent-specific controls

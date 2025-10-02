@@ -215,34 +215,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAgentFromWizard(userId: string, wizardData: any): Promise<Agent> {
-    // Transform wizard data to agent data
+    // Extract location from addressData (city, country, etc.)
+    const location = wizardData.addressData?.components?.city 
+      ? `${wizardData.addressData.components.city}${wizardData.addressData.components.country ? ', ' + wizardData.addressData.components.country : ''}`
+      : wizardData.addressData?.formattedAddress || wizardData.address || undefined;
+
+    // Build role from industry and employee role
+    const role = wizardData.employeeRole 
+      ? `${wizardData.industry || ''} ${wizardData.employeeRole}`.trim()
+      : `${wizardData.industry || 'Müşteri Hizmetleri'} Uzmanı`;
+
+    // Use employee name if provided, otherwise use business name
+    const agentName = wizardData.employeeName || wizardData.businessName;
+
+    // Transform wizard data to agent data with correct field mappings
     const agentData: InsertAgent = {
       userId,
-      name: wizardData.businessName,
-      role: `${wizardData.sector} ${wizardData.serviceType || 'Müşteri Hizmetleri'} Uzmanı`,
+      name: agentName,
+      role: role,
       business_name: wizardData.businessName,
-      description: wizardData.taskDescription,
-      sector: wizardData.sector,
-      location: wizardData.location,
+      description: wizardData.employeeRole || wizardData.productServiceRaw || `${wizardData.businessName} için AI asistan`,
+      sector: wizardData.industry,
+      location: location,
       address: wizardData.address,
       website: wizardData.website,
-      socialMedia: {
-        instagram: wizardData.instagramUsername,
-        twitter: wizardData.twitterUsername,
-        tiktok: wizardData.tiktokUsername,
-      },
-      workingHours: wizardData.weeklyHours,
-      holidays: wizardData.holidays,
-      faq: wizardData.faq,
-      products: wizardData.products,
-      personality: {
-        tone: wizardData.tone,
-        responseLength: wizardData.responseLength,
-        userVerification: wizardData.userVerification,
-      },
-      serviceType: wizardData.serviceType,
-      taskDescription: wizardData.taskDescription,
-      tools: wizardData.tools,
+      socialMedia: wizardData.socialMedia || {},
+      workingHours: wizardData.workingHours,
+      holidays: wizardData.holidaysConfig,
+      faq: wizardData.faqOptimized || wizardData.faqRaw,
+      products: wizardData.productServiceOptimized || wizardData.productServiceRaw,
+      personality: wizardData.personality || {},
+      serviceType: wizardData.industry,
+      taskDescription: wizardData.employeeRole,
+      tools: wizardData.selectedTools,
       integrations: wizardData.integrations,
       messageHistoryFile: wizardData.messageHistoryFile,
       is_active: true,
