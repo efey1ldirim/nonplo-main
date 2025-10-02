@@ -40,7 +40,7 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
     staleTime: 5 * 60 * 1000,
   });
 
-  const forbiddenWords: string[] = forbiddenWordsData?.words || [];
+  const forbiddenWords: string[] = (forbiddenWordsData as any)?.words || [];
 
   // Validate employee name for forbidden words
   useEffect(() => {
@@ -77,18 +77,6 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
 
     return () => clearTimeout(timer);
   }, [watchedValues.employeeName, forbiddenWords]);
-
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (values.employeeName !== data.employeeName || values.employeeRole !== data.employeeRole) {
-        onSave({
-          employeeName: values.employeeName,
-          employeeRole: values.employeeRole,
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, data, onSave]);
 
   const handleSubmit = (values: WizardStep8Data) => {
     onSave(values);

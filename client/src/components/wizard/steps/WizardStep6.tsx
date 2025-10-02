@@ -27,17 +27,6 @@ export default function WizardStep6({ data, onSave, onNext, canProceed }: Wizard
     },
   });
 
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (values.productServiceRaw !== data.productServiceRaw) {
-        onSave({
-          productServiceRaw: values.productServiceRaw,
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, data, onSave]);
-
   const handleSubmit = (values: WizardStep6Data) => {
     onSave(values);
     onNext();

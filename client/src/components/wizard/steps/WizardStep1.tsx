@@ -64,7 +64,7 @@ export default function WizardStep1({ data, onSave, onNext, canProceed }: Wizard
     staleTime: 5 * 60 * 1000,
   });
 
-  const forbiddenWords: string[] = forbiddenWordsData?.words || [];
+  const forbiddenWords: string[] = (forbiddenWordsData as any)?.words || [];
 
   // Validate business name for forbidden words
   useEffect(() => {
@@ -103,18 +103,6 @@ export default function WizardStep1({ data, onSave, onNext, canProceed }: Wizard
     return () => clearTimeout(timer);
   }, [watchedValues.businessName, forbiddenWords]);
 
-  // Auto-save when form values change
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (values.businessName !== data.businessName || values.industry !== data.industry) {
-        onSave({
-          businessName: values.businessName,
-          industry: values.industry,
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, data, onSave]);
 
   const filteredIndustries = POPULAR_INDUSTRIES.filter(industry =>
     industry.toLowerCase().includes(searchTerm.toLowerCase())

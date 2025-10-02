@@ -101,17 +101,6 @@ export default function WizardStep10({ data, onSave, onNext, canProceed }: Wizar
   const { watch } = form;
   const watchedTools = watch('selectedTools');
 
-  useEffect(() => {
-    const subscription = form.watch((values) => {
-      if (JSON.stringify(values.selectedTools) !== JSON.stringify(data.selectedTools)) {
-        onSave({
-          selectedTools: values.selectedTools,
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, data, onSave]);
-
   const handleSubmit = (values: WizardStep10Data) => {
     onSave(values);
     onNext();
