@@ -146,12 +146,13 @@ export default function WizardStep9({ data, onSave, onNext, canProceed }: Wizard
             </CardContent>
           </Card>
 
-          {/* Advanced Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Gelişmiş Ayarlar</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          {/* Advanced Settings - Only show when "Özel" is selected */}
+          {watchedPersonality.tone === 'ozel' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Gelişmiş Ayarlar</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="personality.formality"
@@ -258,27 +259,26 @@ export default function WizardStep9({ data, onSave, onNext, canProceed }: Wizard
                 )}
               />
 
-              {watchedPersonality.tone === 'ozel' && (
-                <FormField
-                  control={form.control}
-                  name="personality.customInstructions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Özel Talimatlar</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Dijital çalışanınızın nasıl davranmasını istediğinizi açıklayın..."
-                          className="min-h-[100px]"
-                          {...field}
-                          data-testid="textarea-custom-instructions"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              )}
-            </CardContent>
-          </Card>
+              <FormField
+                control={form.control}
+                name="personality.customInstructions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Özel Talimatlar</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Dijital çalışanınızın nasıl davranmasını istediğinizi açıklayın..."
+                        className="min-h-[100px]"
+                        {...field}
+                        data-testid="textarea-custom-instructions"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              </CardContent>
+            </Card>
+          )}
 
         </form>
       </Form>
