@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +6,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { User, UserCheck, Sparkles, Loader2 } from 'lucide-react';
+import { User, UserCheck, Sparkles, Loader2, Check, X } from 'lucide-react';
 import { wizardStep8Schema, type WizardStep8Data, type AgentWizardSession } from '@shared/schema';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +21,8 @@ interface WizardStep8Props {
 
 export default function WizardStep8({ data, onSave, onNext, canProceed }: WizardStep8Props) {
   const { toast } = useToast();
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
+
   const form = useForm<WizardStep8Data>({
     resolver: zodResolver(wizardStep8Schema),
     defaultValues: {
@@ -28,6 +30,53 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
       employeeRole: data.employeeRole || '',
     },
   });
+
+  const { watch } = form;
+  const watchedValues = watch();
+
+  // Fetch forbidden words
+  const { data: forbiddenWordsData } = useQuery({
+    queryKey: ['/api/tools/forbidden-words'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const forbiddenWords: string[] = forbiddenWordsData?.words || [];
+
+  // Validate employee name for forbidden words
+  useEffect(() => {
+    const employeeName = watchedValues.employeeName?.trim() || '';
+    
+    if (employeeName.length === 0) {
+      setValidationStatus('idle');
+      return;
+    }
+
+    if (employeeName.length < 2) {
+      setValidationStatus('idle');
+      return;
+    }
+
+    // Debounce validation
+    const timer = setTimeout(() => {
+      setValidationStatus('validating');
+      
+      // Check for forbidden words
+      const lowerName = employeeName.toLowerCase();
+      const hasForbiddenWord = forbiddenWords.some(word => 
+        lowerName.includes(word.toLowerCase())
+      );
+
+      setTimeout(() => {
+        if (hasForbiddenWord) {
+          setValidationStatus('invalid');
+        } else {
+          setValidationStatus('valid');
+        }
+      }, 500);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [watchedValues.employeeName, forbiddenWords]);
 
   useEffect(() => {
     const subscription = form.watch((values) => {
@@ -121,12 +170,31 @@ export default function WizardStep8({ data, onSave, onNext, canProceed }: Wizard
                       Dijital Çalışan Adı <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Örn: Ayşe, Mehmet, Elif"
-                        {...field}
-                        data-testid="input-employee-name"
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="Örn: Ayşe, Mehmet, Elif"
+                          {...field}
+                          data-testid="input-employee-name"
+                          className="pr-10"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {validationStatus === 'validating' && (
+                            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                          )}
+                          {validationStatus === 'valid' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                          {validationStatus === 'invalid' && (
+                            <X className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      </div>
                     </FormControl>
+                    {validationStatus === 'invalid' && (
+                      <p className="text-sm text-red-500 mt-2">
+                        ⚠️ Çalışan adı uygun değil. Lütfen daha profesyonel bir isim seçin.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
