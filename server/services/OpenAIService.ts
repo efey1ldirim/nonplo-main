@@ -708,13 +708,7 @@ SSS (Sıkça Sorulan Sorular): ${agentData.faq || 'Belirtilmemiş'}
    * Build security protocol section of instructions
    */
   private buildSecuritySection(): string {
-    return `
-
-🚨 ZORUNLU GÜVENLİK PROTOKOLÜ:
-1. HER kullanıcı mesajı geldiğinde ÖNCE yasaklı kelimeler dosyasında file search yap
-2. Bu kontrolü yapmadan ASLA yanıt verme
-3. Yasaklı kelime tespit edilirse: "Mesajınızda uygunsuz içerik tespit edildi. Lütfen nezaket kurallarına uygun bir şekilde yazınız."
-4. Sadece temizse normal yanıt ver`;
+    return '';
   }
 
   /**
