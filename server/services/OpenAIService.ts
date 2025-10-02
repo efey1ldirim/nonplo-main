@@ -282,9 +282,11 @@ JSON formatında şu bilgileri döndür:
    * Build comprehensive prompt for playbook generation
    */
   private buildPlaybookPrompt(agentData: Agent, wizardData?: AgentWizardData): string {
-    const workingHours = wizardData?.weeklyHours ? this.formatWorkingHours(wizardData.weeklyHours) : 'Belirtilmemiş';
+    const workingHours = agentData.workingHours ? this.formatWorkingHours(agentData.workingHours) : 'Belirtilmemiş';
     const tools = this.formatTools(agentData.tools);
     const integrations = this.formatIntegrations(agentData.integrations);
+    const holidays = this.formatHolidays(agentData.holidays);
+    const socialMedia = this.formatSocialMedia(agentData.socialMedia);
 
     return `
 İşletme Bilgileri:
@@ -295,13 +297,13 @@ JSON formatında şu bilgileri döndür:
 - Website: ${agentData.website || 'Yok'}
 - Hizmet Türü: ${agentData.serviceType || 'Belirtilmemiş'}
 - Görev Tanımı: ${agentData.taskDescription || 'Belirtilmemiş'}
-- Hizmet Açıklaması: ${agentData.serviceDescription || 'Belirtilmemiş'}
+- Hizmet Açıklaması: ${agentData.description || 'Belirtilmemiş'}
 - Ürünler/Hizmetler: ${agentData.products || 'Belirtilmemiş'}
 
 Çalışma Saatleri:
 ${workingHours}
 
-Tatiller: ${agentData.holidays || 'Belirtilmemiş'}
+Tatiller: ${holidays}
 
 SSS: ${agentData.faq || 'Belirtilmemiş'}
 
@@ -309,7 +311,7 @@ Aktif Araçlar: ${tools}
 Aktif Entegrasyonlar: ${integrations}
 
 Sosyal Medya:
-${JSON.stringify(agentData.socialMedia, null, 2)}
+${socialMedia}
 
 Bu işletme için kapsamlı bir AI asistan talimatı oluştur. Asistan:
 1. Müşteri sorularına profesyonel şekilde yanıt versin
@@ -398,6 +400,59 @@ En az 500 kelimelik ayrıntılı talimat oluştur.
       });
     
     return activeIntegrations.length > 0 ? activeIntegrations.join(', ') : 'Hiç entegrasyon seçilmemiş';
+  }
+
+  /**
+   * Format holidays for display
+   */
+  private formatHolidays(holidays: any): string {
+    if (!holidays) return 'Belirtilmemiş';
+    
+    // If it's already a string, return it
+    if (typeof holidays === 'string') return holidays;
+    
+    // If it's an object, format it nicely
+    if (typeof holidays === 'object') {
+      const parts: string[] = [];
+      
+      if (holidays.national?.enabled) {
+        parts.push('Resmi tatiller kapalı');
+      }
+      if (holidays.religious?.enabled) {
+        parts.push('Dini bayramlar kapalı');
+      }
+      if (holidays.custom && Array.isArray(holidays.custom) && holidays.custom.length > 0) {
+        const customDates = holidays.custom.map((h: any) => h.date || h.name).join(', ');
+        parts.push(`Özel tatiller: ${customDates}`);
+      }
+      
+      return parts.length > 0 ? parts.join(', ') : 'Belirtilmemiş';
+    }
+    
+    return 'Belirtilmemiş';
+  }
+
+  /**
+   * Format social media for display
+   */
+  private formatSocialMedia(socialMedia: any): string {
+    if (!socialMedia || typeof socialMedia !== 'object') return 'Yok';
+    
+    const platforms = Object.entries(socialMedia)
+      .filter(([key, value]) => value && typeof value === 'string' && value.trim() !== '')
+      .map(([key, value]) => {
+        const platformNames: Record<string, string> = {
+          instagram: 'Instagram',
+          facebook: 'Facebook',
+          twitter: 'Twitter',
+          tiktok: 'TikTok',
+          youtube: 'YouTube',
+          linkedin: 'LinkedIn'
+        };
+        return `${platformNames[key] || key}: ${value}`;
+      });
+    
+    return platforms.length > 0 ? platforms.join('\n') : 'Yok';
   }
 
   /**
