@@ -82,6 +82,25 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
     },
   });
 
+  // Detect which preset was selected based on saved data and show working hours if needed
+  useEffect(() => {
+    if (data.workingHours) {
+      // Check if saved data matches any preset
+      const matchingPreset = QUICK_PRESETS.find(preset => 
+        JSON.stringify(preset.hours) === JSON.stringify(data.workingHours)
+      );
+      
+      if (matchingPreset) {
+        setSelectedPreset(matchingPreset.name);
+        setShowWorkingHours(matchingPreset.name === 'Özel');
+      } else {
+        // Custom hours were set, show the working hours form
+        setSelectedPreset('Özel');
+        setShowWorkingHours(true);
+      }
+    }
+  }, []);
+
   // Update form when data changes (when user navigates back to this step)
   useEffect(() => {
     form.reset({
