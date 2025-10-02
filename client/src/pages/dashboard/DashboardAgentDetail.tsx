@@ -1033,20 +1033,39 @@ export default function DashboardAgentDetail() {
     document.title = agent ? `${agent.name} – Dijital Çalışan | Dashboard` : "Dijital Çalışan – Dashboard";
   }, [agent]);
 
+  // Update indicator position when tab changes via URL
+  useEffect(() => {
+    const tabValueToIndex: Record<string, number> = {
+      'overview': 0,
+      'integrations': 1,
+      'settings': 2,
+      'chat': 3
+    };
+    
+    const tabIndex = tabValueToIndex[tabFromUrl] || 0;
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      updateIndicatorPosition(tabIndex);
+    });
+  }, [tabFromUrl]);
+
   // Initialize indicator position and listen for tab changes
   useLayoutEffect(() => {
     let timer: NodeJS.Timeout;
     
-    // Auto-click 'overview' tab to set proper initial state
+    // Set initial indicator position based on current tab
     const setInitialPosition = () => {
-      const overviewTab = document.querySelector('[value="overview"][data-tab-index="0"]') as HTMLElement;
+      const tabValueToIndex: Record<string, number> = {
+        'overview': 0,
+        'integrations': 1,
+        'settings': 2,
+        'chat': 3
+      };
       
-      if (overviewTab) {
-        // Programmatically click the overview button to trigger all proper states
-        overviewTab.click();
-        return true;
-      }
-      return false;
+      const tabIndex = tabValueToIndex[tabFromUrl] || 0;
+      updateIndicatorPosition(tabIndex);
+      return true;
     };
     
     // Try immediately
