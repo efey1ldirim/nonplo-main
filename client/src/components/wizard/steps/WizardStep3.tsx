@@ -125,8 +125,8 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
 
   const applyPreset = (preset: typeof QUICK_PRESETS[0]) => {
     setSelectedPreset(preset.name);
-    form.setValue('workingHours', preset.hours);
-    form.setValue('holidaysConfig', preset.holidays);
+    form.setValue('workingHours', preset.hours as any);
+    form.setValue('holidaysConfig', preset.holidays as any);
     
     // "Özel" seçildiğinde haftalık çalışma saatleri bölümünü göster
     setShowWorkingHours(preset.name === 'Özel');
