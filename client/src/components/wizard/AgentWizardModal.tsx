@@ -169,10 +169,16 @@ export default function AgentWizardModal({ isOpen, onClose, onSuccess }: AgentWi
         description: "Dijital çalışanınız başarıyla oluşturuldu",
         variant: "default"
       });
-      onSuccess?.(data.data.agentId);
-      onClose();
+      
+      // Wait 2 seconds to show the success state before closing
+      setTimeout(() => {
+        setIsCreating(false);
+        onSuccess?.(data.data.agentId);
+        onClose();
+      }, 2000);
     },
     onError: (error: any) => {
+      setIsCreating(false);
       toast({
         title: "Hata",
         description: error.message || "Agent oluşturulamadı",

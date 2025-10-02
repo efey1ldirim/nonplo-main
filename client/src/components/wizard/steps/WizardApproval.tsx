@@ -104,6 +104,7 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
   const summary = getSummaryData();
 
   if (isCreating) {
+    const isComplete = progress === 100;
     const currentStepText = currentStep > 0 && currentStep <= CREATION_STEPS.length 
       ? CREATION_STEPS[currentStep - 1].title 
       : 'Başlatılıyor...';
@@ -111,14 +112,23 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto">
-            <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin" />
-          </div>
+          {isComplete ? (
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+            </div>
+          ) : (
+            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto">
+              <Loader2 className="w-10 h-10 text-blue-600 dark:text-blue-400 animate-spin" />
+            </div>
+          )}
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dijital Çalışanınız Oluşturuluyor
+            {isComplete ? 'Başarıyla Tamamlandı!' : 'Dijital Çalışanınız Oluşturuluyor'}
           </h3>
           <p className="text-gray-600 dark:text-gray-300">
-            Bu işlem birkaç dakika sürebilir, lütfen bekleyiniz...
+            {isComplete 
+              ? 'Dijital çalışanınız hazır ve kullanıma başlamak üzere!'
+              : 'Bu işlem birkaç dakika sürebilir, lütfen bekleyiniz...'
+            }
           </p>
         </div>
 
