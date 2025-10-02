@@ -123,22 +123,18 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
           </p>
         </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
-                <span>İlerleme</span>
-                <span>%{Math.round(progress)}</span>
-              </div>
-              <Progress value={progress} className="h-3" />
-              <div className="text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  {currentStepText}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-3 py-6">
+          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
+            <span>İlerleme</span>
+            <span>%{Math.round(progress)}</span>
+          </div>
+          <Progress value={progress} className="h-3" />
+          <div className="text-center">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              {currentStepText}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
