@@ -1044,6 +1044,9 @@ export default function DashboardAgentDetail() {
     
     const tabIndex = tabValueToIndex[tabFromUrl] || 0;
     
+    // Scroll to top when tab changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     // Use double requestAnimationFrame and small delay to ensure DOM is fully rendered
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
