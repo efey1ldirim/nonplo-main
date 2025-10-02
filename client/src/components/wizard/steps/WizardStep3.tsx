@@ -59,26 +59,36 @@ const QUICK_PRESETS = [
   }
 ];
 
+const DEFAULT_HOURS = DAYS.reduce((acc, day) => ({
+  ...acc,
+  [day.key]: { open: '09:00', close: '18:00', closed: false }
+}), {});
+
+const DEFAULT_HOLIDAYS = {
+  nationalHolidays: true,
+  religiousHolidays: true,
+  customHolidays: []
+};
+
 export default function WizardStep3({ data, onSave, onNext, canProceed }: WizardStep3Props) {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [showWorkingHours, setShowWorkingHours] = useState(false);
 
-  const defaultHours = DAYS.reduce((acc, day) => ({
-    ...acc,
-    [day.key]: { open: '09:00', close: '18:00', closed: false }
-  }), {});
-
   const form = useForm<WizardStep3Data>({
     resolver: zodResolver(wizardStep3Schema),
     defaultValues: {
-      workingHours: (data.workingHours as any) || defaultHours,
-      holidaysConfig: (data.holidaysConfig as any) || {
-        nationalHolidays: true,
-        religiousHolidays: true,
-        customHolidays: []
-      },
+      workingHours: (data.workingHours as any) || DEFAULT_HOURS,
+      holidaysConfig: (data.holidaysConfig as any) || DEFAULT_HOLIDAYS,
     },
   });
+
+  // Update form when data changes (when user navigates back to this step)
+  useEffect(() => {
+    form.reset({
+      workingHours: (data.workingHours as any) || DEFAULT_HOURS,
+      holidaysConfig: (data.holidaysConfig as any) || DEFAULT_HOLIDAYS,
+    });
+  }, [data.workingHours, data.holidaysConfig]);
 
   // Auto-save when form values change
   useEffect(() => {

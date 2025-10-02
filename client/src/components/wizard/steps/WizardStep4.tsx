@@ -69,6 +69,14 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
     },
   });
 
+  // Update form when data changes (when user navigates back to this step)
+  useEffect(() => {
+    form.reset({
+      website: data.website || '',
+      socialMedia: (data.socialMedia as any) || {},
+    });
+  }, [data.website, data.socialMedia]);
+
   // Auto-save when form values change
   useEffect(() => {
     const subscription = form.watch((values) => {
