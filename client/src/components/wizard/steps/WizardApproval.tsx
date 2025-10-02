@@ -31,10 +31,9 @@ const CREATION_STEPS = [
   { id: 2, title: 'Dosyalar indeksleniyor', duration: 3000 },
   { id: 3, title: 'Sosyal medya içerikleri toplanıyor', duration: 2500 },
   { id: 4, title: 'Prompt derleniyor', duration: 2000 },
-  { id: 5, title: 'OpenAI\'de agent konfigüre ediliyor', duration: 4000 },
-  { id: 6, title: 'Araç yetkileri test ediliyor', duration: 3000 },
-  { id: 7, title: 'Sağlık kontrolü ve test mesajı', duration: 2000 },
-  { id: 8, title: 'Yayınlandı!', duration: 1000 }
+  { id: 5, title: 'Araç yetkileri test ediliyor', duration: 3000 },
+  { id: 6, title: 'Sağlık kontrolü ve test mesajı', duration: 2000 },
+  { id: 7, title: 'Yayınlandı!', duration: 1000 }
 ];
 
 export default function WizardApproval({ session, onCreateAgent, isCreating }: WizardApprovalProps) {
