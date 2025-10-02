@@ -48,13 +48,13 @@ const defaultQueryFn = async ({ queryKey, signal }: { queryKey: readonly unknown
   } catch (error: any) {
     // Handle fetch abort errors gracefully (expected during navigation/unmount)
     if (error.name === 'AbortError' || signal?.aborted) {
-      console.log(`🔄 Fetch request to ${url} was aborted (expected behavior)`);
-      throw error; // Re-throw so React Query can handle it properly
+      // Silently throw abort errors without logging (expected behavior)
+      throw error;
     }
     
     // Handle "Fetch is aborted" DOMException errors
     if (error instanceof DOMException && error.message?.includes('aborted')) {
-      console.log(`🔄 Fetch request to ${url} was aborted by browser (expected behavior)`);
+      // Silently throw abort errors without logging (expected behavior)
       throw error;
     }
     
@@ -87,8 +87,19 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-      onError: (error) => {
-        console.error('Mutation error:', error);
+      onError: (error: any) => {
+        // Silently ignore abort errors (expected during navigation/fast interactions)
+        if (
+          error?.name === 'AbortError' ||
+          error?.message?.includes('aborted') ||
+          (error instanceof DOMException && error.message?.includes('aborted'))
+        ) {
+          return; // Don't log abort errors
+        }
+        // Only log real errors
+        if (error && Object.keys(error).length > 0) {
+          console.error('Mutation error:', error);
+        }
       },
     },
   },
@@ -153,13 +164,13 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   } catch (error: any) {
     // Handle fetch abort errors gracefully (expected during navigation/unmount)
     if (error.name === 'AbortError' || error.message?.includes('aborted')) {
-      console.log(`🔄 Mutation request to ${url} was aborted (expected behavior)`);
-      throw error; // Re-throw so the mutation can handle it properly
+      // Silently throw abort errors without logging (expected behavior)
+      throw error;
     }
     
     // Handle "Fetch is aborted" DOMException errors
     if (error instanceof DOMException && error.message?.includes('aborted')) {
-      console.log(`🔄 Mutation request to ${url} was aborted by browser (expected behavior)`);
+      // Silently throw abort errors without logging (expected behavior)
       throw error;
     }
     
