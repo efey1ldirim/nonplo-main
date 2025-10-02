@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -134,6 +134,9 @@ const EmailChangeDialog = ({ children, currentEmail }: EmailChangeDialogProps) =
             <Mail className="w-5 h-5" />
             E-posta Adresi Değiştir
           </DialogTitle>
+          <DialogDescription>
+            Yeni e-posta adresinizi girin ve şifreniz ile onaylayın.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
