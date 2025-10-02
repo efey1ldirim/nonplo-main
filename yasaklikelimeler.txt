@@ -51,6 +51,18 @@ am
 amlar
 amları
 
+# Kutsal ve Tarihsel İsimler (İşletme adında kullanılamaz)
+allah
+atatürk
+mustafa kemal
+peygamber
+hz
+tanrı
+allah'ın
+allahın
+atatürk'ün
+atatürkün
+
 # İngilizce Yasaklı Kelimeler
 fuck
 shit
