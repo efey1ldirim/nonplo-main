@@ -6,9 +6,19 @@ import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle, Clock, AlertCircle, User, Building2, MapPin, 
   Calendar, Globe, HelpCircle, Package, FileText, Heart, 
-  Settings, Sparkles, Loader2 
+  Settings, Sparkles, Loader2, Mail, Search, FileSearch, CreditCard 
 } from 'lucide-react';
 import { type AgentWizardSession } from '@shared/schema';
+
+const TOOLS_CONFIG = [
+  { key: 'googleCalendar', name: 'Google Takvim', icon: Calendar, color: 'text-blue-500' },
+  { key: 'gmail', name: 'Gmail', icon: Mail, color: 'text-red-500' },
+  { key: 'webSearch', name: 'Web Arama', icon: Search, color: 'text-green-500' },
+  { key: 'fileSearch', name: 'Dosya Arama', icon: FileSearch, color: 'text-purple-500' },
+  { key: 'productCatalog', name: 'Ürün Kataloğu', icon: Package, color: 'text-orange-500' },
+  { key: 'paymentLinks', name: 'Ödeme Linkleri', icon: CreditCard, color: 'text-indigo-500' },
+  { key: 'humanHandoff', name: 'İnsan Devresi', icon: User, color: 'text-gray-500' }
+];
 
 interface WizardApprovalProps {
   session: AgentWizardSession;
@@ -229,13 +239,33 @@ export default function WizardApproval({ session, onCreateAgent, isCreating }: W
                       </p>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="text-center p-3 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg">
-                        <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-                          %{Math.round(summary.completeness)}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Tamamlanma</div>
+                    {/* Active Tools Row */}
+                    <div className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm rounded-lg p-4">
+                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 text-center">Etkin Araçlar</div>
+                      <div className="flex items-center justify-center gap-3 flex-wrap">
+                        {(() => {
+                          const selectedTools = (session.selectedTools as any) || {};
+                          const activeTools = TOOLS_CONFIG.filter(tool => selectedTools[tool.key]);
+                          
+                          if (activeTools.length === 0) {
+                            return (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">Araç seçilmemiş</span>
+                            );
+                          }
+                          
+                          return activeTools.map((tool) => {
+                            const Icon = tool.icon;
+                            return (
+                              <div 
+                                key={tool.key}
+                                className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-700 rounded-lg shadow-sm"
+                                title={tool.name}
+                              >
+                                <Icon className={`w-5 h-5 ${tool.color}`} />
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </div>
