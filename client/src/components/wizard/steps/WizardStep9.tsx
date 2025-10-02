@@ -76,6 +76,17 @@ export default function WizardStep9({ data, onSave, onNext, canProceed }: Wizard
   const { watch, setValue } = form;
   const watchedPersonality = watch('personality');
 
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (JSON.stringify(values.personality) !== JSON.stringify(data.personality)) {
+        onSave({
+          personality: values.personality,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, data, onSave]);
+
   const selectPersonality = (tone: string) => {
     setValue('personality.tone', tone as any);
   };

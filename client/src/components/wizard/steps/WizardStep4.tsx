@@ -71,18 +71,25 @@ export default function WizardStep4({ data, onSave, onNext, canProceed }: Wizard
 
   // Update form when data changes (when user navigates back to this step)
   useEffect(() => {
-    const currentFormData = form.getValues();
-    const needsUpdate = 
-      currentFormData.website !== data.website ||
-      JSON.stringify(currentFormData.socialMedia) !== JSON.stringify(data.socialMedia);
-    
-    if (needsUpdate) {
-      form.reset({
-        website: data.website || '',
-        socialMedia: (data.socialMedia as any) || {},
-      });
-    }
-  }, [data.website, data.socialMedia, form]);
+    form.reset({
+      website: data.website || '',
+      socialMedia: (data.socialMedia as any) || {},
+    });
+  }, [data.website, data.socialMedia]);
+
+  // Auto-save when form values change
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (values.website !== data.website ||
+          JSON.stringify(values.socialMedia) !== JSON.stringify(data.socialMedia)) {
+        onSave({
+          website: values.website,
+          socialMedia: values.socialMedia,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, data, onSave]);
 
   const handleSubmit = (values: WizardStep4Data) => {
     onSave(values);

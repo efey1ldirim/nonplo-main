@@ -84,23 +84,30 @@ export default function WizardStep3({ data, onSave, onNext, canProceed }: Wizard
 
   // Update form when data changes (when user navigates back to this step)
   useEffect(() => {
-    const currentFormData = form.getValues();
-    const needsUpdate = 
-      JSON.stringify(currentFormData.workingHours) !== JSON.stringify(data.workingHours) ||
-      JSON.stringify(currentFormData.holidaysConfig) !== JSON.stringify(data.holidaysConfig);
-    
-    if (needsUpdate) {
-      form.reset({
-        workingHours: (data.workingHours as any) || DEFAULT_HOURS,
-        holidaysConfig: (data.holidaysConfig as any) || DEFAULT_HOLIDAYS,
-      });
-    }
-  }, [data.workingHours, data.holidaysConfig, form]);
+    form.reset({
+      workingHours: (data.workingHours as any) || DEFAULT_HOURS,
+      holidaysConfig: (data.holidaysConfig as any) || DEFAULT_HOLIDAYS,
+    });
+  }, [data.workingHours, data.holidaysConfig]);
+
+  // Auto-save when form values change
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (JSON.stringify(values.workingHours) !== JSON.stringify(data.workingHours) ||
+          JSON.stringify(values.holidaysConfig) !== JSON.stringify(data.holidaysConfig)) {
+        onSave({
+          workingHours: values.workingHours,
+          holidaysConfig: values.holidaysConfig,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, data, onSave]);
 
   const applyPreset = (preset: typeof QUICK_PRESETS[0]) => {
     setSelectedPreset(preset.name);
-    form.setValue('workingHours', preset.hours as any);
-    form.setValue('holidaysConfig', preset.holidays as any);
+    form.setValue('workingHours', preset.hours);
+    form.setValue('holidaysConfig', preset.holidays);
     
     // "Özel" seçildiğinde haftalık çalışma saatleri bölümünü göster
     setShowWorkingHours(preset.name === 'Özel');

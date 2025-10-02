@@ -125,6 +125,22 @@ export default function WizardStep2({ data, onSave, onNext, canProceed }: Wizard
 
   const { watch, setValue } = form;
 
+  // Auto-save when form values change
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (values.address !== data.address || 
+          values.timezone !== data.timezone ||
+          JSON.stringify(values.addressData) !== JSON.stringify(data.addressData)) {
+        onSave({
+          address: values.address,
+          addressData: values.addressData,
+          timezone: values.timezone,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, data, onSave]);
+
   // Initialize geocoder and places service when maps loads
   useEffect(() => {
     if (isLoaded && !geocoder) {

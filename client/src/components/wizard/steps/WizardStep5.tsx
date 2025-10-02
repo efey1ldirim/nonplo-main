@@ -27,6 +27,17 @@ export default function WizardStep5({ data, onSave, onNext }: WizardStep5Props) 
     },
   });
 
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      if (values.faqRaw !== data.faqRaw) {
+        onSave({
+          faqRaw: values.faqRaw,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, data, onSave]);
+
   const handleSubmit = (values: WizardStep5Data) => {
     onSave(values);
     onNext();
